@@ -33,8 +33,5 @@
       "npx prettier --write"
     ],
     "*.{ts,tsx,js,jsx}": "npx eslint --max-warnings=0"
-  },
-  "dependencies": {
-    "react-native-reanimated": "~2.14.4"
   }
 }
