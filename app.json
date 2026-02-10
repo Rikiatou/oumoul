@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "fa01bcf0-8fcd-4b44-84ad-ca38807bdccf"
+      }
+    },
+    "android": {
+      "package": "com.kabrak.oumoulsapp"
+    }
+  }
+}

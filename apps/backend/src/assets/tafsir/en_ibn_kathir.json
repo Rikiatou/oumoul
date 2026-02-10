@@ -1,0 +1,22 @@
+[
+  {
+    "sourceKey": "en_ibn_kathir_brief",
+    "sourceName": "Ibn Kathir – Brief (EN)",
+    "author": "Ibn Kathir (concise EN)",
+    "language": "EN",
+    "entries": [
+      {
+        "surah": 1,
+        "ayahFrom": 1,
+        "ayahTo": 7,
+        "text": "Al-Fatihah opens with praise of Allah, Lord of the worlds, the Entirely Merciful, Master of the Day of Judgment. It affirms exclusive worship and seeking aid from Him, then asks for guidance to the straight path of those favored (prophets, truthful, righteous), away from the path of those who knew yet deviated and those who went astray."
+      },
+      {
+        "surah": 2,
+        "ayahFrom": 255,
+        "ayahTo": 255,
+        "text": "Ayat al-Kursi highlights pure tawhid: Allah is the Ever-Living, Sustainer, untouched by drowsiness or sleep. His Throne encompasses the heavens and the earth, preserving them without fatigue. None intercedes except by His permission; His knowledge covers all before and after His creation."
+      }
+    ]
+  }
+]

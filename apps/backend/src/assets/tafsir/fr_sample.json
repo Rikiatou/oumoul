@@ -1,0 +1,22 @@
+[
+  {
+    "sourceKey": "fr_simple",
+    "sourceName": "Tafsir simple en français",
+    "author": "Oumoul (brouillon)",
+    "language": "FR",
+    "entries": [
+      {
+        "surah": 1,
+        "ayahFrom": 1,
+        "ayahTo": 7,
+        "text": "Ici tu peux écrire un tafsir simple de la Fatiha (versets 1 à 7) en français, niveau débutante. Par exemple : ce passage nous apprend à dépendre d’Allah seul, à demander la guidée et à reconnaître les bienfaits qu’Il nous accorde."
+      },
+      {
+        "surah": 2,
+        "ayahFrom": 255,
+        "ayahTo": 255,
+        "text": "Ici tu peux écrire ton explication d’Ayat al-Kursi (2:255) en français, en t’appuyant sur les explications classiques mais avec tes mots et ton ton."
+      }
+    ]
+  }
+]

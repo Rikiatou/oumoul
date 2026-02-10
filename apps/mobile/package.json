@@ -1,0 +1,34 @@
+{
+  "name": "mobile",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@oumoul/config": "*",
+    "@oumoul/ui": "*",
+    "expo": "~54.0.33",
+    "expo-av": "~16.0.7",
+    "expo-constants": "~17.0.8",
+    "expo-dev-client": "~6.0.20",
+    "expo-notifications": "~0.29.0",
+    "expo-secure-store": "~15.0.7",
+    "expo-status-bar": "~3.0.8",
+    "nativewind": "4.0.36",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-css-interop": "0.0.36",
+    "react-native-reanimated": "~3.16.1",
+    "react-native-web": "^0.21.2",
+    "tailwindcss": "3.4.13"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}

@@ -1,0 +1,285 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("BACKEND_DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  firstName    String
+  lastName     String
+  locale       String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  pushToken    String?
+  pushPlatform String?
+  refreshTokens RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  fastingLogs      FastingLog[]
+  makeupPlans      MakeupPlan[]
+  reminderPreferences ReminderPreference[]
+  dhikrRecords       DhikrRecord[]
+  imanePrograms      ImaneProgramDay[]
+  quranFavorites     QuranFavorite[]
+  dhikrFavorites     DhikrFavorite[]
+  cycleDays          CycleDay[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+enum FastingLogStatus {
+  FASTED
+  EXEMPTION
+  MISSED
+  MADE_UP
+}
+
+enum MakeupStrategy {
+  SixDaysAfterEid
+  MondaysThursdays
+  WhiteDays
+  Custom
+}
+
+enum PlanEntryStatus {
+  Pending
+  Completed
+  Skipped
+}
+
+enum ReminderType {
+  AfterEid
+  WeeklyMonday
+  WeeklyThursday
+  Monthly
+  Custom
+  ImaneProgramDaily
+  RamadanDailyCheckin
+}
+
+enum CycleStatus {
+  PURE
+  MENSES
+  SPOTTING
+  POSTPARTUM
+}
+
+model FastingLog {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  status    FastingLogStatus
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([userId, date], map: "FastingLog_userId_date_key")
+  @@index([userId, date], map: "FastingLog_userId_date_idx")
+}
+
+model MakeupPlan {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategy      MakeupStrategy
+  title         String?
+  startDate     DateTime?
+  targetDays    Int
+  completedDays Int            @default(0)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  entries       MakeupPlanEntry[]
+
+  @@index([userId, isActive])
+}
+
+model MakeupPlanEntry {
+  id             String          @id @default(uuid())
+  planId         String
+  plan           MakeupPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  scheduledDate  DateTime
+  status         PlanEntryStatus @default(Pending)
+  completedAt    DateTime?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([planId, scheduledDate], map: "MakeupPlanEntry_plan_schedule_idx")
+}
+
+model ReminderPreference {
+  id         String        @id @default(cuid())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      ReminderType
+  isEnabled Boolean      @default(true)
+  sendTime  String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([userId, type], map: "ReminderPreference_user_type_idx")
+}
+
+model DhikrCategory {
+  id          String      @id @default(cuid())
+  name        String
+  description String?     @db.Text
+  order       Int         @default(0)
+  entries     DhikrEntry[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model DhikrEntry {
+  id          String        @id @default(cuid())
+  category    DhikrCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  String
+  title       String
+  arabicText  String        @db.Text
+  translit    String?       @db.Text
+  translation String?       @db.Text
+  source      String?       @db.Text
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  records     DhikrRecord[]
+  favorites   DhikrFavorite[]
+}
+
+model DhikrRecord {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  entry     DhikrEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId   String
+  count     Int      @default(0)
+  notedAt   DateTime @default(now())
+  notes     String?
+
+  @@unique([userId, entryId], map: "DhikrRecord_user_entry_key")
+  @@index([userId, entryId])
+}
+
+model ImaneProgramDay {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  date      DateTime
+  coranTilawa      Boolean @default(false)
+  dhikrMatinSoir   Boolean @default(false)
+  duasPersonnelles Boolean @default(false)
+  sadaqa           Boolean @default(false)
+  autreBienfait    Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+model CycleDay {
+  id        String       @id @default(cuid())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  date      DateTime
+  status    CycleStatus  @default(PURE)
+  notes     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([userId, date], map: "CycleDay_user_date_key")
+  @@index([userId, date], map: "CycleDay_user_date_idx")
+}
+
+model QuranFavorite {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  surah     Int
+  ayah      Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId], map: "QuranFavorite_user_idx")
+  @@index([userId, surah, ayah], map: "QuranFavorite_user_surah_ayah_idx")
+}
+
+model DhikrFavorite {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  entry     DhikrEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, entryId], map: "DhikrFavorite_user_entry_key")
+  @@index([userId, entryId], map: "DhikrFavorite_user_entry_idx")
+}
+
+enum TafsirLanguage {
+  FR
+  EN
+  AR
+}
+
+model TafsirSource {
+  id        String         @id @default(cuid())
+  key       String         @unique
+  name      String
+  author    String?
+  language  TafsirLanguage?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  entries   TafsirEntry[]
+}
+
+model TafsirEntry {
+  id        String         @id @default(cuid())
+  source    TafsirSource   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId  String
+  surah     Int
+  ayahFrom  Int
+  ayahTo    Int?
+  language  TafsirLanguage?
+  text      String         @db.Text
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([sourceId, surah, ayahFrom], map: "TafsirEntry_source_surah_ayah_idx")
+}

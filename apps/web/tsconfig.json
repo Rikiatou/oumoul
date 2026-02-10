@@ -1,0 +1,47 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"],
+      "@oumoul/api": ["../../packages/api/src/index.ts"],
+      "@oumoul/api/*": ["../../packages/api/src/*"],
+      "@oumoul/config": ["../../packages/config/src/index.ts"],
+      "@oumoul/config/*": ["../../packages/config/src/*"],
+      "@oumoul/ui": ["../../packages/ui/src/index.ts"],
+      "@oumoul/ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "references": [
+    { "path": "../../packages/api" },
+    { "path": "../../packages/config" },
+    { "path": "../../packages/ui" }
+  ],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,18 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "types": ["nativewind/types"],
+    "paths": {
+      "@/*": ["./*"],
+      "@oumoul/api": ["../../packages/api/src/index.ts"],
+      "@oumoul/api/*": ["../../packages/api/src/*"],
+      "@oumoul/config": ["../../packages/config/src/index.ts"],
+      "@oumoul/config/*": ["../../packages/config/src/*"],
+      "@oumoul/ui": ["../../packages/ui/src/index.ts"],
+      "@oumoul/ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "global.d.ts"]
+}
