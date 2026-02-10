@@ -1,0 +1,93 @@
+﻿node.exe : npm warn 
+config ignoring workspace 
+config at C:\dev\oumoul\ap
+ps\mobile/.npmrc
+At C:\Users\GLC\AppData\Ro
+aming\npm\npx.ps1:24 
+char:5
++     & "node$exe"  "$base
+dir/node_modules/npm/bin/n
+px-cli.js" $args
++     ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (n  
+  pm warn config...s\mo   
+ bile/.npmrc:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+- Fetching the buildΓÇª\ 
+Fetching the buildΓÇª| 
+Fetching the buildΓÇª/ 
+Fetching the buildΓÇª- 
+Fetching the buildΓÇª\ 
+Fetching the buildΓÇª| 
+Fetching the buildΓÇª/ 
+Fetching the buildΓÇª- 
+Fetching the buildΓÇª\ 
+Fetching the buildΓÇª| 
+Fetching the buildΓÇª/ 
+Fetching the buildΓÇª- 
+Fetching the buildΓÇª\ 
+Fetching the buildΓÇª| 
+Fetching the buildΓÇª/ 
+Fetching the buildΓÇª- 
+Fetching the buildΓÇªΓ£ö 
+Found a matching build 
+for the project 
+@kabrak/mobile
+{
+  "id": "972f9256-6d68-4bb4-b556-2da136402263",
+  "status": "ERRORED",
+  "platform": "ANDROID",
+  "error": {
+    "errorCode": "EAS_BUILD_UNKNOWN_GRADLE_ERROR",
+    "message": "Gradle build failed with unknown error. See logs for the \"Run gradlew\" phase for more information."
+  },
+  "artifacts": {},
+  "fingerprint": {
+    "id": "019c48bd-f0cf-76e0-b81a-1d2745633c5b",
+    "hash": "dbfe36e86d79b737fba2c04a96818829f86fac5b"
+  },
+  "initiatingActor": {
+    "id": "44469a7a-2fdc-47a5-997d-c4b86b686266",
+    "displayName": "kabrak"
+  },
+  "logFiles": [
+    "https://job-logs.eascdn.net/production/972f9256-6d68-4bb4-b556-2da136402263/1770746933714-678cac5d-ee85-4a91-81de-e9152c9a9d33.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260210%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260210T200538Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=221437ef365cb446db47cd3a6f7be35af6390f9027de00ba250d3b5abdd8b5785ee8e1d6316f7ce912c88497143a8a7d01690d84e53dfa82691c16a6975c42646bc4deaac7805820e5e1612e910410a4fd744dc846ff18478fb0016d4fd6aa56f21d21db14bca56db4558b25f84c741fa52759b80dce649234e05b9e37d1642edb78381c2ba31d38415b98ecd299e54f602236efaedacd27af581c9691a2b17ae445c2b27c26bae9566f0074ddcdb64b06490717feb364dd8b87c6bda72f11452c02a5b7387683e69719388ca4d2710312a6f10f06cd022fe3d7bc30b837101c441d6d13141051540f198ff9a7cc2aafda101a14a6f5807ca9c4d9e968832c25",
+    "https://job-logs.eascdn.net/production/972f9256-6d68-4bb4-b556-2da136402263/1770748362094-16a55b2d-9219-424a-9315-be652d6d6ad1.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260210%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260210T200538Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=846a0652b51d6055828438bbc847841840ff56fd13db873f7e9bd0c3dff4baf66b5313afa8fab55738f438cf92ec8ed00d9ea1d003235e80eb8227f818869916a0185cd4d0b695d55cf435d561065de9843a7a88349631b005c1cf57bf5c6cdedc1d64fe08d5f3df899449dbd238479c2706131701ba21e03dde1f92deb502fc339ef463179844c0a3590b45f427fa49523e6f107aa1cce0ec51d26a5e580405aa636be40d2ab7c0f2126a78f95fe5a675ed91f411f7e0c0197d8ba8e860d541aa6d780a00aab12a61647d490eb03c05e3adda8624c645890fc07c27b2cc7faa053ae24626689ae4074857b74238eda900b33893112f6207169067ac8f337e02",
+    "https://job-logs.eascdn.net/production/972f9256-6d68-4bb4-b556-2da136402263/1770748362342-b73e76f9-ff72-4f60-9d2d-09cf17d4c1af.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260210%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260210T200538Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=8aa2e3efff2a66175ff2ca034adc0db77fbdffb2774b3670555374f27cca0f4635a1e63906c161834c0abffa24951b0260920481ce1fa8604946c0a2afffd8642fcb0cedfa803e357fd2044d3e74a7a1c44d14d43faa13715a013c2fb811e0ecf833a34a853a413dcaeb2799f7f19ec6ab3a5b0479f331fc41d987e27aed989cabaae975707ebe4b8a8ac6f53428f2b0a2d78b4e1ac18e587fe35e539946599131a3eb41c218160516a0e1a30f9dd290c9f39880e2782a7769108326b576925a66e620033d44d58c3b562b4184baaf865f0ed2c28317af4ac28daa6a05335c65852a435990e5ae92db8fa45f5114f046699a35f5863d9143efd969d8a57454a8",
+    "https://job-logs.eascdn.net/production/972f9256-6d68-4bb4-b556-2da136402263/1770748362548-23e53584-1b85-4ee0-b742-76745b442b1e.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260210%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260210T200538Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=0724dce2b248717bf26a2abcb9a1d7283e028817a17449f7c88aaa6bb756c20adb5c276a930227cb707815cbc31ea45eff9e547ce7ed7b35be5c7ce352b99027de96d040ceaa3013436eac2bc8a5b2c65a3081f8c4cea2b82a7bc0a0d336d3c11bfd50152017a08cf795728cfd48ab635b6b6309263e718c665e452de04497a432b74f29835742ec520fabaf2df3f2bdf8a95d2f05f68f05ef1a757582ddfc05433675dff43a2fcac5bbd6bbf1da58031e57c5d8b8869f4f76915b2d465b99ee373cfc2b555048c3543d7bfe273b540287520d144f2c081920f31461468ef1e77ab8f72cfd913039ce9a808913efc585d944ecee403d75be113f717e88a243c8"
+  ],
+  "project": {
+    "id": "cbf6d54d-0207-4b4f-8429-5a7793458893",
+    "name": "mobile",
+    "slug": "mobile",
+    "ownerAccount": {
+      "id": "2ff0c4fb-c0fe-42da-aa81-4044e4ef22c2",
+      "name": "kabrak"
+    }
+  },
+  "distribution": "INTERNAL",
+  "buildProfile": "development",
+  "sdkVersion": "54.0.0",
+  "appVersion": "1.0.0",
+  "appBuildVersion": "1",
+  "gitCommitHash": "6b14484cfda295592b65a9baab1d32cc330127b4",
+  "gitCommitMessage": "fix: install expo-supported reanimated v4.1.6 + newArch + clean prebuild",
+  "priority": "NORMAL",
+  "createdAt": "2026-02-10T18:08:53.380Z",
+  "updatedAt": "2026-02-10T18:35:45.161Z",
+  "completedAt": "2026-02-10T18:35:38.612Z",
+  "expirationDate": "2026-02-24T18:08:53.445Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 190,
+    "buildQueueTime": 1481734,
+    "buildDuration": 122960
+  }
+}
