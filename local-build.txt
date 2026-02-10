@@ -1,0 +1,501 @@
+﻿node.exe : npm warn config ignoring workspace config at 
+C:\dev\oumoul\apps\mobile/.npmrc
+At C:\Users\GLC\AppData\Roaming\npm\npx.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/npm/bin/npx-cli.js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn config...s\mobile/.npm 
+   rc:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ΓÇ║ Building app...
+Configuration on demand is an incubating feature.
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:pluginDescriptors
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors
+> Task :gradle-plugin:settings-plugin:processResources
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources
+> Task :gradle-plugin:shared:compileKotlin FROM-CACHE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin FROM-CACHE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar
+> Task :gradle-plugin:shared:jar
+> Task :gradle-plugin:settings-plugin:compileKotlin FROM-CACHE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileKotlin FROM-CACHE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes
+> Task :gradle-plugin:settings-plugin:jar
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-dev-launcher-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-dev-launcher-gradle-plugin:pluginDescriptors
+> Task :expo-module-gradle-plugin:pluginDescriptors
+> Task :expo-dev-launcher-gradle-plugin:processResources
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileKotlin FROM-CACHE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors
+> Task :expo-gradle-plugin:expo-autolinking-plugin:processResources
+> Task :expo-gradle-plugin:expo-autolinking-plugin:classes
+> Task :expo-gradle-plugin:expo-autolinking-plugin:jar
+> Task :expo-module-gradle-plugin:processResources
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin FROM-CACHE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors
+> Task :gradle-plugin:react-native-gradle-plugin:processResources
+> Task :gradle-plugin:react-native-gradle-plugin:classes
+> Task :gradle-plugin:react-native-gradle-plugin:jar
+> Task :expo-dev-launcher-gradle-plugin:compileKotlin FROM-CACHE
+> Task :expo-dev-launcher-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-dev-launcher-gradle-plugin:classes
+> Task :expo-module-gradle-plugin:compileKotlin FROM-CACHE
+> Task :expo-module-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-module-gradle-plugin:classes
+> Task :expo-dev-launcher-gradle-plugin:jar
+> Task :expo-module-gradle-plugin:jar
+
+> Configure project :
+[32m[ExpoRootProject][0m Using the following versions:
+  - buildTools:  [32m36.0.0[0m
+  - minSdk:      [32m24[0m
+  - compileSdk:  [32m36[0m
+  - targetSdk:   [32m36[0m
+  - ndk:         [32m27.1.12297006[0m
+  - kotlin:      [32m2.1.20[0m
+  - ksp:         [32m2.1.20-2.0.1[0m
+
+> Configure project :app
+ ??  [33mApplying gradle plugin[0m '[32mexpo-dev-launcher-gradle-plugin[0m'
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-application[0m (6.0.2)
+  - [32mexpo-constants[0m (17.0.8)
+  - [32mexpo-dev-client[0m (6.0.20)
+  - [32mexpo-dev-launcher[0m (6.0.20)
+  - [32mexpo-dev-menu[0m (7.0.18)
+  - [32mexpo-dev-menu-interface[0m (2.0.0)
+  - [32mexpo-json-utils[0m (0.15.0)
+  - [32mexpo-manifests[0m (1.0.10)
+  - [32mexpo-modules-core[0m (3.0.29)
+  - [32mexpo-notifications[0m (0.29.14)
+  - [32mexpo-updates-interface[0m (2.0.0)
+  - [33m[?][0m [32mexpo-asset[0m (12.0.12)
+  - [33m[?][0m [32mexpo-av[0m (16.0.8)
+  - [33m[?][0m [32mexpo-file-system[0m (19.0.21)
+  - [33m[?][0m [32mexpo-font[0m (14.0.11)
+  - [33m[?][0m [32mexpo-keep-awake[0m (15.0.8)
+  - [33m[?][0m [32mexpo-secure-store[0m (15.0.8)
+
+
+> Configure project :react-native-reanimated
+Android gradle plugin: 8.11.0
+Gradle: 8.14.3
+
+> Task :expo-dev-client:preBuild UP-TO-DATE
+> Task :expo-application:preBuild UP-TO-DATE
+> Task :expo-dev-menu-interface:preBuild UP-TO-DATE
+> Task :expo-dev-menu:preBuild UP-TO-DATE
+> Task :expo-dev-launcher:preBuild UP-TO-DATE
+> Task :expo-application:preDebugBuild UP-TO-DATE
+> Task :expo-dev-launcher:preDebugBuild UP-TO-DATE
+> Task :expo-dev-client:preDebugBuild UP-TO-DATE
+> Task :expo-dev-menu-interface:preDebugBuild UP-TO-DATE
+> Task :expo-dev-menu:preDebugBuild UP-TO-DATE
+> Task :expo-application:writeDebugAarMetadata
+> Task :expo-json-utils:preBuild UP-TO-DATE
+> Task :expo-json-utils:preDebugBuild UP-TO-DATE
+> Task :expo-dev-menu-interface:writeDebugAarMetadata
+> Task :expo-dev-menu:writeDebugAarMetadata
+> Task :expo-manifests:preBuild UP-TO-DATE
+> Task :expo-manifests:preDebugBuild UP-TO-DATE
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :expo-modules-core:preDebugBuild UP-TO-DATE
+> Task :expo-dev-launcher:writeDebugAarMetadata
+> Task :expo-json-utils:writeDebugAarMetadata
+> Task :expo-updates-interface:preBuild UP-TO-DATE
+> Task :expo-updates-interface:preDebugBuild UP-TO-DATE
+> Task :expo-notifications:preBuild UP-TO-DATE
+> Task :expo-notifications:preDebugBuild UP-TO-DATE
+> Task :expo-updates-interface:writeDebugAarMetadata
+> Task :react-native-reanimated:assertLatestReactNativeWithNewArchitectureTask SKIPPED
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask SKIPPED
+> Task :expo-manifests:writeDebugAarMetadata
+> Task :expo-modules-core:writeDebugAarMetadata
+> Task :expo-notifications:writeDebugAarMetadata
+> Task :expo-application:generateDebugResValues FROM-CACHE
+> Task :expo-dev-launcher:generateDebugResValues FROM-CACHE
+> Task :expo-dev-client:generateDebugResValues FROM-CACHE
+> Task :expo-dev-client:writeDebugAarMetadata
+> Task :expo-application:generateDebugResources FROM-CACHE
+> Task :expo-dev-menu:generateDebugResValues FROM-CACHE
+> Task :expo-dev-client:generateDebugResources FROM-CACHE
+> Task :expo-dev-launcher:generateDebugResources FROM-CACHE
+> Task :expo-application:packageDebugResources FROM-CACHE
+> Task :expo-dev-menu:generateDebugResources FROM-CACHE
+> Task :expo-dev-menu-interface:generateDebugResValues FROM-CACHE
+> Task :expo-dev-menu-interface:generateDebugResources FROM-CACHE
+> Task :expo-dev-menu-interface:packageDebugResources FROM-CACHE
+> Task :expo-json-utils:generateDebugResValues FROM-CACHE
+> Task :expo-json-utils:generateDebugResources FROM-CACHE
+> Task :expo-dev-menu:packageDebugResources FROM-CACHE
+> Task :expo-manifests:generateDebugResValues FROM-CACHE
+> Task :expo-dev-client:packageDebugResources
+> Task :expo-modules-core:generateDebugResValues FROM-CACHE
+> Task :expo-manifests:generateDebugResources FROM-CACHE
+> Task :expo-modules-core:generateDebugResources FROM-CACHE
+> Task :expo-manifests:packageDebugResources FROM-CACHE
+> Task :expo-notifications:generateDebugResValues FROM-CACHE
+> Task :expo-modules-core:packageDebugResources FROM-CACHE
+> Task :expo-notifications:generateDebugResources FROM-CACHE
+> Task :expo-updates-interface:generateDebugResValues FROM-CACHE
+> Task :expo-updates-interface:generateDebugResources FROM-CACHE
+> Task :expo-updates-interface:packageDebugResources FROM-CACHE
+> Task :expo-notifications:packageDebugResources FROM-CACHE
+> Task :expo-dev-client:extractDeepLinksDebug FROM-CACHE
+> Task :expo-application:extractDeepLinksDebug FROM-CACHE
+> Task :react-native-reanimated:prepareReanimatedHeadersForPrefabs
+> Task :expo-dev-client:processDebugManifest FROM-CACHE
+> Task :expo-application:processDebugManifest FROM-CACHE
+> Task :expo-json-utils:packageDebugResources FROM-CACHE
+> Task :expo-dev-menu-interface:extractDeepLinksDebug FROM-CACHE
+> Task :expo-dev-menu:extractDeepLinksDebug FROM-CACHE
+> Task :expo-json-utils:extractDeepLinksDebug FROM-CACHE
+> Task :expo-dev-menu:processDebugManifest FROM-CACHE
+> Task :expo-dev-menu-interface:processDebugManifest FROM-CACHE
+> Task :expo-json-utils:processDebugManifest FROM-CACHE
+> Task :expo-manifests:extractDeepLinksDebug FROM-CACHE
+> Task :expo-modules-core:extractDeepLinksDebug FROM-CACHE
+> Task :expo-modules-core:processDebugManifest FROM-CACHE
+> Task :expo-notifications:extractDeepLinksDebug FROM-CACHE
+> Task :expo-updates-interface:extractDeepLinksDebug FROM-CACHE
+> Task :expo-notifications:processDebugManifest FROM-CACHE
+> Task :expo-updates-interface:processDebugManifest FROM-CACHE
+> Task :expo-application:compileDebugLibraryResources FROM-CACHE
+> Task :expo-dev-client:compileDebugLibraryResources FROM-CACHE
+> Task :expo-application:parseDebugLocalResources FROM-CACHE
+> Task :expo-dev-client:parseDebugLocalResources FROM-CACHE
+> Task :expo-dev-client:generateDebugRFile FROM-CACHE
+> Task :expo-dev-launcher:packageDebugResources
+> Task :expo-dev-launcher:extractDeepLinksDebug FROM-CACHE
+> Task :expo-dev-launcher:processDebugManifest FROM-CACHE
+> Task :react-native-reanimated:prepareWorkletsHeadersForPrefabs
+> Task :react-native-reanimated:preBuild
+> Task :react-native-reanimated:preDebugBuild
+> Task :react-native-reanimated:writeDebugAarMetadata
+> Task :react-native-reanimated:generateDebugResValues FROM-CACHE
+> Task :expo-application:generateDebugRFile FROM-CACHE
+> Task :expo-manifests:processDebugManifest FROM-CACHE
+> Task :react-native-reanimated:generateDebugResources FROM-CACHE
+> Task :expo-dev-menu-interface:compileDebugLibraryResources FROM-CACHE
+> Task :expo-dev-launcher:compileDebugLibraryResources FROM-CACHE
+> Task :expo-json-utils:compileDebugLibraryResources FROM-CACHE
+> Task :expo-dev-launcher:parseDebugLocalResources FROM-CACHE
+> Task :expo-dev-menu-interface:parseDebugLocalResources FROM-CACHE
+> Task :react-native-reanimated:packageDebugResources FROM-CACHE
+> Task :expo-json-utils:parseDebugLocalResources FROM-CACHE
+> Task :expo-dev-launcher:generateDebugRFile FROM-CACHE
+> Task :expo-manifests:compileDebugLibraryResources FROM-CACHE
+> Task :expo-dev-menu:compileDebugLibraryResources FROM-CACHE
+> Task :expo-json-utils:generateDebugRFile FROM-CACHE
+> Task :expo-dev-menu-interface:generateDebugRFile FROM-CACHE
+> Task :expo-manifests:parseDebugLocalResources FROM-CACHE
+> Task :expo-modules-core:compileDebugLibraryResources FROM-CACHE
+> Task :expo-dev-menu:parseDebugLocalResources FROM-CACHE
+> Task :expo-manifests:generateDebugRFile FROM-CACHE
+> Task :expo-notifications:compileDebugLibraryResources FROM-CACHE
+> Task :expo-modules-core:parseDebugLocalResources FROM-CACHE
+> Task :expo-notifications:parseDebugLocalResources FROM-CACHE
+> Task :expo-dev-menu:generateDebugRFile FROM-CACHE
+> Task :expo-application:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-updates-interface:compileDebugLibraryResources FROM-CACHE
+> Task :expo-updates-interface:parseDebugLocalResources FROM-CACHE
+> Task :react-native-reanimated:extractDeepLinksDebug FROM-CACHE
+> Task :expo-modules-core:generateDebugRFile FROM-CACHE
+> Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-application:generateDebugBuildConfig FROM-CACHE
+> Task :expo-modules-core:generateDebugBuildConfig FROM-CACHE
+> Task :react-native-reanimated:processDebugManifest FROM-CACHE
+> Task :expo-application:javaPreCompileDebug FROM-CACHE
+> Task :expo-dev-client:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-notifications:generateDebugRFile FROM-CACHE
+> Task :expo-dev-launcher:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-updates-interface:generateDebugRFile FROM-CACHE
+> Task :expo-dev-menu:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-reanimated:compileDebugLibraryResources FROM-CACHE
+> Task :react-native-reanimated:parseDebugLocalResources FROM-CACHE
+> Task :react-native-reanimated:generateDebugRFile FROM-CACHE
+> Task :expo-dev-menu-interface:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-dev-menu-interface:generateDebugBuildConfig FROM-CACHE
+> Task :expo-dev-menu-interface:javaPreCompileDebug FROM-CACHE
+> Task :expo-json-utils:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-json-utils:generateDebugBuildConfig FROM-CACHE
+> Task :expo-json-utils:javaPreCompileDebug FROM-CACHE
+> Task :expo-manifests:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-dev-client:dataBindingMergeDependencyArtifactsDebug
+> Task :expo-manifests:generateDebugBuildConfig FROM-CACHE
+> Task :expo-manifests:javaPreCompileDebug FROM-CACHE
+> Task :expo-updates-interface:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-dev-client:dataBindingGenBaseClassesDebug FROM-CACHE
+> Task :expo-updates-interface:generateDebugBuildConfig FROM-CACHE
+> Task :expo-updates-interface:javaPreCompileDebug FROM-CACHE
+> Task :expo-notifications:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-notifications:generateDebugBuildConfig FROM-CACHE
+> Task :expo-notifications:javaPreCompileDebug FROM-CACHE
+> Task :expo-dev-launcher:dataBindingMergeDependencyArtifactsDebug
+> Task :expo-dev-client:generateDebugBuildConfig FROM-CACHE
+> Task :react-native-reanimated:generateDebugBuildConfig
+> Task :expo-dev-client:javaPreCompileDebug FROM-CACHE
+> Task :expo-application:mergeDebugShaders
+> Task :expo-application:compileDebugShaders NO-SOURCE
+> Task :expo-application:generateDebugAssets UP-TO-DATE
+> Task :expo-dev-launcher:dataBindingGenBaseClassesDebug FROM-CACHE
+> Task :expo-dev-launcher:generateDebugBuildConfig FROM-CACHE
+> Task :expo-dev-launcher:checkApolloVersions
+> Task :expo-dev-launcher:generateServiceApolloOptions FROM-CACHE
+> Task :react-native-reanimated:javaPreCompileDebug FROM-CACHE
+> Task :react-native-reanimated:packageNdkLibs NO-SOURCE
+> Task :expo-dev-menu:generateDebugBuildConfig FROM-CACHE
+> Task :expo-application:mergeDebugAssets
+> Task :expo-dev-menu:javaPreCompileDebug FROM-CACHE
+> Task :expo-dev-client:mergeDebugShaders
+> Task :expo-dev-client:compileDebugShaders NO-SOURCE
+> Task :expo-dev-client:generateDebugAssets UP-TO-DATE
+> Task :expo-dev-menu:mergeDebugShaders
+> Task :expo-dev-menu:compileDebugShaders NO-SOURCE
+> Task :expo-dev-menu:generateDebugAssets UP-TO-DATE
+> Task :expo-dev-client:mergeDebugAssets
+> Task :expo-dev-launcher:generateServiceApolloSources FROM-CACHE
+> Task :expo-dev-menu:mergeDebugAssets
+> Task :expo-dev-menu-interface:mergeDebugShaders
+> Task :expo-dev-menu-interface:compileDebugShaders NO-SOURCE
+> Task :expo-dev-menu-interface:generateDebugAssets UP-TO-DATE
+> Task :expo-dev-launcher:javaPreCompileDebug FROM-CACHE
+> Task :expo-dev-menu-interface:mergeDebugAssets
+> Task :expo-json-utils:mergeDebugShaders
+> Task :expo-json-utils:compileDebugShaders NO-SOURCE
+> Task :expo-json-utils:generateDebugAssets UP-TO-DATE
+> Task :expo-json-utils:mergeDebugAssets
+> Task :expo-dev-launcher:mergeDebugShaders
+> Task :expo-dev-launcher:compileDebugShaders NO-SOURCE
+> Task :expo-dev-launcher:generateDebugAssets UP-TO-DATE
+> Task :expo-notifications:mergeDebugShaders
+> Task :expo-notifications:compileDebugShaders NO-SOURCE
+> Task :expo-notifications:generateDebugAssets UP-TO-DATE
+> Task :expo-dev-launcher:mergeDebugAssets
+> Task :expo-notifications:mergeDebugAssets
+> Task :expo-manifests:mergeDebugShaders
+> Task :expo-manifests:compileDebugShaders NO-SOURCE
+> Task :expo-manifests:generateDebugAssets UP-TO-DATE
+> Task :expo-application:mergeDebugJniLibFolders
+> Task :expo-application:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-updates-interface:mergeDebugShaders
+> Task :expo-updates-interface:compileDebugShaders NO-SOURCE
+> Task :expo-updates-interface:generateDebugAssets UP-TO-DATE
+> Task :expo-manifests:mergeDebugAssets
+> Task :expo-updates-interface:mergeDebugAssets
+> Task :expo-dev-client:mergeDebugJniLibFolders
+> Task :expo-dev-client:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-dev-launcher:mergeDebugJniLibFolders
+> Task :expo-dev-launcher:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-application:copyDebugJniLibsProjectOnly
+> Task :expo-dev-launcher:copyDebugJniLibsProjectOnly
+> Task :expo-dev-menu:mergeDebugJniLibFolders
+> Task :expo-dev-menu:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-dev-menu-interface:mergeDebugJniLibFolders
+> Task :expo-dev-menu-interface:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-dev-client:copyDebugJniLibsProjectOnly
+> Task :expo-dev-menu-interface:copyDebugJniLibsProjectOnly
+> Task :expo-json-utils:mergeDebugJniLibFolders
+> Task :expo-json-utils:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-json-utils:copyDebugJniLibsProjectOnly
+> Task :expo-manifests:mergeDebugJniLibFolders
+> Task :expo-dev-menu:copyDebugJniLibsProjectOnly
+> Task :expo-manifests:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-manifests:copyDebugJniLibsProjectOnly
+> Task :expo-notifications:mergeDebugJniLibFolders
+> Task :expo-notifications:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-updates-interface:mergeDebugJniLibFolders
+> Task :expo-updates-interface:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-notifications:copyDebugJniLibsProjectOnly
+> Task :expo-updates-interface:copyDebugJniLibsProjectOnly
+> Task :app:generateAutolinkingPackageList
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :app:generateReactNativeEntryPoint
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-constants:createExpoConfig
+> Task :expo-constants:preBuild
+> Task :expo-constants:preDebugBuild
+> Task :expo-constants:writeDebugAarMetadata
+> Task :expo:generatePackagesList
+> Task :expo:preBuild
+> Task :expo:preDebugBuild
+> Task :expo:writeDebugAarMetadata
+> Task :expo-modules-core:compileDebugKotlin FROM-CACHE
+> Task :app:generateDebugBuildConfig
+> Task :expo-constants:generateDebugResValues FROM-CACHE
+> Task :expo:generateDebugResValues FROM-CACHE
+> Task :expo-modules-core:javaPreCompileDebug FROM-CACHE
+> Task :expo-constants:generateDebugResources FROM-CACHE
+> Task :expo:generateDebugResources FROM-CACHE
+> Task :app:generateDebugResValues FROM-CACHE
+> Task :expo-constants:packageDebugResources FROM-CACHE
+> Task :expo-constants:extractDeepLinksDebug FROM-CACHE
+> Task :expo:packageDebugResources FROM-CACHE
+> Task :expo:extractDeepLinksDebug FROM-CACHE
+> Task :expo:processDebugManifest FROM-CACHE
+> Task :expo:compileDebugLibraryResources FROM-CACHE
+> Task :expo:parseDebugLocalResources FROM-CACHE
+> Task :expo-constants:processDebugManifest FROM-CACHE
+> Task :expo:generateDebugRFile FROM-CACHE
+> Task :expo:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-constants:compileDebugLibraryResources FROM-CACHE
+> Task :expo-constants:parseDebugLocalResources FROM-CACHE
+> Task :expo-constants:generateDebugRFile FROM-CACHE
+> Task :expo-constants:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-constants:generateDebugBuildConfig FROM-CACHE
+> Task :expo-constants:javaPreCompileDebug FROM-CACHE
+> Task :expo-constants:mergeDebugShaders
+> Task :expo-constants:compileDebugShaders NO-SOURCE
+> Task :expo-constants:generateDebugAssets UP-TO-DATE
+> Task :expo:generateDebugBuildConfig FROM-CACHE
+> Task :expo:javaPreCompileDebug FROM-CACHE
+> Task :expo:mergeDebugShaders
+> Task :expo:compileDebugShaders NO-SOURCE
+> Task :expo:generateDebugAssets UP-TO-DATE
+> Task :app:checkDebugAarMetadata
+> Task :expo:mergeDebugAssets
+> Task :expo:mergeDebugJniLibFolders
+> Task :expo:mergeDebugNativeLibs NO-SOURCE
+> Task :expo:copyDebugJniLibsProjectOnly
+> Task :expo-constants:mergeDebugAssets
+> Task :expo-constants:mergeDebugJniLibFolders
+> Task :expo-constants:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-constants:copyDebugJniLibsProjectOnly
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources FROM-CACHE
+
+> Task :react-native-reanimated:compileDebugJavaWithJavac
+C:\dev\oumoul\node_modules\react-native-reanimated\android\src\main\java\com\
+swmansion\reanimated\ReanimatedPackage.java:72: error: cannot find symbol
+    Systrace.beginSection(Systrace.TRACE_TAG_REACT_JAVA_BRIDGE, 
+"createUIManagerModule");
+                                  ^
+  symbol:   variable TRACE_TAG_REACT_JAVA_BRIDGE
+  location: class Systrace
+C:\dev\oumoul\node_modules\react-native-reanimated\android\src\main\java\com\
+swmansion\reanimated\ReanimatedPackage.java:80: error: cannot find symbol
+      Systrace.endSection(Systrace.TRACE_TAG_REACT_JAVA_BRIDGE);
+                                  ^
+  symbol:   variable TRACE_TAG_REACT_JAVA_BRIDGE
+  location: class Systrace
+C:\dev\oumoul\node_modules\react-native-reanimated\android\src\reactNativeVer
+sionPatch\BorderRadiiDrawableUtils\latest\com\swmansion\reanimated\BorderRadi
+iDrawableUtils.java:21: error: method resolve in class LengthPercentage 
+cannot be applied to given types;
+    return length.resolve(bounds.width(), 
+bounds.height()).toPixelFromDIP().getHorizontal();
+                 ^
+  required: float
+  found:    int,int
+  reason: actual and formal argument lists differ in length
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+3 errors
+
+> Task :react-native-reanimated:compileDebugJavaWithJavac FAILED
+> Task :expo-modules-core:compileDebugJavaWithJavac FROM-CACHE
+> Task :app:mergeDebugResources FROM-CACHE
+
+[Incubating] Problems report is available at: file:///C:/dev/oumoul/apps/mobile/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task 
+':react-native-reanimated:compileDebugJavaWithJavac'.
+> Compilation failed; see the compiler output below.
+  C:\dev\oumoul\node_modules\react-native-reanimated\android\src\reactNativeV
+ersionPatch\BorderRadiiDrawableUtils\latest\com\swmansion\reanimated\BorderRa
+diiDrawableUtils.java:21: error: method resolve in class LengthPercentage 
+cannot be applied to given types;
+      return length.resolve(bounds.width(), 
+bounds.height()).toPixelFromDIP().getHorizontal();
+                   ^
+    required: float
+    found:    int,int
+    reason: actual and formal argument lists differ in length
+  Note: Recompile with -Xlint:deprecation for details.
+  C:\dev\oumoul\node_modules\react-native-reanimated\android\src\main\java\co
+m\swmansion\reanimated\ReanimatedPackage.java:72: error: cannot find symbol
+      Systrace.beginSection(Systrace.TRACE_TAG_REACT_JAVA_BRIDGE, 
+"createUIManagerModule");
+                                    ^
+    symbol:   variable TRACE_TAG_REACT_JAVA_BRIDGE
+    location: class Systrace
+  C:\dev\oumoul\node_modules\react-native-reanimated\android\src\main\java\co
+m\swmansion\reanimated\ReanimatedPackage.java:80: error: cannot find symbol
+        Systrace.endSection(Systrace.TRACE_TAG_REACT_JAVA_BRIDGE);
+                                    ^
+    symbol:   variable TRACE_TAG_REACT_JAVA_BRIDGE
+    location: class Systrace
+  Note: Recompile with -Xlint:unchecked for details.
+  Note: Some input files use or override a deprecated API.
+  Note: Some input files use unchecked or unsafe operations.
+  3 errors
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 1m 26s
+237 actionable tasks: 93 executed, 144 from cache
+Error: C:\dev\oumoul\apps\mobile\android\gradlew.bat app:assembleDebug -x 
+lint -x test --configure-on-demand --build-cache 
+-PreactNativeDevServerPort=8081 -PreactNativeArchitectures=x86_64,arm64-v8a 
+exited with non-zero code: 1
+Error: C:\dev\oumoul\apps\mobile\android\gradlew.bat app:assembleDebug -x 
+lint -x test --configure-on-demand --build-cache 
+-PreactNativeDevServerPort=8081 -PreactNativeArchitectures=x86_64,arm64-v8a 
+exited with non-zero code: 1
+    at ChildProcess.completionListener 
+(C:\dev\oumoul\node_modules\@expo\spawn-async\src\spawnAsync.ts:67:13)
+    at Object.onceWrapper (node:events:632:26)
+    at ChildProcess.emit (node:events:517:28)
+    at ChildProcess.cp.emit 
+(C:\dev\oumoul\node_modules\cross-spawn\lib\enoent.js:34:29)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Process.ChildProcess._handle.onexit 
+(node:internal/child_process:303:5)
+    ...
+    at spawnAsync 
+(C:\dev\oumoul\node_modules\@expo\spawn-async\src\spawnAsync.ts:28:21)
+    at spawnGradleAsync (C:\dev\oumoul\node_modules\@expo\cli\src\start\platf
+orms\android\gradle.ts:134:28)
+    at assembleAsync (C:\dev\oumoul\node_modules\@expo\cli\src\start\platform
+s\android\gradle.ts:83:16)
+    at runAndroidAsync (C:\dev\oumoul\node_modules\@expo\cli\src\run\android\
+runAndroidAsync.ts:62:24)

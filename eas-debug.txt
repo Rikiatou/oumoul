@@ -1,0 +1,52 @@
+﻿node.exe : npm warn 
+config ignoring workspace 
+config at C:\dev\oumoul\ap
+ps\mobile/.npmrc
+At C:\Users\GLC\AppData\Ro
+aming\npm\npx.ps1:24 
+char:5
++     & "node$exe"  "$base
+dir/node_modules/npm/bin/n
+px-cli.js" $args
++     ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (n  
+  pm warn config...s\mo   
+ bile/.npmrc:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+Resolved "development" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "development" environment on EAS.
+
+
+request to https://api.expo.dev/graphql failed, reason: socket hang up
+CombinedError: [Network] 
+request to https://api.exp
+o.dev/graphql failed, 
+reason: socket hang up
+    at makeErrorResult (C:
+\Users\GLC\AppData\Roaming
+\npm\node_modules\eas-cli\
+node_modules\@urql\core\di
+st\urql-core-chunk.js:495:
+10)
+    at fetchOperation (C:\
+Users\GLC\AppData\Roaming\
+npm\node_modules\eas-cli\n
+ode_modules\@urql\core\dis
+t\urql-core-chunk.js:756:1
+1)
+    at process.processTick
+sAndRejections (node:inter
+nal/process/task_queues:95
+:5)
+    at async C:\Users\GLC\
+AppData\Roaming\npm\node_m
+odules\eas-cli\node_module
+s\wonka\dist\wonka.js:346:
+20
