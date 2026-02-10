@@ -2,7 +2,10 @@
   "name": "oumouls-app",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev:web": "npm -w web run dev",
     "dev:mobile": "npm -w mobile run start",
@@ -30,5 +33,8 @@
       "npx prettier --write"
     ],
     "*.{ts,tsx,js,jsx}": "npx eslint --max-warnings=0"
+  },
+  "dependencies": {
+    "react-native-reanimated": "~2.14.4"
   }
 }
