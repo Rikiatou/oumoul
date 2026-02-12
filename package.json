@@ -15,7 +15,7 @@
     "lint": "turbo run lint",
     "format": "turbo run format",
     "test": "turbo run test",
-    "build": "turbo run build",
+    "build": "npm -w backend run build",
     "clean": "turbo run clean",
     "lint:staged": "lint-staged",
     "prepare": "husky"
