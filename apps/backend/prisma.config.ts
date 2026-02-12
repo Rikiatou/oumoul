@@ -8,7 +8,6 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    // Use a backend-specific env var so we don't accidentally pick up a global DATABASE_URL (e.g. Supabase)
-    url: env("BACKEND_DATABASE_URL"),
+    url: env("DATABASE_URL"),
   },
 });
