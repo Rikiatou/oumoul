@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ["...", "nodejs_20", "openssl"]
+
+[phases.build]
+cmds = [
+  "npm install --workspace=apps/backend --include-workspace-root",
+  "cd apps/backend",
+  "npx prisma generate",
+  "npm run build"
+]
+
+[phases.start]
+cmds = ["cd apps/backend && npm run start:prod"]
+
+[variables]
+NODE_ENV = "production"
+PORT = "3333"
