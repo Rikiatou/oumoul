@@ -22,8 +22,7 @@ COPY apps/backend/ ./apps/backend/
 
 WORKDIR /monorepo/apps/backend
 ENV DATABASE_URL="mysql://dummy:dummy@localhost:3306/dummy"
-RUN npx prisma generate
-RUN npx nest build
+RUN npm run build
 
 # ── Stage 2: Production image ──
 FROM node:20-slim AS runner
