@@ -37,4 +37,4 @@ COPY --from=build /monorepo/node_modules ./node_modules
 ENV NODE_ENV=production
 EXPOSE 3333
 
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
