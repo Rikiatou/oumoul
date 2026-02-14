@@ -49,7 +49,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await authApi.login({ email, password });
       await applyAuthResponse(response);
     } catch (error) {
-      setState({ user: null, tokens: null, loading: false });
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.toLowerCase().includes('not verified') || msg.toLowerCase().includes('non vérifié')) {
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          pendingVerificationEmail: email.toLowerCase(),
+        }));
+      } else {
+        setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null });
+      }
       throw error;
     }
   }, [applyAuthResponse]);

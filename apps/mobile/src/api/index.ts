@@ -17,7 +17,9 @@ import Constants from 'expo-constants';
 
 const tokenStore = new SecureTokenStore();
 
-function deriveBackendBaseUrl(): string | undefined {
+const PRODUCTION_API_URL = 'https://backend-production-bdc1.up.railway.app/api';
+
+function deriveBackendBaseUrl(): string {
   const explicit = process.env.EXPO_PUBLIC_OU_MOUL_API_URL;
   if (explicit) {
     return explicit;
@@ -34,7 +36,7 @@ function deriveBackendBaseUrl(): string | undefined {
     return `http://${host}:3333/api`;
   }
 
-  return undefined;
+  return PRODUCTION_API_URL;
 }
 
 const httpClient = new HttpClient({

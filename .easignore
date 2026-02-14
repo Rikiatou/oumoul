@@ -1,0 +1,25 @@
+# Backend (not needed for mobile build)
+apps/backend
+
+# All node_modules everywhere
+**/node_modules
+
+# Git
+.git
+
+# Build artifacts
+**/dist
+*.tsbuildinfo
+
+# Android/iOS native (EAS generates fresh)
+apps/mobile/android
+apps/mobile/ios
+
+# Dev / infra files
+**/.env
+**/.env.*
+docker-compose.yml
+Dockerfile
+.railwayignore
+nixpacks.toml
+railway.toml
