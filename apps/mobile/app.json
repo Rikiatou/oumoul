@@ -2,11 +2,12 @@
   "expo": {
     "name": "Nissa Imane Tracker",
     "slug": "mobile",
-    "version": "1.0.0",
+    "owner": "kabrak",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "plugins": [
       [
         "expo-notifications",
