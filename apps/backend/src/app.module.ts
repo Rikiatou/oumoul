@@ -15,6 +15,7 @@ import { HadithModule } from './hadith/hadith.module';
 import { CycleModule } from './cycle/cycle.module';
 import appConfig from './config/app.config';
 import { RamadanModule } from './ramadan/ramadan.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RamadanModule } from './ramadan/ramadan.module';
       envFilePath: ['.env'],
     }),
     PrismaModule,
+    EmailModule,
     AuthModule,
     PrayerModule,
     FastingModule,

@@ -19,13 +19,15 @@ model User {
   firstName    String
   lastName     String
   locale       String?
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  pushToken    String?
-  pushPlatform String?
-  refreshTokens RefreshToken[]
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  pushToken       String?
+  pushPlatform    String?
+  refreshTokens   RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   fastingLogs      FastingLog[]
   makeupPlans      MakeupPlan[]
   reminderPreferences ReminderPreference[]
@@ -45,6 +47,19 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model PasswordResetToken {

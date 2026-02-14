@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -15,24 +17,40 @@ async function bootstrap() {
 
   const isProd = process.env.NODE_ENV === 'production';
 
+  // Security headers
+  app.use(helmet());
+
+  // Rate limiting: 100 requests per minute per IP
+  app.use(
+    rateLimit({
+      windowMs: 60 * 1000,
+      max: 100,
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
+
+  // CORS: allow all origins for mobile app (React Native doesn't send Origin header)
   app.enableCors({
-    origin: isProd ? [frontendUrl] : true,
+    origin: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
-  const documentConfig = new DocumentBuilder()
-    .setTitle("Oumoul's App API")
-    .setDescription('REST API powering spiritual companion services')
-    .setVersion('0.1.0')
-    .addBearerAuth()
-    .addServer(`http://localhost:${port}/${apiPrefix}`)
-    .addServer(frontendUrl)
-    .build();
+  // Swagger docs: only in development
+  if (!isProd) {
+    const documentConfig = new DocumentBuilder()
+      .setTitle("Oumoul's App API")
+      .setDescription('REST API powering spiritual companion services')
+      .setVersion('0.1.0')
+      .addBearerAuth()
+      .addServer(`http://localhost:${port}/${apiPrefix}`)
+      .build();
 
-  const document = SwaggerModule.createDocument(app, documentConfig);
-  SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
+    const document = SwaggerModule.createDocument(app, documentConfig);
+    SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
+  }
 
   app.setGlobalPrefix(apiPrefix);
   await app.listen(port, '0.0.0.0');

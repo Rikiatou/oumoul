@@ -39,6 +39,20 @@ export interface ResetPasswordPayload {
   password: string;
 }
 
+export interface RegisterResponse {
+  message: string;
+  user: AuthUser;
+}
+
+export interface VerifyEmailPayload {
+  email: string;
+  code: string;
+}
+
+export interface ResendVerificationPayload {
+  email: string;
+}
+
 export interface HadithItem {
   collection: string;
   hadithNumber: string;

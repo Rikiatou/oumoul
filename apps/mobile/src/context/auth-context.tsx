@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { AuthResponse, AuthUser, SessionTokens, RegisterPayload, Locale } from '@oumoul/api';
+import type { AuthResponse, AuthUser, SessionTokens, RegisterPayload, RegisterResponse, Locale } from '@oumoul/api';
 import { authApi, tokenStore } from '../api';
 import { syncPushTokenWithBackend } from '../push-notifications';
 
@@ -7,11 +7,14 @@ interface AuthState {
   user: AuthUser | null;
   tokens: SessionTokens | null;
   loading: boolean;
+  pendingVerificationEmail: string | null;
 }
 
 interface AuthContextValue extends AuthState {
   login(email: string, password: string): Promise<void>;
   register(payload: RegisterPayload): Promise<void>;
+  verifyEmail(email: string, code: string): Promise<void>;
+  resendVerification(email: string): Promise<void>;
   logout(): Promise<void>;
   refresh(): Promise<void>;
 }
@@ -22,6 +25,7 @@ const initialState: AuthState = {
   user: null,
   tokens: null,
   loading: true,
+  pendingVerificationEmail: null,
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -54,22 +58,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (payload: RegisterPayload) => {
       setState((prev) => ({ ...prev, loading: true }));
       try {
-        const response = await authApi.register({
+        await authApi.register({
           ...payload,
           locale: normalizeLocale(payload.locale),
         });
-        await applyAuthResponse(response);
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          pendingVerificationEmail: payload.email.toLowerCase(),
+        }));
       } catch (error) {
-        setState({ user: null, tokens: null, loading: false });
+        setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null });
+        throw error;
+      }
+    },
+    [],
+  );
+
+  const verifyEmail = useCallback(
+    async (email: string, code: string) => {
+      setState((prev) => ({ ...prev, loading: true }));
+      try {
+        const response = await authApi.verifyEmail({ email, code });
+        await applyAuthResponse(response);
+        setState((prev) => ({ ...prev, pendingVerificationEmail: null }));
+      } catch (error) {
+        setState((prev) => ({ ...prev, loading: false }));
         throw error;
       }
     },
     [applyAuthResponse],
   );
 
+  const resendVerification = useCallback(
+    async (email: string) => {
+      await authApi.resendVerification({ email });
+    },
+    [],
+  );
+
   const logout = useCallback(async () => {
     await tokenStore.clearTokens();
-    setState({ user: null, tokens: null, loading: false });
+    setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null });
   }, []);
 
   const refresh = useCallback(async () => {
@@ -120,10 +150,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...state,
       login,
       register,
+      verifyEmail,
+      resendVerification,
       logout,
       refresh,
     }),
-    [state, login, register, logout, refresh],
+    [state, login, register, verifyEmail, resendVerification, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

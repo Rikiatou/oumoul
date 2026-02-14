@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
 import type { AuthUser, ImaneProgramItems, ImaneProgramDayResponse } from '@oumoul/api';
 import { imaneProgramApi } from '../api';
+import { sc, ss } from '../ui/theme';
 
 const DAILY_ITEMS: Array<{
   id: keyof ImaneProgramItems;
@@ -110,103 +113,74 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
     [day],
   );
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView className="flex-1 bg-primary">
-      <ScrollView contentContainerStyle={{ paddingVertical: 32, paddingHorizontal: 20 }}>
-        <View className="mb-xl">
-          <Text className="text-neutral-100 text-xs tracking-[4px] uppercase">{user.firstName || user.email}</Text>
-          <Text className="text-neutral-100 text-3xl font-bold mt-sm">Programme Imane du jour</Text>
-          <Text className="text-neutral-100/80 text-base leading-6 mt-xs">
-            Quelques actions simples pour nourrir ton cœur aujourd’hui, que tu sois en période de jeûne, de règles ou en dehors
-            de Ramadan.
-          </Text>
-          <View className="flex-row gap-sm mt-md">
-            <TouchableOpacity
-              className="border border-white/60 rounded-md px-md py-xs"
-              onPress={onBack}
-            >
-              <Text style={{ color: colors.neutral100, fontWeight: '600' }}>Retour au tableau de bord</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={[ss.screen, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={ss.mb20}>
+          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
+            <Ionicons name="chevron-back" size={20} color={sc.accent} />
+            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
+          </TouchableOpacity>
+          <Text style={ss.title}>Programme Imane</Text>
+          <Text style={ss.subtitle}>Actions simples pour nourrir ton cœur aujourd'hui.</Text>
         </View>
 
         {loading ? (
-          <View className="items-center mt-lg">
-            <ActivityIndicator color={colors.neutral100} />
-            <Text className="text-neutral-100 mt-sm">Chargement…</Text>
+          <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+            <ActivityIndicator color={sc.accent} />
+            <Text style={[ss.muted, { marginTop: 8 }]}>Chargement…</Text>
           </View>
         ) : !day ? (
-          <Text className="text-[#ffb4ab]">{error ?? 'Aucune donnée pour ce jour.'}</Text>
+          <Text style={ss.errorText}>{error ?? 'Aucune donnée pour ce jour.'}</Text>
         ) : (
-          <View className="bg-black/30 rounded-2xl px-lg py-lg mb-xl gap-md">
-            <View className="gap-xs mb-sm">
-              <Text className="text-neutral-100 text-lg font-semibold">
-                Checklist du {readableDate}
-              </Text>
-              <Text className="text-neutral-100/80 text-sm">
-                Résumé : {completedCount} / 5 objectifs complétés. {saving ? 'Enregistrement…' : ''}
-              </Text>
-              <Text className="text-neutral-100/70 text-xs">
-                Appuie sur une action pour la cocher ou la décocher pour cette journée.
-              </Text>
-              {error && <Text className="text-[#ffb4ab] text-sm mt-xs">{error}</Text>}
-            </View>
+          <View style={ss.card}>
+            <Text style={ss.sectionTitle}>Checklist du {readableDate}</Text>
+            <Text style={ss.muted}>{completedCount} / 5 objectifs complétés{saving ? ' · Enregistrement…' : ''}</Text>
+            {error && <Text style={ss.errorText}>{error}</Text>}
 
-            <View className="flex-row flex-wrap gap-xs mb-sm">
-              {[{ label: 'J-2', offset: -2 }, { label: 'J-1', offset: -1 }, { label: "Aujourd’hui", offset: 0 }].map(
+            {/* Day selector */}
+            <View style={[ss.row, ss.gap6, ss.mb12]}>
+              {[{ label: 'J-2', offset: -2 }, { label: 'J-1', offset: -1 }, { label: "Aujourd'hui", offset: 0 }].map(
                 (entry) => {
                   const date = new Date();
                   date.setDate(date.getDate() + entry.offset);
                   const iso = date.toISOString().slice(0, 10);
                   const isActive = iso === selectedDateIso;
                   return (
-                    <TouchableOpacity
-                      key={entry.label}
-                      className={`px-md py-xs rounded-full border ${
-                        isActive ? 'bg-neutral-100 border-transparent' : 'border-white/40'
-                      }`}
-                      onPress={() => setSelectedDateIso(iso)}
-                    >
-                      <Text
-                        style={{
-                          color: isActive ? colors.primary : colors.neutral100,
-                          fontWeight: '600',
-                        }}
-                      >
-                        {entry.label}
-                      </Text>
+                    <TouchableOpacity key={entry.label} style={[ss.chip, isActive && ss.chipActive]} onPress={() => setSelectedDateIso(iso)}>
+                      <Text style={[ss.chipText, isActive && ss.chipTextActive]}>{entry.label}</Text>
                     </TouchableOpacity>
                   );
                 },
               )}
             </View>
 
-            <View className="gap-sm">
+            {/* Checklist items */}
+            <View style={{ gap: 10 }}>
               {DAILY_ITEMS.map((item) => {
                 const checked = day.items[item.id];
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    className="bg-white/5 rounded-xl px-md py-sm flex-row gap-sm items-start"
+                    style={[ss.infoRow, ss.row, { gap: 12, alignItems: 'flex-start' }]}
                     onPress={() => void toggleItem(item.id)}
+                    activeOpacity={0.7}
                   >
-                    <View
-                      className="w-5 h-5 rounded-full border items-center justify-center mt-1"
-                      style={{
-                        borderColor: 'rgba(255,255,255,0.7)',
-                        backgroundColor: checked ? colors.neutral100 : 'rgba(0,0,0,0.2)',
-                      }}
-                    >
-                      {checked && (
-                        <View
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: colors.primary }}
-                        />
-                      )}
+                    <View style={{
+                      width: 22, height: 22, borderRadius: 11,
+                      borderWidth: 2,
+                      borderColor: checked ? sc.accent : 'rgba(0,0,0,0.2)',
+                      backgroundColor: checked ? sc.accent : 'transparent',
+                      alignItems: 'center', justifyContent: 'center', marginTop: 2,
+                    }}>
+                      {checked && <Ionicons name="checkmark" size={14} color="#fff" />}
                     </View>
-                    <View className="flex-1 gap-1">
-                      <Text className="text-neutral-100 text-base font-semibold">{item.title}</Text>
-                      <Text className="text-neutral-100/80 text-sm">{item.description}</Text>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={{ color: sc.text, fontSize: 14, fontWeight: '600' }}>{item.title}</Text>
+                      <Text style={{ color: sc.textSoft, fontSize: 12 }}>{item.description}</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -215,6 +189,6 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

@@ -5,8 +5,11 @@ import type {
   ForgotPasswordPayload,
   LoginPayload,
   RegisterPayload,
+  RegisterResponse,
   ResetPasswordPayload,
+  ResendVerificationPayload,
   SuccessResponse,
+  VerifyEmailPayload,
 } from '../types';
 
 export function createAuthApi(client: HttpClient) {
@@ -14,7 +17,21 @@ export function createAuthApi(client: HttpClient) {
 
   return {
     register(payload: RegisterPayload) {
-      return client.request<AuthResponse>(`${base}/register`, {
+      return client.request<RegisterResponse>(`${base}/register`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        skipAuth: true,
+      });
+    },
+    verifyEmail(payload: VerifyEmailPayload) {
+      return client.request<AuthResponse>(`${base}/verify-email`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        skipAuth: true,
+      });
+    },
+    resendVerification(payload: ResendVerificationPayload) {
+      return client.request<SuccessResponse>(`${base}/resend-verification`, {
         method: 'POST',
         body: JSON.stringify(payload),
         skipAuth: true,

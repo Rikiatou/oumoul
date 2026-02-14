@@ -1,0 +1,8 @@
+apps/mobile
+apps/web
+.git
+**/node_modules
+**/.expo
+**/android
+**/ios
+**/*.apk

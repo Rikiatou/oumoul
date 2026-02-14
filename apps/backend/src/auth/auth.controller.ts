@@ -7,6 +7,8 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { UpdatePushTokenDto } from './dto/update-push-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
 
@@ -29,6 +31,16 @@ export class AuthController {
   @Post('login')
   login(@Body() payload: LoginAuthDto) {
     return this.authService.login(payload);
+  }
+
+  @Post('verify-email')
+  verifyEmail(@Body() payload: VerifyEmailDto) {
+    return this.authService.verifyEmail(payload);
+  }
+
+  @Post('resend-verification')
+  resendVerification(@Body() payload: ResendVerificationDto) {
+    return this.authService.resendVerification(payload);
   }
 
   @Post('refresh')

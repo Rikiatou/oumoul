@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from "@oumoul/ui";
 import { apiRoutes } from "@oumoul/config";
 import type { AuthUser } from "@oumoul/api";
 import { httpClient } from "../api";
 import { t, Locale } from "../i18n";
+import { sc, ss } from '../ui/theme';
 
 const FALLBACK = { lat: 4.0511, lng: 9.7679 };
 
@@ -71,90 +74,78 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
 
   const rotation = direction ?? 0;
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView className="flex-1 bg-primary">
-      <ScrollView contentContainerStyle={{ paddingVertical: 32, paddingHorizontal: 20 }}>
-        <View className="mb-xl">
-          <Text className="text-neutral-100 text-xs tracking-[4px] uppercase">{user.firstName || user.email}</Text>
-          <Text className="text-neutral-100 text-3xl font-bold mt-sm">{t(locale, "qibla.title", "Qibla")}</Text>
-          <Text className="text-neutral-100/80 text-base leading-6 mt-xs">
-            {t(locale, "qibla.subtitle", "Trouve ta direction et vérifie l’azimut.")}
-          </Text>
-          <TouchableOpacity className="self-start mt-md border border-white/60 rounded-md px-md py-xs" onPress={onBack}>
-            <Text style={{ color: colors.neutral100, fontWeight: "600" }}>
-              {t(locale, "common.back.dashboard", "Retour au tableau de bord")}
-            </Text>
+    <View style={[ss.screen, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={ss.mb20}>
+          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
+            <Ionicons name="chevron-back" size={20} color={sc.accent} />
+            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>{t(locale, "common.back.dashboard", "Retour")}</Text>
           </TouchableOpacity>
+          <Text style={ss.title}>{t(locale, "qibla.title", "Qibla")}</Text>
+          <Text style={ss.subtitle}>{t(locale, "qibla.subtitle", "Trouve ta direction et vérifie l'azimut.")}</Text>
         </View>
 
-        <View className="bg-black/30 rounded-2xl px-lg py-lg mb-xl gap-sm">
-          <Text className="text-neutral-100/80 text-sm">
-            {t(locale, "qibla.position", "Position")}
-          </Text>
+        {/* Position card */}
+        <View style={ss.card}>
+          <Text style={ss.sectionTitle}>{t(locale, "qibla.position", "Position")}</Text>
           <TextInput
-            className="bg-white/10 text-neutral-100 rounded-lg px-md py-sm"
+            style={ss.input}
             placeholder="Latitude"
-            placeholderTextColor="rgba(255,255,255,0.6)"
+            placeholderTextColor={sc.muted}
             keyboardType="decimal-pad"
             value={coords.lat}
             onChangeText={(value) => setCoords((prev) => ({ ...prev, lat: value }))}
           />
           <TextInput
-            className="bg-white/10 text-neutral-100 rounded-lg px-md py-sm"
+            style={ss.input}
             placeholder="Longitude"
-            placeholderTextColor="rgba(255,255,255,0.6)"
+            placeholderTextColor={sc.muted}
             keyboardType="decimal-pad"
             value={coords.lng}
             onChangeText={(value) => setCoords((prev) => ({ ...prev, lng: value }))}
           />
-          <Text className="text-neutral-100/60 text-xs">{info}</Text>
-          <TouchableOpacity
-            className="bg-neutral-100 rounded-lg py-sm items-center"
-            disabled={loading}
-            onPress={() => void fetchQibla()}
-          >
-            <Text style={{ color: colors.primary, fontWeight: "700" }}>
+          <Text style={{ color: sc.muted, fontSize: 12 }}>{info}</Text>
+          <TouchableOpacity style={[ss.primaryBtn, loading && { opacity: 0.5 }]} disabled={loading} onPress={() => void fetchQibla()}>
+            <Text style={ss.primaryBtnText}>
               {loading ? t(locale, "qibla.button.calculating", "Calcul…") : t(locale, "qibla.button.refresh", "Actualiser")}
             </Text>
           </TouchableOpacity>
-          {error && <Text className="text-[#ffb4ab]">{error}</Text>}
+          {error && <Text style={ss.errorText}>{error}</Text>}
         </View>
 
-        <View className="items-center gap-sm">
+        {/* Direction display */}
+        <View style={{ alignItems: 'center', gap: 12, marginTop: 8 }}>
           {direction !== null ? (
             <>
-              <Text className="text-neutral-100/80">Direction: {direction.toFixed(1)}°</Text>
-              <View
-                style={{
-                  width: 220,
-                  height: 220,
-                  borderRadius: 110,
-                  borderWidth: 2,
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255,255,255,0.05)',
-                }}
-              >
-                <View
-                  style={{
-                    width: 4,
-                    height: 80,
-                    backgroundColor: colors.neutral100,
-                    transform: [{ rotate: `${rotation}deg` }],
-                    borderRadius: 4,
-                  }}
-                />
-                <Text className="text-neutral-100 mt-sm">Kaaba</Text>
+              <Text style={[ss.label, { fontSize: 13 }]}>Direction : {direction.toFixed(1)}°</Text>
+              <View style={{
+                width: 220, height: 220, borderRadius: 110,
+                borderWidth: 2, borderColor: 'rgba(0,0,0,0.1)',
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: '#fff',
+                shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+              }}>
+                <View style={{
+                  width: 4, height: 80,
+                  backgroundColor: sc.accent,
+                  transform: [{ rotate: `${rotation}deg` }],
+                  borderRadius: 4,
+                }} />
+                <Ionicons name="locate" size={18} color={sc.accent} style={{ marginTop: 8 }} />
+                <Text style={{ color: sc.text, fontWeight: '700', fontSize: 13, marginTop: 4 }}>Kaaba</Text>
               </View>
             </>
           ) : loading ? (
-            <ActivityIndicator color={colors.neutral100} />
+            <ActivityIndicator color={sc.accent} />
           ) : (
-            <Text className="text-neutral-100/70">{t(locale, "qibla.prompt", "Saisis ou autorise ta position pour calculer la Qibla.")}</Text>
+            <Text style={ss.muted}>{t(locale, "qibla.prompt", "Saisis ou autorise ta position pour calculer la Qibla.")}</Text>
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

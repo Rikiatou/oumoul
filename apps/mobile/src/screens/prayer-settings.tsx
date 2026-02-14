@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { colors } from "@oumoul/ui";
 import type { AuthUser, CalculationMethodOption, HighLatitudeRuleOption, MadhabOption } from "@oumoul/api";
 import { CalculationMethodOption as CalculationMethodEnum, HighLatitudeRuleOption as HighLatitudeRuleEnum, MadhabOption as MadhabEnum } from "@oumoul/api";
+import { sc, ss } from "../ui/theme";
 
 type StoredPrayerSettings = {
   latitude: string;
@@ -77,18 +80,18 @@ function ChoiceRow<T extends string>({
   onChange: (next: T) => void;
 }) {
   return (
-    <View className="mt-lg">
-      <Text style={{ color: "rgba(255,255,255,0.85)", fontWeight: "700" }}>{title}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-sm">
+    <View style={{ marginTop: 14 }}>
+      <Text style={ss.label}>{title}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
         {options.map((option) => {
           const active = option.value === value;
           return (
             <TouchableOpacity
               key={option.value}
-              className={`px-md py-sm rounded-md mr-sm border ${active ? "bg-neutral-100 border-transparent" : "border-white/40"}`}
+              style={[ss.chip, { marginRight: 6 }, active && ss.chipActive]}
               onPress={() => onChange(option.value)}
             >
-              <Text style={{ color: active ? colors.primary : colors.neutral100, fontWeight: "700" }}>{option.label}</Text>
+              <Text style={[ss.chipText, active && ss.chipTextActive]}>{option.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -109,14 +112,13 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <View className="mt-lg">
-      <Text style={{ color: "rgba(255,255,255,0.85)", fontWeight: "700" }}>{label}</Text>
+    <View style={{ marginTop: 12 }}>
+      <Text style={ss.label}>{label}</Text>
       <TextInput
-        className="w-full bg-white/10 text-neutral-100 rounded-lg px-md py-sm mt-sm"
+        style={[ss.input, { marginTop: 4 }]}
         placeholder={placeholder}
-        placeholderTextColor="rgba(255,255,255,0.6)"
+        placeholderTextColor={sc.muted}
         value={value}
-        style={{ color: colors.neutral100 }}
         onChangeText={onChangeText}
       />
     </View>
@@ -188,69 +190,81 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
     }
   }, []);
 
+  const insets = useSafeAreaInsets();
+
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-primary items-center justify-center">
-        <ActivityIndicator size="large" color={colors.neutral100} />
-        <Text className="text-neutral-100 mt-sm">Chargement…</Text>
-      </SafeAreaView>
+      <View style={[ss.screen, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={sc.accent} />
+        <Text style={[ss.muted, { marginTop: 8 }]}>Chargement…</Text>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-primary">
-      <ScrollView contentContainerStyle={{ paddingVertical: 32, paddingHorizontal: 20 }}>
-        <View className="mb-xl">
-          <Text className="text-neutral-100 text-xs tracking-[4px] uppercase">{user.firstName || user.email}</Text>
-          <Text className="text-neutral-100 text-3xl font-bold mt-sm">Réglages prière</Text>
-          <Text className="text-neutral-100/80 text-base leading-6 mt-xs">Méthode, madhab, ajustements, localisation.</Text>
+    <View style={[ss.screen, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={ss.mb20}>
+          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
+            <Ionicons name="chevron-back" size={20} color={sc.accent} />
+            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
+          </TouchableOpacity>
+          <Text style={ss.title}>Réglages prière</Text>
+          <Text style={ss.subtitle}>Méthode, madhab, ajustements, localisation.</Text>
         </View>
 
-        {error ? <Text style={{ color: "#FFD6D6", marginBottom: 12 }}>{error}</Text> : null}
+        {error ? <Text style={[ss.errorText, ss.mb8]}>{error}</Text> : null}
 
-        <Field
-          label="Latitude"
-          value={settings.latitude}
-          onChangeText={(v) => setSettings((prev) => ({ ...prev, latitude: v }))}
-          placeholder="4.0511"
-        />
-        <Field
-          label="Longitude"
-          value={settings.longitude}
-          onChangeText={(v) => setSettings((prev) => ({ ...prev, longitude: v }))}
-          placeholder="9.7679"
-        />
-        <Field
-          label="Time zone"
-          value={settings.timeZone}
-          onChangeText={(v) => setSettings((prev) => ({ ...prev, timeZone: v }))}
-          placeholder="Africa/Douala"
-        />
+        {/* Location card */}
+        <View style={ss.card}>
+          <Text style={ss.sectionTitle}>Localisation</Text>
+          <Field
+            label="Latitude"
+            value={settings.latitude}
+            onChangeText={(v) => setSettings((prev) => ({ ...prev, latitude: v }))}
+            placeholder="4.0511"
+          />
+          <Field
+            label="Longitude"
+            value={settings.longitude}
+            onChangeText={(v) => setSettings((prev) => ({ ...prev, longitude: v }))}
+            placeholder="9.7679"
+          />
+          <Field
+            label="Time zone"
+            value={settings.timeZone}
+            onChangeText={(v) => setSettings((prev) => ({ ...prev, timeZone: v }))}
+            placeholder="Africa/Douala"
+          />
+        </View>
 
-        <ChoiceRow
-          title="Méthode"
-          options={METHOD_OPTIONS}
-          value={(settings.method ?? DEFAULTS.method) as CalculationMethodOption}
-          onChange={(method) => setSettings((prev) => ({ ...prev, method }))}
-        />
+        {/* Method card */}
+        <View style={ss.card}>
+          <Text style={ss.sectionTitle}>Méthode de calcul</Text>
+          <ChoiceRow
+            title="Méthode"
+            options={METHOD_OPTIONS}
+            value={(settings.method ?? DEFAULTS.method) as CalculationMethodOption}
+            onChange={(method) => setSettings((prev) => ({ ...prev, method }))}
+          />
+          <ChoiceRow
+            title="Madhab (Asr)"
+            options={MADHAB_OPTIONS}
+            value={(settings.madhab ?? DEFAULTS.madhab) as MadhabOption}
+            onChange={(madhab) => setSettings((prev) => ({ ...prev, madhab }))}
+          />
+          <ChoiceRow
+            title="Règle hautes latitudes"
+            options={HIGH_LAT_OPTIONS}
+            value={(settings.highLatitudeRule ?? DEFAULTS.highLatitudeRule) as HighLatitudeRuleOption}
+            onChange={(highLatitudeRule) => setSettings((prev) => ({ ...prev, highLatitudeRule }))}
+          />
+        </View>
 
-        <ChoiceRow
-          title="Madhab (Asr)"
-          options={MADHAB_OPTIONS}
-          value={(settings.madhab ?? DEFAULTS.madhab) as MadhabOption}
-          onChange={(madhab) => setSettings((prev) => ({ ...prev, madhab }))}
-        />
-
-        <ChoiceRow
-          title="Règle hautes latitudes"
-          options={HIGH_LAT_OPTIONS}
-          value={(settings.highLatitudeRule ?? DEFAULTS.highLatitudeRule) as HighLatitudeRuleOption}
-          onChange={(highLatitudeRule) => setSettings((prev) => ({ ...prev, highLatitudeRule }))}
-        />
-
-        <View className="mt-lg">
-          <Text style={{ color: "rgba(255,255,255,0.85)", fontWeight: "700" }}>Ajustements (minutes)</Text>
-
+        {/* Adjustments card */}
+        <View style={ss.card}>
+          <Text style={ss.sectionTitle}>Ajustements (minutes)</Text>
           <Field
             label="Fajr"
             value={String(settings.fajrAdjustment ?? 0)}
@@ -283,31 +297,25 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
           />
         </View>
 
-        <View className="mt-2xl flex-row" style={{ gap: 12 }}>
+        {/* Action buttons */}
+        <View style={[ss.row, { gap: 12, marginTop: 20 }]}>
           <TouchableOpacity
-            className="flex-1 bg-white/10 rounded-lg py-sm items-center"
+            style={[ss.outlineBtn, { flex: 1, alignItems: 'center', paddingVertical: 12 }]}
             disabled={saving}
             onPress={() => void reset()}
           >
-            <Text style={{ color: colors.neutral100, fontWeight: "700" }}>{saving ? "…" : "Réinitialiser"}</Text>
+            <Text style={ss.outlineBtnText}>{saving ? '…' : 'Réinitialiser'}</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
-            className="flex-1 bg-neutral-100 rounded-lg py-sm items-center"
+            style={[ss.primaryBtn, { flex: 1 }, (saving || !canSave) && { opacity: 0.5 }]}
             disabled={saving || !canSave}
             onPress={() => void save()}
           >
-            <Text style={{ color: colors.primary, fontWeight: "800" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
+            <Text style={ss.primaryBtnText}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity className="mt-lg self-center" onPress={onBack} disabled={saving}>
-          <Text style={{ color: "rgba(255,255,255,0.85)", fontWeight: "700", textDecorationLine: "underline" }}>
-            Retour
-          </Text>
-        </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
 import type { AuthUser, HijriCalendarDay, HijriCalendarResponse } from '@oumoul/api';
 import * as SecureStore from 'expo-secure-store';
 import { hijriApi } from '../api';
 import { cancelReminder, scheduleDateReminder } from '../push-notifications';
+import { sc, ss } from '../ui/theme';
 
 type IslamicEventKey =
   | 'ramadan_start'
@@ -241,56 +244,66 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
     [user.locale],
   );
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView className="flex-1 bg-primary">
-      <ScrollView contentContainerStyle={{ paddingVertical: 32, paddingHorizontal: 20 }}>
-        <View className="mb-xl">
-          <Text className="text-neutral-100 text-xs tracking-[4px] uppercase">{user.firstName || user.email}</Text>
-          <Text className="text-neutral-100 text-3xl font-bold mt-sm">Calendrier Hijri</Text>
-          <Text className="text-neutral-100/80 text-base leading-6 mt-xs">Douala, Cameroun</Text>
-          <View className="flex-row gap-sm mt-md">
-            <TouchableOpacity className="border border-white/60 rounded-md px-md py-xs" onPress={onBack}>
-              <Text style={{ color: colors.neutral100, fontWeight: '600' }}>Retour au tableau de bord</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={[ss.screen, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={ss.mb20}>
+          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
+            <Ionicons name="chevron-back" size={20} color={sc.accent} />
+            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
+          </TouchableOpacity>
+          <Text style={ss.title}>Calendrier Hijri</Text>
+          <Text style={ss.subtitle}>Douala, Cameroun</Text>
         </View>
 
-        <View className="bg-black/30 rounded-2xl px-lg py-lg mb-xl gap-sm">
-          <View className="flex-row items-center justify-between">
-            <TouchableOpacity className="border border-white/40 rounded-md px-md py-xs" onPress={goPrev}>
-              <Text style={{ color: colors.neutral100, fontWeight: '700' }}>◀</Text>
+        {/* Month navigation + calendar */}
+        <View style={ss.card}>
+          <View style={[ss.row, { justifyContent: 'space-between' }]}>
+            <TouchableOpacity onPress={goPrev} style={ss.outlineBtn}>
+              <Ionicons name="chevron-back" size={16} color={sc.text} />
             </TouchableOpacity>
-            <Text className="text-neutral-100 text-lg font-semibold">{title}</Text>
-            <TouchableOpacity className="border border-white/40 rounded-md px-md py-xs" onPress={goNext}>
-              <Text style={{ color: colors.neutral100, fontWeight: '700' }}>▶</Text>
+            <Text style={ss.sectionTitle}>{title}</Text>
+            <TouchableOpacity onPress={goNext} style={ss.outlineBtn}>
+              <Ionicons name="chevron-forward" size={16} color={sc.text} />
             </TouchableOpacity>
           </View>
 
           {loading ? (
-            <View className="items-center mt-md">
-              <ActivityIndicator color={colors.neutral100} />
-              <Text className="text-neutral-100 mt-sm">Chargement…</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <ActivityIndicator color={sc.accent} />
+              <Text style={[ss.muted, { marginTop: 8 }]}>Chargement…</Text>
             </View>
           ) : error ? (
-            <Text className="text-[#ffb4ab]">{error}</Text>
+            <Text style={ss.errorText}>{error}</Text>
           ) : days.length === 0 ? (
-            <Text className="text-neutral-100/80">Aucun jour trouvé.</Text>
+            <Text style={ss.muted}>Aucun jour trouvé.</Text>
           ) : (
-            <View className="gap-xs mt-sm">
+            <View style={{ gap: 6, marginTop: 8 }}>
               {days.map((day: HijriCalendarDay) => {
                 const isToday = day.gregorianDate === todayIso;
                 return (
                   <View
                     key={day.gregorianDate}
-                    className={`rounded-lg px-md py-sm flex-row justify-between ${isToday ? 'bg-white/15' : 'bg-white/5'}`}
+                    style={[
+                      ss.infoRow,
+                      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+                      isToday && { backgroundColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderColor: sc.accent },
+                    ]}
                   >
-                    <View className="gap-1">
-                      <Text className="text-neutral-100 font-semibold">
+                    <View style={{ gap: 2 }}>
+                      <Text style={{ color: sc.text, fontWeight: '600', fontSize: 13 }}>
                         Jour {day.day} · {day.hijriDate}
                       </Text>
-                      <Text className="text-neutral-100/70 text-sm">{formatGregorian(day.gregorianDate)}</Text>
+                      <Text style={{ color: sc.textSoft, fontSize: 12 }}>{formatGregorian(day.gregorianDate)}</Text>
                     </View>
-                    {isToday ? <Text className="text-neutral-100/80 font-semibold">Aujourd’hui</Text> : null}
+                    {isToday && (
+                      <View style={[ss.chip, ss.chipActive, { paddingHorizontal: 10, paddingVertical: 3 }]}>
+                        <Text style={[ss.chipTextActive, { fontSize: 10 }]}>Aujourd'hui</Text>
+                      </View>
+                    )}
                   </View>
                 );
               })}
@@ -298,29 +311,28 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
           )}
         </View>
 
-        <View className="bg-black/30 rounded-2xl px-lg py-lg mb-xl gap-sm">
-          <Text className="text-neutral-100 text-lg font-semibold">Événements islamiques</Text>
-          <Text className="text-neutral-100/70 text-sm">
-            Active des rappels locaux (sur cet appareil) pour les prochaines dates à Douala.
-          </Text>
-          <View className="gap-sm mt-sm">
+        {/* Islamic events */}
+        <View style={ss.card}>
+          <Text style={ss.sectionTitle}>Événements islamiques</Text>
+          <Text style={ss.muted}>Active des rappels locaux pour les prochaines dates à Douala.</Text>
+          <View style={{ gap: 8, marginTop: 8 }}>
             {ISLAMIC_EVENTS.map((event) => (
-              <View key={event.key} className="bg-white/10 rounded-lg px-md py-sm flex-row justify-between items-center">
-                <View className="flex-1">
-                  <Text className="text-neutral-100 font-semibold">{event.title}</Text>
-                  <Text className="text-neutral-100/70 text-xs">{`${event.hijriDay}/${event.hijriMonth} Hijri`}</Text>
+              <View key={event.key} style={[ss.infoRow, ss.row, { justifyContent: 'space-between' }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: sc.text, fontWeight: '600', fontSize: 13 }}>{event.title}</Text>
+                  <Text style={{ color: sc.muted, fontSize: 11 }}>{`${event.hijriDay}/${event.hijriMonth} Hijri`}</Text>
                 </View>
                 <Switch
                   value={eventReminders[event.key]}
                   onValueChange={() => void toggleEventReminder(event)}
-                  trackColor={{ true: colors.neutral100, false: 'rgba(255,255,255,0.2)' }}
-                  thumbColor={eventReminders[event.key] ? colors.primary : colors.neutral100}
+                  trackColor={{ true: sc.accent, false: 'rgba(0,0,0,0.1)' }}
+                  thumbColor={eventReminders[event.key] ? '#fff' : '#ccc'}
                 />
               </View>
             ))}
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

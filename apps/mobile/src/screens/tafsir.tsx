@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
 import type { AuthUser, Locale, TafsirResponse } from '@oumoul/api';
 import { quranApi, tafsirApi } from '../api';
 import { loadTafsirSelection, saveTafsirSelection } from '../storage/tafsir-selection-store';
-import { useRef } from 'react';
+import { sc, ss } from '../ui/theme';
 
 interface TafsirFormState {
   surah: string;
@@ -196,205 +198,124 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
     }
   }, [form.surah, form.ayah, form.locale]);
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView className="flex-1 bg-primary">
-      <ScrollView contentContainerStyle={{ paddingVertical: 32, paddingHorizontal: 20 }}>
-        <View className="mb-xl">
-          <Text className="text-neutral-100 text-xs tracking-[4px] uppercase">{user.firstName || user.email}</Text>
-          <Text className="text-neutral-100 text-3xl font-bold mt-sm">Tafsir du Coran</Text>
-          <Text className="text-neutral-100/80 text-base leading-6 mt-xs">
-            Choisis une sourate et un verset pour consulter un tafsir authentique. Sélectionne une source précise ou laisse
-            Auto pour un choix adapté à ta langue.
-          </Text>
-          <View className="flex-row gap-sm mt-md">
-            <TouchableOpacity
-              className="border border-white/60 rounded-md px-md py-xs"
-              onPress={onBackToDashboard}
-            >
-              <Text style={{ color: colors.neutral100, fontWeight: '600' }}>Retour au tableau de bord</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="border border-white/60 rounded-md px-md py-xs"
-              onPress={() => {
-                setForm(DEFAULT_FORM);
-                setResult(null);
-                setError(null);
-                setToast('Réinitialisé.');
-              }}
-            >
-              <Text style={{ color: colors.neutral100, fontWeight: '600' }}>Réinitialiser</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={[ss.screen, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={ss.mb20}>
+          <TouchableOpacity onPress={onBackToDashboard} style={[ss.row, ss.gap4, ss.mb12]}>
+            <Ionicons name="chevron-back" size={20} color={sc.accent} />
+            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
+          </TouchableOpacity>
+          <Text style={ss.title}>Tafsir du Coran</Text>
+          <Text style={ss.subtitle}>Choisis une sourate et un verset pour consulter un tafsir.</Text>
+          <TouchableOpacity style={[ss.outlineBtn, { alignSelf: 'flex-start', marginTop: 10 }]} onPress={() => { setForm(DEFAULT_FORM); setResult(null); setError(null); setToast('Réinitialisé.'); }}>
+            <Text style={ss.outlineBtnText}>Réinitialiser</Text>
+          </TouchableOpacity>
         </View>
 
-        <View className="bg-black/30 rounded-2xl px-lg py-lg mb-xl">
-          <Text className="text-neutral-100 text-xl font-semibold">Paramètres</Text>
-          <View className="mt-md gap-sm">
-            <View>
-              <Text className="text-neutral-100/80 mb-xs">Sourate</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row gap-xs">
-                  {surahLoading && (
-                    <>
-                      <View className="w-28 h-12 rounded-md bg-white/20" />
-                      <View className="w-24 h-12 rounded-md bg-white/14" />
-                    </>
-                  )}
-                  {!surahLoading &&
-                    surahs.map((surah) => {
-                      const isActive = form.surah === String(surah.id);
-                      return (
-                        <TouchableOpacity
-                          key={surah.id}
-                          className={`px-md py-xs rounded-md border ${isActive ? 'bg-neutral-100 border-transparent' : 'border-white/40'}`}
-                          onPress={() => handleFieldChange('surah', String(surah.id))}
-                        >
-                          <Text style={{ color: isActive ? colors.primary : colors.neutral100, fontWeight: '600' }}>
-                            {surah.id}. {surah.name}
-                          </Text>
-                          <Text style={{ color: isActive ? colors.primary : colors.neutral100, fontSize: 11 }}>
-                            {surah.nameArabic} · {surah.versesCount} versets
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                </View>
-              </ScrollView>
+        {/* Settings card */}
+        <View style={ss.card}>
+          <Text style={ss.sectionTitle}>Paramètres</Text>
+
+          {/* Surah */}
+          <Text style={[ss.label, ss.mb8]}>Sourate</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={ss.mb12}>
+            <View style={[ss.row, ss.gap6]}>
+              {surahLoading && <ActivityIndicator color={sc.accent} />}
+              {!surahLoading && surahs.map((surah) => {
+                const isActive = form.surah === String(surah.id);
+                return (
+                  <TouchableOpacity key={surah.id} style={[ss.chip, isActive && ss.chipActive]} onPress={() => handleFieldChange('surah', String(surah.id))}>
+                    <View>
+                      <Text style={[ss.chipText, isActive && ss.chipTextActive]}>{surah.id}. {surah.name}</Text>
+                      <Text style={{ color: isActive ? 'rgba(255,255,255,0.7)' : sc.muted, fontSize: 10 }}>{surah.nameArabic} · {surah.versesCount}v</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <View>
-              <Text className="text-neutral-100/80 mb-xs">Verset</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row gap-xs">
-                  {ayahLoading && (
-                    <>
-                      <View className="w-16 h-10 rounded-md bg-white/20" />
-                      <View className="w-16 h-10 rounded-md bg-white/14" />
-                    </>
-                  )}
-                  {!ayahLoading &&
-                    ayahOptions.map((num) => {
-                      const isActive = form.ayah === String(num);
-                      return (
-                        <TouchableOpacity
-                          key={num}
-                          className={`px-sm py-[6px] rounded-md border ${isActive ? 'bg-neutral-100 border-transparent' : 'border-white/40'}`}
-                          onPress={() => handleFieldChange('ayah', String(num))}
-                        >
-                          <Text style={{ color: isActive ? colors.primary : colors.neutral100, fontWeight: '600' }}>{num}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                </View>
-              </ScrollView>
+          </ScrollView>
+
+          {/* Ayah */}
+          <Text style={[ss.label, ss.mb8]}>Verset</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={ss.mb12}>
+            <View style={[ss.row, ss.gap6]}>
+              {ayahLoading && <ActivityIndicator color={sc.accent} />}
+              {!ayahLoading && ayahOptions.map((num) => {
+                const isActive = form.ayah === String(num);
+                return (
+                  <TouchableOpacity key={num} style={[ss.chip, isActive && ss.chipActive, { paddingHorizontal: 10, paddingVertical: 5 }]} onPress={() => handleFieldChange('ayah', String(num))}>
+                    <Text style={[ss.chipText, isActive && ss.chipTextActive]}>{num}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <View>
-              <Text className="text-neutral-100/80 mb-xs">Langue</Text>
-              <View className="flex-row gap-sm">
-                {(['fr', 'en', 'ar'] as Locale[]).map((locale) => {
-                  const isActive = form.locale === locale;
-                  return (
-                    <TouchableOpacity
-                      key={locale}
-                      className={`px-md py-xs rounded-md border ${
-                        isActive ? 'bg-neutral-100 border-transparent' : 'border-white/40'
-                      }`}
-                      onPress={() => handleFieldChange('locale', locale)}
-                    >
-                      <Text
-                        style={{
-                          color: isActive ? colors.primary : colors.neutral100,
-                          fontWeight: '600',
-                        }}
-                      >
-                        {locale === 'fr' ? 'Français' : locale === 'en' ? 'English' : 'العربية'}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-            <View>
-              <Text className="text-neutral-100/80 mb-xs">Source</Text>
-              <View className="flex-row flex-wrap gap-sm">
-                <TouchableOpacity
-                  className={`px-md py-xs rounded-md border ${
-                    !form.source ? 'bg-neutral-100 border-transparent' : 'border-white/40'
-                  }`}
-                  onPress={() => handleFieldChange('source', undefined)}
-                >
-                  <Text style={{ color: !form.source ? colors.primary : colors.neutral100, fontWeight: '600' }}>
-                    Auto
-                  </Text>
+          </ScrollView>
+
+          {/* Language */}
+          <Text style={[ss.label, ss.mb8]}>Langue</Text>
+          <View style={[ss.row, ss.gap6, ss.mb12]}>
+            {(['fr', 'en', 'ar'] as Locale[]).map((locale) => {
+              const isActive = form.locale === locale;
+              return (
+                <TouchableOpacity key={locale} style={[ss.chip, isActive && ss.chipActive]} onPress={() => handleFieldChange('locale', locale)}>
+                  <Text style={[ss.chipText, isActive && ss.chipTextActive]}>{locale === 'fr' ? 'Français' : locale === 'en' ? 'English' : 'العربية'}</Text>
                 </TouchableOpacity>
-                {sources.map((source) => {
-                  const isActive = form.source === source.key;
-                  return (
-                    <TouchableOpacity
-                      key={source.key}
-                      className={`px-md py-xs rounded-md border ${
-                        isActive ? 'bg-neutral-100 border-transparent' : 'border-white/40'
-                      }`}
-                      onPress={() => handleFieldChange('source', source.key)}
-                    >
-                      <Text style={{ color: isActive ? colors.primary : colors.neutral100, fontWeight: '600' }}>
-                        {source.name}
-                        {source.author ? ` — ${source.author}` : ''}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-            <TouchableOpacity
-              className="bg-neutral-100 rounded-lg py-sm items-center mt-sm"
-              disabled={loading}
-              onPress={() => void handleSubmit()}
-            >
-              <Text style={{ color: colors.primary, fontWeight: '700' }}>
-                {loading ? 'Chargement…' : 'Afficher le tafsir'}
-              </Text>
-            </TouchableOpacity>
-            {error && <Text className="text-[#ffb4ab] mt-sm">{error}</Text>}
+              );
+            })}
           </View>
+
+          {/* Source */}
+          <Text style={[ss.label, ss.mb8]}>Source</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            <TouchableOpacity style={[ss.chip, !form.source && ss.chipActive]} onPress={() => handleFieldChange('source', undefined)}>
+              <Text style={[ss.chipText, !form.source && ss.chipTextActive]}>Auto</Text>
+            </TouchableOpacity>
+            {sources.map((source) => {
+              const isActive = form.source === source.key;
+              return (
+                <TouchableOpacity key={source.key} style={[ss.chip, isActive && ss.chipActive]} onPress={() => handleFieldChange('source', source.key)}>
+                  <Text style={[ss.chipText, isActive && ss.chipTextActive]}>{source.name}{source.author ? ` — ${source.author}` : ''}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity style={[ss.primaryBtn, loading && { opacity: 0.5 }]} disabled={loading} onPress={() => void handleSubmit()}>
+            <Text style={ss.primaryBtnText}>{loading ? 'Chargement…' : 'Afficher le tafsir'}</Text>
+          </TouchableOpacity>
+          {error && <Text style={ss.errorText}>{error}</Text>}
         </View>
 
+        {/* Loading skeleton */}
         {loading && (
-          <View className="bg-black/30 rounded-2xl px-lg py-lg mb-xl gap-xs">
-            <View className="w-32 h-4 rounded-md bg-white/15" />
-            <View className="w-44 h-3 rounded-md bg-white/10" />
-            <View className="h-[14px] rounded-md bg-white/12 mt-xs" />
-            <View className="h-[14px] rounded-md bg-white/12" />
-            <View className="h-[14px] rounded-md bg-white/12 w-5/6" />
+          <View style={ss.card}>
+            <View style={{ height: 14, width: 120, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.06)' }} />
+            <View style={{ height: 12, width: 180, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.04)', marginTop: 6 }} />
+            <View style={{ height: 12, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.04)', marginTop: 6 }} />
+            <View style={{ height: 12, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.04)', marginTop: 4 }} />
           </View>
         )}
 
+        {/* Result */}
         {!loading && result && (
-          <View className="bg-black/40 rounded-2xl px-lg py-lg mb-xl gap-sm">
-            <View className="flex-row justify-between items-baseline mb-sm">
-              <View>
-                <Text className="text-neutral-100/80 text-xs tracking-[2px] uppercase">
-                  Sourate {result.surah} · Verset {result.ayah}
-                </Text>
-                <Text className="text-neutral-100/80 text-sm">Source : {result.source}</Text>
-              </View>
-            </View>
-            <Text className="text-neutral-100 text-base leading-6" style={{ lineHeight: 24 }}>
-              {result.text}
-            </Text>
+          <View style={[ss.card, { backgroundColor: 'rgba(0,0,0,0.03)' }]}>
+            <Text style={ss.label}>Sourate {result.surah} · Verset {result.ayah}</Text>
+            <Text style={[ss.muted, { marginBottom: 6 }]}>Source : {result.source}</Text>
+            <Text style={{ color: sc.text, fontSize: 15, lineHeight: 24 }}>{result.text}</Text>
           </View>
         )}
 
+        {/* Toast */}
         {toast && (
-          <View className="absolute bottom-6 left-0 right-0 items-center">
-            <View className="bg-black/80 px-md py-xs rounded-lg">
-              <Text className="text-neutral-100 text-sm">{toast}</Text>
-            </View>
-            <TouchableOpacity onPress={() => setToast(null)} className="mt-[4px]">
-              <Text className="text-neutral-100/80 text-xs">Fermer</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={() => setToast(null)} style={{ alignSelf: 'center', backgroundColor: sc.text, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, marginBottom: 16 }}>
+            <Text style={{ color: '#fff', fontSize: 13 }}>{toast}</Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

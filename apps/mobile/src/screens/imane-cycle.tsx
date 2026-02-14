@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
 import type { AuthUser, CycleMonthResponse, CycleStatus } from '@oumoul/api';
 import { cycleApi } from '../api';
+import { sc, ss } from '../ui/theme';
+
+const CYCLE_STATUSES: CycleStatus[] = ['PURE', 'MENSES', 'SPOTTING', 'POSTPARTUM'];
+const CYCLE_LABELS: Record<CycleStatus, string> = {
+  PURE: 'Pure',
+  MENSES: 'Règles',
+  SPOTTING: 'Spotting',
+  POSTPARTUM: 'Post-partum',
+};
 
 export function ImaneCycleScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const today = new Date();
@@ -82,10 +93,10 @@ export function ImaneCycleScreen({ user, onBack }: { user: AuthUser; onBack: () 
   }, [data]);
 
   const cycleDayColor = (status: CycleStatus): string => {
-    if (status === 'MENSES') return 'rgba(244, 67, 54, 0.25)';
-    if (status === 'SPOTTING') return 'rgba(255, 160, 0, 0.25)';
-    if (status === 'POSTPARTUM') return 'rgba(156, 39, 176, 0.25)';
-    return 'rgba(255,255,255,0.15)';
+    if (status === 'MENSES') return 'rgba(244, 67, 54, 0.15)';
+    if (status === 'SPOTTING') return 'rgba(255, 160, 0, 0.15)';
+    if (status === 'POSTPARTUM') return 'rgba(156, 39, 176, 0.15)';
+    return 'rgba(0,0,0,0.03)';
   };
 
   const handleSelectDay = useCallback(
@@ -128,56 +139,45 @@ export function ImaneCycleScreen({ user, onBack }: { user: AuthUser; onBack: () 
     year: 'numeric',
   });
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView className="flex-1 bg-primary">
-      <ScrollView contentContainerStyle={{ paddingVertical: 32, paddingHorizontal: 20 }}>
-        <View className="mb-xl">
-          <Text className="text-neutral-100 text-xs tracking-[4px] uppercase">{user.firstName || user.email}</Text>
-          <Text className="text-neutral-100 text-3xl font-bold mt-sm">Cycle & Ramadan</Text>
-          <Text className="text-neutral-100/80 text-base leading-6 mt-xs">
-            Note tes jours de règles, spotting ou postpartum pour croiser ton cycle avec Ramadan et organiser ton jeûne.
-          </Text>
-          <View className="flex-row gap-sm mt-md">
-            <TouchableOpacity
-              className="border border-white/60 rounded-md px-md py-xs"
-              onPress={onBack}
-            >
-              <Text style={{ color: colors.neutral100, fontWeight: '600' }}>Retour au tableau de bord</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={[ss.screen, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={ss.mb20}>
+          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
+            <Ionicons name="chevron-back" size={20} color={sc.accent} />
+            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
+          </TouchableOpacity>
+          <Text style={ss.title}>Cycle & Ramadan</Text>
+          <Text style={ss.subtitle}>Note tes jours de règles, spotting ou postpartum.</Text>
         </View>
 
-        <View className="bg-black/30 rounded-2xl px-lg py-lg mb-xl gap-md">
-          <View className="flex-row justify-between items-center flex-wrap gap-sm mb-sm">
-            <View className="flex-row gap-xs">
-              <TouchableOpacity
-                className="px-md py-xs rounded-full border border-white/40 bg-white/10"
-                onPress={() => setMonth((prev) => (prev === 1 ? 12 : prev - 1))}
-              >
-                <Text className="text-neutral-100 text-xs">← Mois précédent</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="px-md py-xs rounded-full border border-white/40 bg-white/10"
-                onPress={() => setMonth((prev) => (prev === 12 ? 1 : prev + 1))}
-              >
-                <Text className="text-neutral-100 text-xs">Mois suivant →</Text>
-              </TouchableOpacity>
-            </View>
-            <Text className="text-neutral-100 font-semibold">{monthLabel}</Text>
+        {/* Calendar card */}
+        <View style={ss.card}>
+          <View style={[ss.row, { justifyContent: 'space-between', marginBottom: 8 }]}>
+            <TouchableOpacity onPress={() => setMonth((prev) => (prev === 1 ? 12 : prev - 1))} style={ss.outlineBtn}>
+              <Ionicons name="chevron-back" size={16} color={sc.text} />
+            </TouchableOpacity>
+            <Text style={ss.sectionTitle}>{monthLabel}</Text>
+            <TouchableOpacity onPress={() => setMonth((prev) => (prev === 12 ? 1 : prev + 1))} style={ss.outlineBtn}>
+              <Ionicons name="chevron-forward" size={16} color={sc.text} />
+            </TouchableOpacity>
           </View>
 
-          {error && <Text className="text-[#ffb4ab] text-sm mb-xs">{error}</Text>}
+          {error && <Text style={[ss.errorText, ss.mb8]}>{error}</Text>}
           {loading || !data ? (
-            <View className="items-center mt-sm">
-              <ActivityIndicator color={colors.neutral100} />
-              <Text className="text-neutral-100 mt-xs text-sm">Chargement du calendrier…</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <ActivityIndicator color={sc.accent} />
+              <Text style={[ss.muted, { marginTop: 8 }]}>Chargement du calendrier…</Text>
             </View>
           ) : (
             <>
-              <View className="flex-row justify-between mb-xs">
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d) => (
-                  <View key={d} style={{ flex: 1, alignItems: 'center' }}>
-                    <Text className="text-neutral-100/80 text-xs font-semibold">{d}</Text>
+              <View style={[ss.row, { justifyContent: 'space-between', marginBottom: 6 }]}>
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+                  <View key={`${d}-${i}`} style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={{ color: sc.muted, fontSize: 11, fontWeight: '600' }}>{d}</Text>
                   </View>
                 ))}
               </View>
@@ -185,24 +185,27 @@ export function ImaneCycleScreen({ user, onBack }: { user: AuthUser; onBack: () 
                 {weeks.map((week, wIdx) =>
                   week.map((dateIso, dIdx) => {
                     if (!dateIso) {
-                      return <View key={`${wIdx}-${dIdx}`} style={{ height: 32, width: `${100 / 7}%` }} />;
+                      return <View key={`${wIdx}-${dIdx}`} style={{ height: 34, width: `${100 / 7}%` }} />;
                     }
                     const dayNum = Number(dateIso.slice(-2));
                     const status = daysMap.get(dateIso)?.status ?? 'PURE';
+                    const isToday = dateIso === todayIso;
                     return (
                       <TouchableOpacity
                         key={dateIso}
-                        className="rounded-md items-center justify-center"
                         style={{
-                          height: 32,
+                          height: 34,
                           width: `${100 / 7}%`,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           backgroundColor: cycleDayColor(status),
-                          borderColor: dateIso === todayIso ? colors.neutral100 : 'rgba(255,255,255,0.25)',
-                          borderWidth: dateIso === todayIso ? 2 : 1,
+                          borderColor: isToday ? sc.accent : 'rgba(0,0,0,0.06)',
+                          borderWidth: isToday ? 2 : 1,
                         }}
                         onPress={() => handleSelectDay(dateIso)}
                       >
-                        <Text className="text-neutral-100 text-xs">{dayNum}</Text>
+                        <Text style={{ color: sc.text, fontSize: 12, fontWeight: isToday ? '700' : '400' }}>{dayNum}</Text>
                       </TouchableOpacity>
                     );
                   }),
@@ -210,106 +213,64 @@ export function ImaneCycleScreen({ user, onBack }: { user: AuthUser; onBack: () 
               </View>
 
               {selectedDate ? (
-                <View className="bg-white/10 rounded-xl px-md py-sm mt-md gap-sm">
-                  <Text className="text-neutral-100 font-semibold">{selectedDate}</Text>
-                  <View className="flex-row flex-wrap gap-xs">
+                <View style={[ss.infoRow, { marginTop: 14, gap: 10 }]}>
+                  <Text style={{ color: sc.text, fontWeight: '700', fontSize: 14 }}>{selectedDate}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {CYCLE_STATUSES.map((status) => {
                       const isActive = statusDraft === status;
                       return (
-                        <TouchableOpacity
-                          key={status}
-                          className={`px-md py-xs rounded-lg ${isActive ? 'bg-neutral-100' : 'bg-white/10'}`}
-                          onPress={() => setStatusDraft(status)}
-                        >
-                          <Text style={{ color: isActive ? colors.primary : colors.neutral100, fontWeight: isActive ? '700' : '600' }}>
-                            {CYCLE_LABELS[status]}
-                          </Text>
+                        <TouchableOpacity key={status} style={[ss.chip, isActive && ss.chipActive]} onPress={() => setStatusDraft(status)}>
+                          <Text style={[ss.chipText, isActive && ss.chipTextActive]}>{CYCLE_LABELS[status]}</Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
 
-                  <TouchableOpacity
-                    className="border border-white/40 rounded-md px-md py-xs self-start"
-                    onPress={() => setSelectedDate(null)}
-                    disabled={updating}
-                  >
-                    <Text style={{ color: colors.neutral100, fontWeight: '600', opacity: updating ? 0.6 : 1 }}>Annuler</Text>
-                  </TouchableOpacity>
+                  <Text style={ss.label}>Notes</Text>
+                  <TextInput
+                    value={notesDraft}
+                    onChangeText={setNotesDraft}
+                    placeholder="Optionnel"
+                    placeholderTextColor={sc.muted}
+                    multiline
+                    style={[ss.input, { minHeight: 56, textAlignVertical: 'top' }]}
+                  />
 
-                  <View className="gap-xs">
-                    <Text className="text-neutral-100/70 text-xs">Notes</Text>
-                    <View className="bg-white/10 rounded-lg px-md py-sm">
-                      <TextInput
-                        value={notesDraft}
-                        onChangeText={setNotesDraft}
-                        placeholder="Optionnel"
-                        placeholderTextColor="rgba(255,255,255,0.6)"
-                        multiline
-                        style={{ color: colors.neutral100, minHeight: 56, textAlignVertical: 'top' }}
-                      />
-                    </View>
+                  <View style={[ss.row, { gap: 10 }]}>
+                    <TouchableOpacity style={[ss.primaryBtn, { flex: 1 }, updating && { opacity: 0.5 }]} onPress={() => void handleSaveSelectedDay()} disabled={updating}>
+                      <Text style={ss.primaryBtnText}>{updating ? 'Enregistrement…' : 'Enregistrer'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={ss.outlineBtn} onPress={() => setSelectedDate(null)} disabled={updating}>
+                      <Text style={ss.outlineBtnText}>Annuler</Text>
+                    </TouchableOpacity>
                   </View>
-
-                  <TouchableOpacity
-                    className="bg-neutral-100 rounded-lg py-sm items-center"
-                    onPress={() => void handleSaveSelectedDay()}
-                    disabled={updating}
-                  >
-                    <Text style={{ color: colors.primary, fontWeight: '700', opacity: updating ? 0.6 : 1 }}>
-                      {updating ? 'Enregistrement…' : 'Enregistrer'}
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               ) : null}
 
-              <View className="flex-row flex-wrap gap-sm mt-sm">
-                <LegendDot
-                  color="rgba(255,255,255,0.15)"
-                  label={`Jour pur (${monthStats.PURE})`}
-                />
-                <LegendDot
-                  color="rgba(244, 67, 54, 0.25)"
-                  label={`Règles (${monthStats.MENSES})`}
-                />
-                <LegendDot
-                  color="rgba(255, 160, 0, 0.25)"
-                  label={`Spotting (${monthStats.SPOTTING})`}
-                />
-                <LegendDot
-                  color="rgba(156, 39, 176, 0.25)"
-                  label={`Postpartum (${monthStats.POSTPARTUM})`}
-                />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
+                <LegendDot color="rgba(0,0,0,0.03)" label={`Pur (${monthStats.PURE})`} />
+                <LegendDot color="rgba(244,67,54,0.15)" label={`Règles (${monthStats.MENSES})`} />
+                <LegendDot color="rgba(255,160,0,0.15)" label={`Spotting (${monthStats.SPOTTING})`} />
+                <LegendDot color="rgba(156,39,176,0.15)" label={`Postpartum (${monthStats.POSTPARTUM})`} />
               </View>
-              <Text className="text-neutral-100/80 text-xs mt-xs">
+              <Text style={[ss.muted, { marginTop: 4, fontSize: 12 }]}>
                 Ce mois-ci : {monthStats.MENSES} jours de règles, {monthStats.SPOTTING} de spotting, {monthStats.POSTPARTUM}{' '}
                 en postpartum.
               </Text>
-              {updating && (
-                <Text className="text-neutral-100/80 text-xs mt-xs">Mise à jour en cours…</Text>
-              )}
+              {updating && <Text style={[ss.muted, { marginTop: 4, fontSize: 12 }]}>Mise à jour en cours…</Text>}
             </>
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <View className="flex-row items-center gap-xs">
-      <View
-        style={{
-          width: 14,
-          height: 14,
-          borderRadius: 999,
-          borderColor: 'rgba(255,255,255,0.6)',
-          borderWidth: 1,
-          backgroundColor: color,
-        }}
-      />
-      <Text className="text-neutral-100/80 text-xs">{label}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View style={{ width: 14, height: 14, borderRadius: 999, borderColor: 'rgba(0,0,0,0.12)', borderWidth: 1, backgroundColor: color }} />
+      <Text style={{ color: sc.textSoft, fontSize: 11 }}>{label}</Text>
     </View>
   );
 }
