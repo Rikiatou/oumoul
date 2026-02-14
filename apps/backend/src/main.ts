@@ -17,6 +17,10 @@ async function bootstrap() {
 
   const isProd = process.env.NODE_ENV === 'production';
 
+  // Trust Railway's reverse proxy so rate-limit sees real client IP
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', 1);
+
   // Security headers
   app.use(helmet());
 

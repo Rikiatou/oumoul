@@ -1,29 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: nodemailer.Transporter;
+  private readonly resend: Resend | null = null;
   private readonly from: string;
 
   constructor(private readonly configService: ConfigService) {
-    const user = this.configService.get<string>('SMTP_USER');
-    const pass = this.configService.get<string>('SMTP_PASS');
-
-    if (!user || !pass) {
-      this.logger.warn('SMTP_USER / SMTP_PASS not set – emails will only be logged');
+    const apiKey = this.configService.get<string>('RESEND_API_KEY');
+    if (!apiKey) {
+      this.logger.warn('RESEND_API_KEY not set – emails will only be logged');
+    } else {
+      this.resend = new Resend(apiKey);
     }
-
-    this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: user && pass ? { user, pass } : undefined,
-    });
-
-    this.from = `"Nissa Imane Tracker" <${user ?? 'noreply@oumoul.app'}>`;
+    this.from = this.configService.get<string>('EMAIL_FROM') ?? 'Nissa Imane Tracker <onboarding@resend.dev>';
   }
 
   async sendVerificationEmail(to: string, firstName: string, code: string): Promise<void> {
@@ -40,9 +32,19 @@ export class EmailService {
       </div>
     `;
 
+    if (!this.resend) {
+      this.logger.warn(`[NO RESEND KEY] Verification code for ${to}: ${code}`);
+      return;
+    }
+
     try {
-      await this.transporter.sendMail({ from: this.from, to, subject, html });
-      this.logger.log(`Verification email sent to ${to}`);
+      const { data, error } = await this.resend.emails.send({ from: this.from, to, subject, html });
+      if (error) {
+        this.logger.error(`Resend error for ${to}: ${JSON.stringify(error)}`);
+        this.logger.warn(`[FALLBACK] Verification code for ${to}: ${code}`);
+        return;
+      }
+      this.logger.log(`Verification email sent to ${to} (id: ${data?.id})`);
     } catch (error) {
       this.logger.error(`Failed to send verification email to ${to}`, error);
       this.logger.warn(`[FALLBACK] Verification code for ${to}: ${code}`);
@@ -64,9 +66,19 @@ export class EmailService {
       </div>
     `;
 
+    if (!this.resend) {
+      this.logger.warn(`[NO RESEND KEY] Reset URL for ${to}: ${resetUrl}`);
+      return;
+    }
+
     try {
-      await this.transporter.sendMail({ from: this.from, to, subject, html });
-      this.logger.log(`Password reset email sent to ${to}`);
+      const { data, error } = await this.resend.emails.send({ from: this.from, to, subject, html });
+      if (error) {
+        this.logger.error(`Resend error for ${to}: ${JSON.stringify(error)}`);
+        this.logger.warn(`[FALLBACK] Reset URL for ${to}: ${resetUrl}`);
+        return;
+      }
+      this.logger.log(`Password reset email sent to ${to} (id: ${data?.id})`);
     } catch (error) {
       this.logger.error(`Failed to send password reset email to ${to}`, error);
       this.logger.warn(`[FALLBACK] Reset URL for ${to}: ${resetUrl}`);
