@@ -9,10 +9,19 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_OU_MOUL_API_URL": "https://backend-production-bdc1.up.railway.app/api"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_OU_MOUL_API_URL": "https://backend-production-bdc1.up.railway.app/api"
+      }
     }
   },
   "submit": {
