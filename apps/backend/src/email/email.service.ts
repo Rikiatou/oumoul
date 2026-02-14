@@ -1,28 +1,37 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private resend: Resend;
+  private transporter: nodemailer.Transporter;
   private readonly from: string;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY');
-    if (!apiKey) {
-      this.logger.warn('RESEND_API_KEY not set – emails will only be logged');
+    const user = this.configService.get<string>('SMTP_USER');
+    const pass = this.configService.get<string>('SMTP_PASS');
+
+    if (!user || !pass) {
+      this.logger.warn('SMTP_USER / SMTP_PASS not set – emails will only be logged');
     }
-    this.resend = new Resend(apiKey ?? '');
-    this.from = this.configService.get<string>('EMAIL_FROM') ?? "Oumoul's App <onboarding@resend.dev>";
+
+    this.transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: user && pass ? { user, pass } : undefined,
+    });
+
+    this.from = `"Nissa Imane Tracker" <${user ?? 'noreply@oumoul.app'}>`;
   }
 
   async sendVerificationEmail(to: string, firstName: string, code: string): Promise<void> {
-    const subject = "Vérifiez votre adresse email – Oumoul's App";
+    const subject = 'Vérifiez votre adresse email – Nissa Imane Tracker';
     const html = `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
         <h2 style="color:#1a7f64;">Assalamu Alaikum ${firstName},</h2>
-        <p>Merci de vous être inscrit(e) sur <strong>Oumoul's App</strong>.</p>
+        <p>Merci de vous être inscrit(e) sur <strong>Nissa Imane Tracker</strong>.</p>
         <p>Votre code de vérification est :</p>
         <div style="text-align:center;margin:24px 0;">
           <span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#1a7f64;">${code}</span>
@@ -32,8 +41,7 @@ export class EmailService {
     `;
 
     try {
-      const { error } = await this.resend.emails.send({ from: this.from, to, subject, html });
-      if (error) throw error;
+      await this.transporter.sendMail({ from: this.from, to, subject, html });
       this.logger.log(`Verification email sent to ${to}`);
     } catch (error) {
       this.logger.error(`Failed to send verification email to ${to}`, error);
@@ -42,7 +50,7 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail(to: string, firstName: string, resetUrl: string): Promise<void> {
-    const subject = "Réinitialisation de mot de passe – Oumoul's App";
+    const subject = 'Réinitialisation de mot de passe – Nissa Imane Tracker';
     const html = `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
         <h2 style="color:#1a7f64;">Assalamu Alaikum ${firstName},</h2>
@@ -57,8 +65,7 @@ export class EmailService {
     `;
 
     try {
-      const { error } = await this.resend.emails.send({ from: this.from, to, subject, html });
-      if (error) throw error;
+      await this.transporter.sendMail({ from: this.from, to, subject, html });
       this.logger.log(`Password reset email sent to ${to}`);
     } catch (error) {
       this.logger.error(`Failed to send password reset email to ${to}`, error);
