@@ -13,17 +13,10 @@ import {
   createCycleApi,
 } from '@oumoul/api';
 import { SecureTokenStore } from '../storage/secure-token-store';
-import Constants from 'expo-constants';
 
 const tokenStore = new SecureTokenStore();
 
-const API_URL = Constants.expoConfig?.extra?.apiUrl;
-
-if (!API_URL) {
-  throw new Error(
-    'API_URL is not defined. Check EXPO_PUBLIC_API_URL in eas.json env or EAS secrets.',
-  );
-}
+const API_URL = 'https://backend-production-bdc1.up.railway.app/api';
 
 const httpClient = new HttpClient({
   tokenStore,

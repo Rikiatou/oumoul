@@ -14,7 +14,7 @@ export const featureFlags = {
 
 export const apiRoutes = {
   backend: {
-    base: process.env.OU_MOUL_API_URL ?? "http://localhost:3333/api",
+    base: process.env.OU_MOUL_API_URL ?? "https://backend-production-bdc1.up.railway.app/api",
     auth: "/auth",
     prayer: "/prayer-times",
     fasting: "/fasting",
