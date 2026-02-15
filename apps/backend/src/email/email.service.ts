@@ -1,21 +1,51 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private readonly resend: Resend | null = null;
-  private readonly from: string;
+  private readonly apiKey: string | undefined;
+  private readonly senderEmail: string;
+  private readonly senderName: string;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY');
-    if (!apiKey) {
-      this.logger.warn('RESEND_API_KEY not set – emails will only be logged');
-    } else {
-      this.resend = new Resend(apiKey);
+    this.apiKey = this.configService.get<string>('BREVO_API_KEY');
+    this.senderEmail = this.configService.get<string>('EMAIL_FROM_ADDRESS') ?? 'rikiatouhassansale@gmail.com';
+    this.senderName = this.configService.get<string>('EMAIL_FROM_NAME') ?? 'Nissa Imane Tracker';
+
+    if (!this.apiKey) {
+      this.logger.warn('BREVO_API_KEY not set – emails will only be logged');
     }
-    this.from = this.configService.get<string>('EMAIL_FROM') ?? 'Nissa Imane Tracker <onboarding@resend.dev>';
+  }
+
+  private async sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+    if (!this.apiKey) {
+      return false;
+    }
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': this.apiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: this.senderName, email: this.senderEmail },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Brevo ${response.status}: ${body}`);
+    }
+
+    const data = await response.json();
+    this.logger.log(`Email sent to ${to} (messageId: ${data.messageId})`);
+    return true;
   }
 
   async sendVerificationEmail(to: string, firstName: string, code: string): Promise<void> {
@@ -32,19 +62,11 @@ export class EmailService {
       </div>
     `;
 
-    if (!this.resend) {
-      this.logger.warn(`[NO RESEND KEY] Verification code for ${to}: ${code}`);
-      return;
-    }
-
     try {
-      const { data, error } = await this.resend.emails.send({ from: this.from, to, subject, html });
-      if (error) {
-        this.logger.error(`Resend error for ${to}: ${JSON.stringify(error)}`);
-        this.logger.warn(`[FALLBACK] Verification code for ${to}: ${code}`);
-        return;
+      const sent = await this.sendEmail(to, subject, html);
+      if (!sent) {
+        this.logger.warn(`[NO API KEY] Verification code for ${to}: ${code}`);
       }
-      this.logger.log(`Verification email sent to ${to} (id: ${data?.id})`);
     } catch (error) {
       this.logger.error(`Failed to send verification email to ${to}`, error);
       this.logger.warn(`[FALLBACK] Verification code for ${to}: ${code}`);
@@ -66,19 +88,11 @@ export class EmailService {
       </div>
     `;
 
-    if (!this.resend) {
-      this.logger.warn(`[NO RESEND KEY] Reset URL for ${to}: ${resetUrl}`);
-      return;
-    }
-
     try {
-      const { data, error } = await this.resend.emails.send({ from: this.from, to, subject, html });
-      if (error) {
-        this.logger.error(`Resend error for ${to}: ${JSON.stringify(error)}`);
-        this.logger.warn(`[FALLBACK] Reset URL for ${to}: ${resetUrl}`);
-        return;
+      const sent = await this.sendEmail(to, subject, html);
+      if (!sent) {
+        this.logger.warn(`[NO API KEY] Reset URL for ${to}: ${resetUrl}`);
       }
-      this.logger.log(`Password reset email sent to ${to} (id: ${data?.id})`);
     } catch (error) {
       this.logger.error(`Failed to send password reset email to ${to}`, error);
       this.logger.warn(`[FALLBACK] Reset URL for ${to}: ${resetUrl}`);
