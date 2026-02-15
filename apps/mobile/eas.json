@@ -14,13 +14,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_OU_MOUL_API_URL": "https://backend-production-bdc1.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://backend-production-bdc1.up.railway.app/api"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_OU_MOUL_API_URL": "https://backend-production-bdc1.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://backend-production-bdc1.up.railway.app/api"
       }
     }
   },

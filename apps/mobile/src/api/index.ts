@@ -17,31 +17,17 @@ import Constants from 'expo-constants';
 
 const tokenStore = new SecureTokenStore();
 
-const PRODUCTION_API_URL = 'https://backend-production-bdc1.up.railway.app/api';
+const API_URL = Constants.expoConfig?.extra?.apiUrl;
 
-function deriveBackendBaseUrl(): string {
-  const explicit = process.env.EXPO_PUBLIC_OU_MOUL_API_URL;
-  if (explicit) {
-    return explicit;
-  }
-
-  const hostUri =
-    Constants.expoConfig?.hostUri ??
-    (Constants as unknown as { manifest2?: { extra?: { expoClient?: { hostUri?: string } } } }).manifest2?.extra?.expoClient
-      ?.hostUri ??
-    (Constants as unknown as { manifest?: { hostUri?: string } }).manifest?.hostUri;
-
-  const host = hostUri?.split(':')[0];
-  if (host) {
-    return `http://${host}:3333/api`;
-  }
-
-  return PRODUCTION_API_URL;
+if (!API_URL) {
+  throw new Error(
+    'API_URL is not defined. Check EXPO_PUBLIC_API_URL in eas.json env or EAS secrets.',
+  );
 }
 
 const httpClient = new HttpClient({
   tokenStore,
-  baseUrl: deriveBackendBaseUrl(),
+  baseUrl: API_URL,
 });
 
 export const authApi = createAuthApi(httpClient);
