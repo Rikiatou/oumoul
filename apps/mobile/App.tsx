@@ -22,7 +22,7 @@ import { colors } from "@oumoul/ui";
 import type { AuthUser, RegisterPayload } from "@oumoul/api";
 import { useAuth, AuthProvider } from "./src/context/auth-context";
 import { useForm } from "./src/hooks/use-form";
-import { authApi } from "./src/api";
+import { authApi, API_URL } from "./src/api";
 import { DashboardScreen } from "./src/screens/dashboard";
 import { TafsirScreen } from "./src/screens/tafsir";
 import { ImaneQuranScreen } from "./src/screens/imane-quran";
@@ -496,6 +496,7 @@ function LoginScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "fo
 
   return (
     <AuthLayout title="Connexion" subtitle="Accède à ton espace spirituel" mode="login" onSwitch={onSwitch}>
+      <Text style={{ fontSize: 9, color: "#999", marginBottom: 8 }}>API: {API_URL}</Text>
       {error ? <Text style={auth.error}>{error}</Text> : null}
       <AuthInput placeholder="Email" value={form.email} onChangeText={(v) => updateField("email", v)} keyboardType="email-address" autoCapitalize="none" />
       <AuthInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} secureTextEntry />

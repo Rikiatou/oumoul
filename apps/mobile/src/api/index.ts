@@ -16,7 +16,7 @@ import { SecureTokenStore } from '../storage/secure-token-store';
 
 const tokenStore = new SecureTokenStore();
 
-const API_URL = 'https://backend-production-bdc1.up.railway.app/api';
+export const API_URL = 'https://backend-production-bdc1.up.railway.app/api';
 
 const httpClient = new HttpClient({
   tokenStore,

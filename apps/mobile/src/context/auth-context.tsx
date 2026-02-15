@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
 import type { AuthResponse, AuthUser, SessionTokens, RegisterPayload, RegisterResponse, Locale } from '@oumoul/api';
 import { authApi, tokenStore } from '../api';
 import { syncPushTokenWithBackend } from '../push-notifications';
@@ -47,13 +46,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setState((prev) => ({ ...prev, loading: true }));
     try {
-      Alert.alert('DEBUG LOGIN', `Calling login for ${email}`);
       const response = await authApi.login({ email, password });
-      Alert.alert('DEBUG LOGIN OK', JSON.stringify(response).substring(0, 200));
       await applyAuthResponse(response);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      Alert.alert('DEBUG LOGIN ERROR', msg);
+      const msg = error instanceof Error ? error.message : '';
       if (msg.toLowerCase().includes('not verified') || msg.toLowerCase().includes('non vérifié')) {
         setState((prev) => ({
           ...prev,
@@ -71,20 +67,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (payload: RegisterPayload) => {
       setState((prev) => ({ ...prev, loading: true }));
       try {
-        Alert.alert('DEBUG REGISTER', `Calling register for ${payload.email}`);
-        const result = await authApi.register({
+        await authApi.register({
           ...payload,
           locale: normalizeLocale(payload.locale),
         });
-        Alert.alert('DEBUG REGISTER OK', JSON.stringify(result).substring(0, 200));
         setState((prev) => ({
           ...prev,
           loading: false,
           pendingVerificationEmail: payload.email.toLowerCase(),
         }));
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        Alert.alert('DEBUG REGISTER ERROR', msg);
         setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null });
         throw error;
       }
