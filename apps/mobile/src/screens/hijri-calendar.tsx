@@ -108,7 +108,7 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
     } finally {
       setLoading(false);
     }
-  }, [hijriMonth, hijriYear]);
+  }, [hijriMonth, hijriYear, detectedLoc.city, detectedLoc.country]);
 
   useEffect(() => {
     const loadEventToggles = async () => {

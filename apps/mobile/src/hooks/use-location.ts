@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import * as SecureStore from 'expo-secure-store';
 
@@ -35,7 +35,10 @@ export function useLocation() {
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
 
-  const detect = useCallback(async (force = false) => {
+  const locationRef = useRef(FALLBACK);
+  locationRef.current = location;
+
+  const detect = useCallback(async (force = false): Promise<DetectedLocation> => {
     setLoading(true);
     setError(null);
 
@@ -63,13 +66,12 @@ export function useLocation() {
         setPermissionDenied(true);
         setError('Permission de localisation refusée');
         setLoading(false);
-        // Return cached or fallback
-        return location;
+        return locationRef.current;
       }
     } catch {
       setError('Impossible de demander la permission');
       setLoading(false);
-      return location;
+      return locationRef.current;
     }
 
     // Get GPS position
@@ -125,9 +127,9 @@ export function useLocation() {
       const message = err instanceof Error ? err.message : 'Impossible de détecter la position';
       setError(message);
       setLoading(false);
-      return location;
+      return locationRef.current;
     }
-  }, [location]);
+  }, []);
 
   useEffect(() => {
     void detect();

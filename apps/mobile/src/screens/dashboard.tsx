@@ -173,15 +173,25 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
   });
 
   // Auto-fill prayer form from GPS location
+  const [gpsCoordsKey, setGpsCoordsKey] = useState("");
   useEffect(() => {
     if (locLoading) return;
     if (detectedLoc.latitude && detectedLoc.longitude) {
-      setPrayerForm((prev) => ({
-        ...prev,
-        latitude: String(detectedLoc.latitude),
-        longitude: String(detectedLoc.longitude),
-        timeZone: detectedLoc.timeZone ?? prev.timeZone,
-      }));
+      const newLat = String(detectedLoc.latitude);
+      const newLng = String(detectedLoc.longitude);
+      const newTz = detectedLoc.timeZone;
+      setPrayerForm((prev) => {
+        if (prev.latitude === newLat && prev.longitude === newLng) return prev;
+        return {
+          ...prev,
+          latitude: newLat,
+          longitude: newLng,
+          timeZone: newTz ?? prev.timeZone,
+        };
+      });
+      // Track GPS change to trigger prayer re-fetch
+      const key = `${newLat},${newLng}`;
+      setGpsCoordsKey((prev) => (prev === key ? prev : key));
     }
   }, [detectedLoc, locLoading]);
 
@@ -605,6 +615,13 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
   useEffect(() => {
     void refreshAll();
   }, [refreshAll]);
+
+  // Re-fetch prayer times when GPS location updates coords
+  useEffect(() => {
+    if (!gpsCoordsKey) return;
+    void fetchPrayer();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gpsCoordsKey]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (next) => {
