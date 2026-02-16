@@ -150,8 +150,8 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
         const cal = await hijriApi.calendar({
           hijriYear: yearCandidate,
           hijriMonth: event.hijriMonth,
-          city: 'Douala',
-          country: 'Cameroon',
+          city: detectedLoc.city ?? 'Douala',
+          country: detectedLoc.country ?? 'Cameroon',
           method: 2,
         });
 
@@ -167,7 +167,7 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
       }
       return null;
     },
-    [findGregorianDateForHijriDay, hijriYear],
+    [findGregorianDateForHijriDay, hijriYear, detectedLoc.city, detectedLoc.country],
   );
 
   const toggleEventReminder = useCallback(
