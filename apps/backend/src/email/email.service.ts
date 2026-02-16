@@ -10,8 +10,8 @@ export class EmailService {
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('BREVO_API_KEY');
-    this.senderEmail = this.configService.get<string>('EMAIL_FROM_ADDRESS') ?? 'rikiatouhassansale@gmail.com';
-    this.senderName = this.configService.get<string>('EMAIL_FROM_NAME') ?? 'Nissa Imane Tracker';
+    this.senderEmail = this.configService.get<string>('EMAIL_FROM_ADDRESS') ?? 'kabrakeng@gmail.com';
+    this.senderName = this.configService.get<string>('EMAIL_FROM_NAME') ?? 'NISSA IMANE TRACKER';
 
     if (!this.apiKey) {
       this.logger.warn('BREVO_API_KEY not set – emails will only be logged');
