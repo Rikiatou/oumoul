@@ -2,7 +2,6 @@ import { StatusBar } from "expo-status-bar";
 import React, { Component, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -23,7 +22,7 @@ import { colors } from "@oumoul/ui";
 import type { AuthUser, RegisterPayload } from "@oumoul/api";
 import { useAuth, AuthProvider } from "./src/context/auth-context";
 import { useForm } from "./src/hooks/use-form";
-import { authApi, API_URL } from "./src/api";
+import { authApi } from "./src/api";
 import { DashboardScreen } from "./src/screens/dashboard";
 import { TafsirScreen } from "./src/screens/tafsir";
 import { ImaneQuranScreen } from "./src/screens/imane-quran";
@@ -56,6 +55,25 @@ const C = {
   error: "#D32F2F",
   errorBg: "#FFEBEE",
 };
+
+function translateError(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("password") && (m.includes("longer") || m.includes("short") || m.includes("least")))
+    return "Le mot de passe doit contenir au moins 8 caractères.";
+  if (m.includes("email already") || m.includes("conflict"))
+    return "Cet email est déjà utilisé.";
+  if (m.includes("invalid credentials"))
+    return "Email ou mot de passe incorrect.";
+  if (m.includes("not verified") || m.includes("non vérifié"))
+    return "Email non vérifié. Vérifie ta boîte mail.";
+  if (m.includes("invalid") && m.includes("email"))
+    return "Adresse email invalide.";
+  if (m.includes("network") || m.includes("fetch") || m.includes("failed"))
+    return "Erreur réseau. Vérifie ta connexion internet.";
+  if (m.includes("expired"))
+    return "Code expiré. Demande un nouveau code.";
+  return msg;
+}
 
 export default function App() {
   return (
@@ -482,24 +500,16 @@ function LoginScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "fo
 
   const handleSubmit = useCallback(async () => {
     setError(null);
-    Alert.alert("DEBUG", `URL: ${API_URL}\nEmail: ${form.email.trim()}`);
     try {
       await login(form.email.trim(), form.password);
-      Alert.alert("LOGIN OK", "Connexion réussie!");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      Alert.alert("LOGIN ERROR", msg || "(empty error message)");
-      if (msg.toLowerCase().includes("not verified") || msg.toLowerCase().includes("non vérifié")) {
-        setError("Email non vérifié. Veuillez vérifier votre boîte mail.");
-      } else {
-        setError(msg || "Erreur inconnue");
-      }
+      setError(translateError(msg) || "Erreur de connexion");
     }
   }, [login, form]);
 
   return (
     <AuthLayout title="Connexion" subtitle="Accède à ton espace spirituel" mode="login" onSwitch={onSwitch}>
-      <Text style={{ fontSize: 9, color: "#999", marginBottom: 8 }}>API: {API_URL}</Text>
       {error ? <Text style={auth.error}>{error}</Text> : null}
       <AuthInput placeholder="Email" value={form.email} onChangeText={(v) => updateField("email", v)} keyboardType="email-address" autoCapitalize="none" />
       <AuthInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} secureTextEntry />
@@ -520,14 +530,11 @@ function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | 
 
   const handleSubmit = useCallback(async () => {
     setError(null);
-    Alert.alert("DEBUG REGISTER", `URL: ${API_URL}\nEmail: ${form.email.trim()}`);
     try {
       await register({ firstName: form.firstName.trim(), lastName: form.lastName.trim(), email: form.email.trim(), password: form.password, locale: form.locale });
-      Alert.alert("REGISTER OK", "Inscription réussie! Vérifie ton email.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      Alert.alert("REGISTER ERROR", msg || "(empty error message)");
-      setError(msg || "Erreur inconnue");
+      setError(translateError(msg) || "Erreur d'inscription");
     }
   }, [register, form]);
 
@@ -578,7 +585,8 @@ function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "regist
       await authApi.forgotPassword({ email: email.trim() });
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(translateError(msg) || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
@@ -627,7 +635,8 @@ function ResetPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "registe
       setDone(true);
       setTimeout(() => onSwitch("login"), 800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(translateError(msg) || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
