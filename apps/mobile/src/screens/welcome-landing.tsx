@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors } from "@oumoul/ui";
+import * as Location from "expo-location";
 
 const { width, height } = Dimensions.get("window");
 
@@ -56,7 +57,10 @@ export function WelcomeLandingScreen({ onGetStarted }: WelcomeLandingProps) {
 
       {/* Bottom CTA */}
       <View style={s.bottom}>
-        <TouchableOpacity style={s.btn} onPress={onGetStarted} activeOpacity={0.85}>
+        <TouchableOpacity style={s.btn} onPress={async () => {
+          try { await Location.requestForegroundPermissionsAsync(); } catch {}
+          onGetStarted();
+        }} activeOpacity={0.85}>
           <Text style={s.btnText}>Commencer</Text>
         </TouchableOpacity>
         <Text style={s.version}>Bismillah Ar-Rahman Ar-Rahim</Text>

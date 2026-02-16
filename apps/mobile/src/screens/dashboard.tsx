@@ -53,6 +53,7 @@ import * as SecureStore from "expo-secure-store";
 import { t, Locale } from "../i18n";
 import { useLocationContext } from "../context/location-context";
 import { prayerSettingsStorage } from "./prayer-settings";
+import { Skeleton, SkeletonCard } from "../ui/skeleton";
 
 const DEFAULT_COORDS = {
   latitude: "4.0511",
@@ -456,7 +457,20 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
 
       const result = await prayerApi.getPrayerTimes(params);
       setPrayerResult(result);
+      // Cache for offline use
+      try { await SecureStore.setItemAsync("oumoul.prayerTimesCache", JSON.stringify(result)); } catch {}
     } catch (error) {
+      // Try loading cached prayer times if network fails
+      if (!prayerResult) {
+        try {
+          const cached = await SecureStore.getItemAsync("oumoul.prayerTimesCache");
+          if (cached) {
+            setPrayerResult(JSON.parse(cached) as PrayerTimesResponse);
+            setPrayerError("Horaires en cache (hors ligne)");
+            return;
+          }
+        } catch {}
+      }
       const message = error instanceof Error ? error.message : "Impossible de calculer les horaires.";
       setPrayerError(message);
       setPrayerResult(null);
@@ -1051,7 +1065,20 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
         </View>
 
         {/* Next prayer highlight */}
-        {nextPrayerInfo && (
+        {prayerLoading && !nextPrayerInfo ? (
+          <View style={ds.nextPrayerCard}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={ds.nextPrayerIcon}>
+                <Ionicons name="time-outline" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Skeleton width="50%" height={12} />
+                <Skeleton width="30%" height={18} />
+              </View>
+              <Skeleton width={60} height={24} borderRadius={6} />
+            </View>
+          </View>
+        ) : nextPrayerInfo ? (
           <View style={ds.nextPrayerCard}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <View style={ds.nextPrayerIcon}>
@@ -1064,7 +1091,7 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
               <Text style={ds.nextPrayerTime}>{nextPrayerInfo.time}</Text>
             </View>
           </View>
-        )}
+        ) : null}
 
         {/* Ramadan banner */}
         <View style={ds.ramadanBanner}>

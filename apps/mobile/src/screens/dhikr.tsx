@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
@@ -7,6 +7,7 @@ import type { AuthUser, DhikrCategory, DhikrEntry, DhikrRecord } from '@oumoul/a
 import { dhikrApi } from '../api';
 import * as SecureStore from 'expo-secure-store';
 import { t, Locale } from '../i18n';
+import * as Haptics from 'expo-haptics';
 
 interface DhikrFormState {
   entryId: string;
@@ -28,6 +29,7 @@ export function DhikrScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const locale = (user.locale as Locale | undefined) ?? 'fr';
 
@@ -284,7 +286,7 @@ export function DhikrScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData().finally(() => setRefreshing(false)); }} tintColor={dk_c.accent} />}>
         {/* Mode tabs */}
         <View style={dk.tabRow}>
           {(['read', 'count', 'favorites'] as const).map((m) => {
@@ -389,7 +391,7 @@ export function DhikrScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
                 <View style={dk.counterRow}>
                   <TouchableOpacity
                     style={dk.counterBtn}
-                    onPress={() => setForm((prev) => ({ ...prev, count: Math.max(0, prev.count - 1) }))}
+                    onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setForm((prev) => ({ ...prev, count: Math.max(0, prev.count - 1) })); }}
                   >
                     <Ionicons name="remove" size={22} color={dk_c.accent} />
                   </TouchableOpacity>
@@ -401,7 +403,7 @@ export function DhikrScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
                   />
                   <TouchableOpacity
                     style={dk.counterBtn}
-                    onPress={() => setForm((prev) => ({ ...prev, count: prev.count + 1 }))}
+                    onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setForm((prev) => ({ ...prev, count: prev.count + 1 })); }}
                   >
                     <Ionicons name="add" size={22} color={dk_c.accent} />
                   </TouchableOpacity>
@@ -481,12 +483,13 @@ export function DhikrScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
                       <View style={{ flexDirection: 'row', gap: 6 }}>
                         <TouchableOpacity
                           style={dk.historyBtn}
-                          onPress={() =>
+                          onPress={() => {
+                            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             void dhikrApi
                               .updateRecord(record.id, { count: record.count + 1 })
                               .then(() => loadData())
-                              .catch((err) => setError(err instanceof Error ? err.message : t(locale, 'common.update_failed', 'Mise à jour impossible')))
-                          }
+                              .catch((err) => setError(err instanceof Error ? err.message : t(locale, 'common.update_failed', 'Mise à jour impossible')));
+                          }}
                         >
                           <Ionicons name="add" size={14} color={dk_c.accent} />
                         </TouchableOpacity>

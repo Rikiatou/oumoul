@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
@@ -262,7 +262,7 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
         <Ionicons name="moon-outline" size={20} color={hc_c.muted} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={hc_c.accent} />}>
         {/* Location badge */}
         <View style={hc.locBadge}>
           <Ionicons name="location-outline" size={14} color={hc_c.accent} />

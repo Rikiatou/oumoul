@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -89,6 +90,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
   const [savingCycle, setSavingCycle] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [fastStatusDraft, setFastStatusDraft] = useState<FastingLogStatus | null>(null);
@@ -329,7 +331,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadYear().finally(() => setRefreshing(false)); }} tintColor={r_c.accent} />}>
         {/* Ramadan day banner */}
         <View style={r.heroBanner}>
           <Ionicons name="moon" size={24} color="#FFC107" />
