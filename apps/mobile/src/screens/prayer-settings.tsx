@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { colors } from "@oumoul/ui";
 import type { AuthUser, CalculationMethodOption, HighLatitudeRuleOption, MadhabOption } from "@oumoul/api";
 import { CalculationMethodOption as CalculationMethodEnum, HighLatitudeRuleOption as HighLatitudeRuleEnum, MadhabOption as MadhabEnum } from "@oumoul/api";
-import { sc, ss } from "../ui/theme";
+import { useLocationContext } from "../context/location-context";
 
 type StoredPrayerSettings = {
   latitude: string;
@@ -63,73 +63,120 @@ const HIGH_LAT_OPTIONS: Array<{ value: HighLatitudeRuleOption; label: string }> 
   { value: HighLatitudeRuleEnum.AngleBased, label: "Angle Based" },
 ];
 
+const PRAYER_NAMES = [
+  { key: 'fajrAdjustment' as const, label: 'Fajr', icon: 'sunny-outline' },
+  { key: 'dhuhrAdjustment' as const, label: 'Dhuhr', icon: 'sunny' },
+  { key: 'asrAdjustment' as const, label: 'Asr', icon: 'partly-sunny-outline' },
+  { key: 'maghribAdjustment' as const, label: 'Maghrib', icon: 'cloudy-night-outline' },
+  { key: 'ishaAdjustment' as const, label: 'Isha', icon: 'moon-outline' },
+];
+
 function parseAdjustment(value: string): number {
   const n = Number.parseInt(value, 10);
   return Number.isNaN(n) ? 0 : n;
 }
 
-function ChoiceRow<T extends string>({
+function ProChoiceRow<T extends string>({
   title,
+  icon,
   options,
   value,
   onChange,
 }: {
   title: string;
+  icon: string;
   options: Array<{ value: T; label: string }>;
   value: T;
   onChange: (next: T) => void;
 }) {
   return (
-    <View style={{ marginTop: 14 }}>
-      <Text style={ss.label}>{title}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
-        {options.map((option) => {
-          const active = option.value === value;
-          return (
-            <TouchableOpacity
-              key={option.value}
-              style={[ss.chip, { marginRight: 6 }, active && ss.chipActive]}
-              onPress={() => onChange(option.value)}
-            >
-              <Text style={[ss.chipText, active && ss.chipTextActive]}>{option.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
+    <View style={{ marginTop: 16 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <Ionicons name={icon as any} size={16} color={ps_c.accent} />
+        <Text style={ps.fieldLabel}>{title}</Text>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          {options.map((option) => {
+            const active = option.value === value;
+            return (
+              <TouchableOpacity
+                key={option.value}
+                style={[ps.choiceChip, active && ps.choiceChipActive]}
+                onPress={() => onChange(option.value)}
+              >
+                <Text style={[ps.choiceChipText, active && ps.choiceChipTextActive]}>{option.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-function Field({
+function ProField({
   label,
+  icon,
   value,
   onChangeText,
   placeholder,
+  keyboardType,
 }: {
   label: string;
+  icon: string;
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
+  keyboardType?: 'default' | 'numeric' | 'decimal-pad';
 }) {
   return (
-    <View style={{ marginTop: 12 }}>
-      <Text style={ss.label}>{label}</Text>
-      <TextInput
-        style={[ss.input, { marginTop: 4 }]}
-        placeholder={placeholder}
-        placeholderTextColor={sc.muted}
-        value={value}
-        onChangeText={onChangeText}
-      />
+    <View style={ps.fieldRow}>
+      <View style={ps.fieldIconWrap}>
+        <Ionicons name={icon as any} size={16} color={ps_c.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={ps.fieldSmallLabel}>{label}</Text>
+        <TextInput
+          style={ps.fieldInput}
+          placeholder={placeholder}
+          placeholderTextColor={ps_c.muted}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+        />
+      </View>
     </View>
   );
 }
 
 export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+  const { location: detectedLoc, loading: locLoading } = useLocationContext();
   const [settings, setSettings] = useState<StoredPrayerSettings>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gpsApplied, setGpsApplied] = useState(false);
+
+  // Auto-fill from GPS if no saved settings exist
+  useEffect(() => {
+    if (locLoading || gpsApplied) return;
+    if (detectedLoc.latitude && detectedLoc.longitude) {
+      setSettings((prev) => {
+        // Only auto-fill if still on defaults
+        if (prev.latitude === DEFAULTS.latitude && prev.longitude === DEFAULTS.longitude) {
+          return {
+            ...prev,
+            latitude: String(detectedLoc.latitude),
+            longitude: String(detectedLoc.longitude),
+            timeZone: detectedLoc.timeZone ?? prev.timeZone,
+          };
+        }
+        return prev;
+      });
+      setGpsApplied(true);
+    }
+  }, [detectedLoc, locLoading, gpsApplied]);
 
   const canSave = useMemo(() => {
     const lat = Number.parseFloat(settings.latitude);
@@ -169,7 +216,7 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
       await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(settings));
       onBack();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Impossible d’enregistrer les réglages.";
+      const message = err instanceof Error ? err.message : "Impossible d'enregistrer les réglages.";
       setError(message);
     } finally {
       setSaving(false);
@@ -194,45 +241,61 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
 
   if (loading) {
     return (
-      <View style={[ss.screen, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={sc.accent} />
-        <Text style={[ss.muted, { marginTop: 8 }]}>Chargement…</Text>
+      <View style={[ps.screen, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={ps_c.accent} />
+        <Text style={[ps.mutedText, { marginTop: 8 }]}>Chargement…</Text>
       </View>
     );
   }
 
   return (
-    <View style={[ss.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={ss.mb20}>
-          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
-            <Ionicons name="chevron-back" size={20} color={sc.accent} />
-            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
-          </TouchableOpacity>
-          <Text style={ss.title}>Réglages prière</Text>
-          <Text style={ss.subtitle}>Méthode, madhab, ajustements, localisation.</Text>
+    <View style={[ps.screen, { paddingTop: insets.top }]}>
+      {/* Top bar */}
+      <View style={ps.topBar}>
+        <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Ionicons name="chevron-back" size={24} color={ps_c.accent} />
+        </TouchableOpacity>
+        <Text style={ps.topTitle}>Réglages prière</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {/* Hero */}
+        <View style={ps.heroCard}>
+          <Ionicons name="compass-outline" size={24} color={ps_c.accent} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={ps.heroTitle}>Configuration</Text>
+            <Text style={ps.heroSub}>Méthode, madhab, ajustements et localisation</Text>
+          </View>
         </View>
 
-        {error ? <Text style={[ss.errorText, ss.mb8]}>{error}</Text> : null}
+        {error && <Text style={ps.errorText}>{error}</Text>}
 
         {/* Location card */}
-        <View style={ss.card}>
-          <Text style={ss.sectionTitle}>Localisation</Text>
-          <Field
+        <View style={ps.card}>
+          <View style={ps.cardHeader}>
+            <Ionicons name="location-outline" size={18} color={ps_c.accent} />
+            <Text style={ps.sectionTitle}>Localisation</Text>
+          </View>
+          <ProField
             label="Latitude"
+            icon="navigate-outline"
             value={settings.latitude}
             onChangeText={(v) => setSettings((prev) => ({ ...prev, latitude: v }))}
             placeholder="4.0511"
+            keyboardType="decimal-pad"
           />
-          <Field
+          <ProField
             label="Longitude"
+            icon="navigate-outline"
             value={settings.longitude}
             onChangeText={(v) => setSettings((prev) => ({ ...prev, longitude: v }))}
             placeholder="9.7679"
+            keyboardType="decimal-pad"
           />
-          <Field
-            label="Time zone"
+          <ProField
+            label="Fuseau horaire"
+            icon="time-outline"
             value={settings.timeZone}
             onChangeText={(v) => setSettings((prev) => ({ ...prev, timeZone: v }))}
             placeholder="Africa/Douala"
@@ -240,22 +303,28 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
         </View>
 
         {/* Method card */}
-        <View style={ss.card}>
-          <Text style={ss.sectionTitle}>Méthode de calcul</Text>
-          <ChoiceRow
+        <View style={ps.card}>
+          <View style={ps.cardHeader}>
+            <Ionicons name="calculator-outline" size={18} color={ps_c.accent} />
+            <Text style={ps.sectionTitle}>Méthode de calcul</Text>
+          </View>
+          <ProChoiceRow
             title="Méthode"
+            icon="globe-outline"
             options={METHOD_OPTIONS}
             value={(settings.method ?? DEFAULTS.method) as CalculationMethodOption}
             onChange={(method) => setSettings((prev) => ({ ...prev, method }))}
           />
-          <ChoiceRow
+          <ProChoiceRow
             title="Madhab (Asr)"
+            icon="book-outline"
             options={MADHAB_OPTIONS}
             value={(settings.madhab ?? DEFAULTS.madhab) as MadhabOption}
             onChange={(madhab) => setSettings((prev) => ({ ...prev, madhab }))}
           />
-          <ChoiceRow
+          <ProChoiceRow
             title="Règle hautes latitudes"
+            icon="earth-outline"
             options={HIGH_LAT_OPTIONS}
             value={(settings.highLatitudeRule ?? DEFAULTS.highLatitudeRule) as HighLatitudeRuleOption}
             onChange={(highLatitudeRule) => setSettings((prev) => ({ ...prev, highLatitudeRule }))}
@@ -263,55 +332,53 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
         </View>
 
         {/* Adjustments card */}
-        <View style={ss.card}>
-          <Text style={ss.sectionTitle}>Ajustements (minutes)</Text>
-          <Field
-            label="Fajr"
-            value={String(settings.fajrAdjustment ?? 0)}
-            onChangeText={(v) => setSettings((prev) => ({ ...prev, fajrAdjustment: parseAdjustment(v) }))}
-            placeholder="0"
-          />
-          <Field
-            label="Dhuhr"
-            value={String(settings.dhuhrAdjustment ?? 0)}
-            onChangeText={(v) => setSettings((prev) => ({ ...prev, dhuhrAdjustment: parseAdjustment(v) }))}
-            placeholder="0"
-          />
-          <Field
-            label="Asr"
-            value={String(settings.asrAdjustment ?? 0)}
-            onChangeText={(v) => setSettings((prev) => ({ ...prev, asrAdjustment: parseAdjustment(v) }))}
-            placeholder="0"
-          />
-          <Field
-            label="Maghrib"
-            value={String(settings.maghribAdjustment ?? 0)}
-            onChangeText={(v) => setSettings((prev) => ({ ...prev, maghribAdjustment: parseAdjustment(v) }))}
-            placeholder="0"
-          />
-          <Field
-            label="Isha"
-            value={String(settings.ishaAdjustment ?? 0)}
-            onChangeText={(v) => setSettings((prev) => ({ ...prev, ishaAdjustment: parseAdjustment(v) }))}
-            placeholder="0"
-          />
+        <View style={ps.card}>
+          <View style={ps.cardHeader}>
+            <Ionicons name="options-outline" size={18} color={ps_c.accent} />
+            <Text style={ps.sectionTitle}>Ajustements (minutes)</Text>
+          </View>
+          {PRAYER_NAMES.map((prayer) => (
+            <View key={prayer.key} style={ps.adjustRow}>
+              <View style={ps.adjustIconWrap}>
+                <Ionicons name={prayer.icon as any} size={16} color={ps_c.accent} />
+              </View>
+              <Text style={ps.adjustLabel}>{prayer.label}</Text>
+              <View style={ps.adjustControls}>
+                <TouchableOpacity
+                  style={ps.adjustBtn}
+                  onPress={() => setSettings((prev) => ({ ...prev, [prayer.key]: (prev[prayer.key] ?? 0) - 1 }))}
+                >
+                  <Ionicons name="remove" size={16} color={ps_c.accent} />
+                </TouchableOpacity>
+                <Text style={ps.adjustValue}>{settings[prayer.key] ?? 0}</Text>
+                <TouchableOpacity
+                  style={ps.adjustBtn}
+                  onPress={() => setSettings((prev) => ({ ...prev, [prayer.key]: (prev[prayer.key] ?? 0) + 1 }))}
+                >
+                  <Ionicons name="add" size={16} color={ps_c.accent} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
         </View>
 
         {/* Action buttons */}
-        <View style={[ss.row, { gap: 12, marginTop: 20 }]}>
+        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginTop: 8 }}>
           <TouchableOpacity
-            style={[ss.outlineBtn, { flex: 1, alignItems: 'center', paddingVertical: 12 }]}
+            style={ps.resetBtn}
             disabled={saving}
             onPress={() => void reset()}
           >
-            <Text style={ss.outlineBtnText}>{saving ? '…' : 'Réinitialiser'}</Text>
+            <Ionicons name="refresh-outline" size={18} color={ps_c.text} />
+            <Text style={ps.resetBtnText}>{saving ? '…' : 'Réinitialiser'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[ss.primaryBtn, { flex: 1 }, (saving || !canSave) && { opacity: 0.5 }]}
+            style={[ps.saveBtn, (saving || !canSave) && { opacity: 0.5 }]}
             disabled={saving || !canSave}
             onPress={() => void save()}
           >
-            <Text style={ss.primaryBtnText}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Text>
+            <Ionicons name="checkmark" size={18} color="#fff" />
+            <Text style={ps.saveBtnText}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -323,3 +390,153 @@ export const prayerSettingsStorage = {
   key: STORAGE_KEY,
   defaults: DEFAULTS,
 } as const;
+
+const ps_c = {
+  bg: '#FAFAF5',
+  card: '#FFFFFF',
+  border: 'rgba(0,0,0,0.06)',
+  text: '#1A1A1A',
+  textSoft: 'rgba(26,26,26,0.6)',
+  muted: 'rgba(26,26,26,0.35)',
+  accent: colors.primaryDark,
+  accentLight: 'rgba(26,127,100,0.08)',
+};
+
+const ps = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: ps_c.bg },
+
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: ps_c.border,
+  },
+  topTitle: { fontSize: 20, fontWeight: '700', color: ps_c.text },
+
+  heroCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ps_c.accentLight,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 14,
+    padding: 16,
+  },
+  heroTitle: { fontSize: 16, fontWeight: '700', color: ps_c.text },
+  heroSub: { fontSize: 12, color: ps_c.muted, marginTop: 2 },
+
+  errorText: { color: '#C62828', fontSize: 13, paddingHorizontal: 16, marginTop: 8 },
+  mutedText: { color: ps_c.muted, fontSize: 13 },
+
+  card: {
+    backgroundColor: ps_c.card,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: ps_c.border,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: ps_c.text },
+
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: ps_c.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 14,
+  },
+  fieldIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: ps_c.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fieldSmallLabel: { fontSize: 10, fontWeight: '600', color: ps_c.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  fieldInput: {
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: ps_c.text,
+    borderWidth: 1,
+    borderColor: ps_c.border,
+  },
+
+  choiceChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderWidth: 1,
+    borderColor: ps_c.border,
+  },
+  choiceChipActive: { backgroundColor: ps_c.accent, borderColor: ps_c.accent },
+  choiceChipText: { fontSize: 12, fontWeight: '600', color: ps_c.text },
+  choiceChipTextActive: { color: '#fff' },
+
+  adjustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: ps_c.border,
+    gap: 10,
+  },
+  adjustIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: ps_c.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adjustLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: ps_c.text },
+  adjustControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  adjustBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: ps_c.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adjustValue: { fontSize: 16, fontWeight: '700', color: ps_c.text, minWidth: 28, textAlign: 'center' },
+
+  resetBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: ps_c.border,
+    gap: 6,
+  },
+  resetBtnText: { color: ps_c.text, fontWeight: '600', fontSize: 14 },
+  saveBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ps_c.accent,
+    borderRadius: 12,
+    paddingVertical: 14,
+    gap: 6,
+  },
+  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+});

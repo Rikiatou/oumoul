@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
@@ -7,7 +7,7 @@ import type { AuthUser, HijriCalendarDay, HijriCalendarResponse } from '@oumoul/
 import * as SecureStore from 'expo-secure-store';
 import { hijriApi } from '../api';
 import { cancelReminder, scheduleDateReminder } from '../push-notifications';
-import { sc, ss } from '../ui/theme';
+import { useLocationContext } from '../context/location-context';
 
 type IslamicEventKey =
   | 'ramadan_start'
@@ -84,6 +84,11 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
+  const { location: detectedLoc } = useLocationContext();
+  const locLabel = detectedLoc.city && detectedLoc.country
+    ? `${detectedLoc.city}, ${detectedLoc.country}`
+    : detectedLoc.city ?? 'Localisation détectée';
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -91,8 +96,8 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
       const response = await hijriApi.calendar({
         hijriYear,
         hijriMonth,
-        city: 'Douala',
-        country: 'Cameroon',
+        city: detectedLoc.city ?? 'Douala',
+        country: detectedLoc.country ?? 'Cameroon',
         method: 2,
       });
       setData(response);
@@ -247,61 +252,62 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[ss.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={ss.mb20}>
-          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
-            <Ionicons name="chevron-back" size={20} color={sc.accent} />
-            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
-          </TouchableOpacity>
-          <Text style={ss.title}>Calendrier Hijri</Text>
-          <Text style={ss.subtitle}>Douala, Cameroun</Text>
+    <View style={[hc.screen, { paddingTop: insets.top }]}>
+      {/* Top bar */}
+      <View style={hc.topBar}>
+        <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Ionicons name="chevron-back" size={24} color={hc_c.accent} />
+        </TouchableOpacity>
+        <Text style={hc.topTitle}>Calendrier Hijri</Text>
+        <Ionicons name="moon-outline" size={20} color={hc_c.muted} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {/* Location badge */}
+        <View style={hc.locBadge}>
+          <Ionicons name="location-outline" size={14} color={hc_c.accent} />
+          <Text style={hc.locText}>{locLabel}</Text>
         </View>
 
         {/* Month navigation + calendar */}
-        <View style={ss.card}>
-          <View style={[ss.row, { justifyContent: 'space-between' }]}>
-            <TouchableOpacity onPress={goPrev} style={ss.outlineBtn}>
-              <Ionicons name="chevron-back" size={16} color={sc.text} />
+        <View style={hc.card}>
+          <View style={hc.monthNav}>
+            <TouchableOpacity onPress={goPrev} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="chevron-back" size={20} color={hc_c.muted} />
             </TouchableOpacity>
-            <Text style={ss.sectionTitle}>{title}</Text>
-            <TouchableOpacity onPress={goNext} style={ss.outlineBtn}>
-              <Ionicons name="chevron-forward" size={16} color={sc.text} />
+            <Text style={hc.monthTitle}>{title}</Text>
+            <TouchableOpacity onPress={goNext} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="chevron-forward" size={20} color={hc_c.muted} />
             </TouchableOpacity>
           </View>
 
           {loading ? (
-            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-              <ActivityIndicator color={sc.accent} />
-              <Text style={[ss.muted, { marginTop: 8 }]}>Chargement…</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+              <ActivityIndicator size="large" color={hc_c.accent} />
             </View>
           ) : error ? (
-            <Text style={ss.errorText}>{error}</Text>
+            <Text style={hc.errorText}>{error}</Text>
           ) : days.length === 0 ? (
-            <Text style={ss.muted}>Aucun jour trouvé.</Text>
+            <Text style={hc.mutedText}>Aucun jour trouvé.</Text>
           ) : (
-            <View style={{ gap: 6, marginTop: 8 }}>
+            <View style={{ gap: 4, marginTop: 8 }}>
               {days.map((day: HijriCalendarDay) => {
                 const isToday = day.gregorianDate === todayIso;
                 return (
                   <View
                     key={day.gregorianDate}
-                    style={[
-                      ss.infoRow,
-                      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-                      isToday && { backgroundColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderColor: sc.accent },
-                    ]}
+                    style={[hc.dayRow, isToday && hc.dayRowToday]}
                   >
-                    <View style={{ gap: 2 }}>
-                      <Text style={{ color: sc.text, fontWeight: '600', fontSize: 13 }}>
-                        Jour {day.day} · {day.hijriDate}
-                      </Text>
-                      <Text style={{ color: sc.textSoft, fontSize: 12 }}>{formatGregorian(day.gregorianDate)}</Text>
+                    <View style={[hc.dayNum, isToday && { backgroundColor: hc_c.accent }]}>
+                      <Text style={[hc.dayNumText, isToday && { color: '#fff' }]}>{day.day}</Text>
+                    </View>
+                    <View style={{ flex: 1, gap: 1 }}>
+                      <Text style={hc.dayHijri}>{day.hijriDate}</Text>
+                      <Text style={hc.dayGreg}>{formatGregorian(day.gregorianDate)}</Text>
                     </View>
                     {isToday && (
-                      <View style={[ss.chip, ss.chipActive, { paddingHorizontal: 10, paddingVertical: 3 }]}>
-                        <Text style={[ss.chipTextActive, { fontSize: 10 }]}>Aujourd'hui</Text>
+                      <View style={hc.todayBadge}>
+                        <Text style={hc.todayBadgeText}>Aujourd'hui</Text>
                       </View>
                     )}
                   </View>
@@ -312,20 +318,26 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
         </View>
 
         {/* Islamic events */}
-        <View style={ss.card}>
-          <Text style={ss.sectionTitle}>Événements islamiques</Text>
-          <Text style={ss.muted}>Active des rappels locaux pour les prochaines dates à Douala.</Text>
-          <View style={{ gap: 8, marginTop: 8 }}>
+        <View style={hc.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <Ionicons name="calendar-outline" size={18} color={hc_c.accent} />
+            <Text style={hc.sectionTitle}>Événements islamiques</Text>
+          </View>
+          <Text style={hc.sectionSub}>Active des rappels locaux pour les prochaines dates.</Text>
+          <View style={{ gap: 6, marginTop: 10 }}>
             {ISLAMIC_EVENTS.map((event) => (
-              <View key={event.key} style={[ss.infoRow, ss.row, { justifyContent: 'space-between' }]}>
+              <View key={event.key} style={hc.eventRow}>
+                <View style={hc.eventIcon}>
+                  <Ionicons name="star-outline" size={16} color={hc_c.accent} />
+                </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: sc.text, fontWeight: '600', fontSize: 13 }}>{event.title}</Text>
-                  <Text style={{ color: sc.muted, fontSize: 11 }}>{`${event.hijriDay}/${event.hijriMonth} Hijri`}</Text>
+                  <Text style={hc.eventTitle}>{event.title}</Text>
+                  <Text style={hc.eventDate}>{`${event.hijriDay}/${event.hijriMonth} Hijri`}</Text>
                 </View>
                 <Switch
                   value={eventReminders[event.key]}
                   onValueChange={() => void toggleEventReminder(event)}
-                  trackColor={{ true: sc.accent, false: 'rgba(0,0,0,0.1)' }}
+                  trackColor={{ true: hc_c.accent, false: 'rgba(0,0,0,0.1)' }}
                   thumbColor={eventReminders[event.key] ? '#fff' : '#ccc'}
                 />
               </View>
@@ -336,3 +348,47 @@ export function HijriCalendarScreen({ user, onBack }: { user: AuthUser; onBack: 
     </View>
   );
 }
+
+const hc_c = {
+  bg: '#FAFAF5',
+  card: '#FFFFFF',
+  border: 'rgba(0,0,0,0.06)',
+  text: '#1A1A1A',
+  textSoft: 'rgba(26,26,26,0.6)',
+  muted: 'rgba(26,26,26,0.35)',
+  accent: colors.primaryDark,
+  accentLight: 'rgba(26,127,100,0.08)',
+};
+
+const hc = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: hc_c.bg },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: hc_c.border },
+  topTitle: { fontSize: 20, fontWeight: '700', color: hc_c.text },
+
+  locBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: hc_c.accentLight, marginHorizontal: 16, marginTop: 12, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  locText: { fontSize: 12, fontWeight: '600', color: hc_c.text },
+
+  card: { backgroundColor: hc_c.card, marginHorizontal: 16, marginTop: 14, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: hc_c.border },
+  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  monthTitle: { fontSize: 16, fontWeight: '700', color: hc_c.text },
+
+  errorText: { color: '#C62828', fontSize: 13 },
+  mutedText: { color: hc_c.muted, fontSize: 13 },
+
+  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 8, borderRadius: 10 },
+  dayRowToday: { backgroundColor: hc_c.accentLight, borderWidth: 1, borderColor: hc_c.accent + '30' },
+  dayNum: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.04)', alignItems: 'center', justifyContent: 'center' },
+  dayNumText: { fontSize: 13, fontWeight: '700', color: hc_c.text },
+  dayHijri: { fontSize: 13, fontWeight: '600', color: hc_c.text },
+  dayGreg: { fontSize: 11, color: hc_c.muted },
+  todayBadge: { backgroundColor: hc_c.accent, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  todayBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: hc_c.text },
+  sectionSub: { fontSize: 12, color: hc_c.muted },
+
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: hc_c.border },
+  eventIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: hc_c.accentLight, alignItems: 'center', justifyContent: 'center' },
+  eventTitle: { fontSize: 13, fontWeight: '600', color: hc_c.text },
+  eventDate: { fontSize: 11, color: hc_c.muted },
+});

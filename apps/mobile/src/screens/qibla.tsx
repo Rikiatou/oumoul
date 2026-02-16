@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from "@oumoul/ui";
@@ -7,33 +7,26 @@ import { apiRoutes } from "@oumoul/config";
 import type { AuthUser } from "@oumoul/api";
 import { httpClient } from "../api";
 import { t, Locale } from "../i18n";
-import { sc, ss } from '../ui/theme';
-
-const FALLBACK = { lat: 4.0511, lng: 9.7679 };
+import { useLocationContext } from "../context/location-context";
 
 export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const locale = (user.locale as Locale | undefined) ?? "fr";
-  const [coords, setCoords] = useState<{ lat: string; lng: string }>({
-    lat: String(FALLBACK.lat),
-    lng: String(FALLBACK.lng),
-  });
+  const { location: detectedLoc, loading: locLoading, refresh: refreshLoc } = useLocationContext();
   const [direction, setDirection] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string>(t(locale, "qibla.fallback", "Douala (fallback)"));
 
-  const numericCoords = useMemo(() => ({
-    lat: Number.parseFloat(coords.lat),
-    lng: Number.parseFloat(coords.lng),
-  }), [coords]);
+  const locationLabel = detectedLoc.city && detectedLoc.country
+    ? `${detectedLoc.city}, ${detectedLoc.country}`
+    : detectedLoc.city ?? t(locale, "qibla.loc.detected", "Localisation détectée");
 
-  const fetchQibla = async () => {
+  const fetchQibla = useCallback(async (lat: number, lng: number) => {
     setLoading(true);
     setError(null);
     try {
       const query = new URLSearchParams();
-      query.set('latitude', String(numericCoords.lat));
-      query.set('longitude', String(numericCoords.lng));
+      query.set('latitude', String(lat));
+      query.set('longitude', String(lng));
       const res = await httpClient.request<{ direction: number }>(`${apiRoutes.backend.prayer}/qibla?${query.toString()}`, {
         method: 'GET',
       });
@@ -45,107 +38,178 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      void fetchQibla();
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: String(pos.coords.latitude), lng: String(pos.coords.longitude) });
-        setInfo(t(locale, "qibla.loc.detected", "Localisation détectée"));
-      },
-      () => {
-        setInfo(t(locale, "qibla.fallback", "Douala (fallback)"));
-        void fetchQibla();
-      },
-      { maximumAge: 60000, timeout: 7000 },
-    );
   }, []);
 
+  // Auto-fetch when location is detected
   useEffect(() => {
-    if (Number.isFinite(numericCoords.lat) && Number.isFinite(numericCoords.lng)) {
-      void fetchQibla();
+    if (locLoading) return;
+    if (detectedLoc.latitude && detectedLoc.longitude) {
+      void fetchQibla(detectedLoc.latitude, detectedLoc.longitude);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numericCoords.lat, numericCoords.lng]);
+  }, [detectedLoc, locLoading, fetchQibla]);
+
+  const handleRefresh = useCallback(async () => {
+    const loc = await refreshLoc();
+    if (loc.latitude && loc.longitude) {
+      void fetchQibla(loc.latitude, loc.longitude);
+    }
+  }, [refreshLoc, fetchQibla]);
 
   const rotation = direction ?? 0;
 
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[ss.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={ss.mb20}>
-          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
-            <Ionicons name="chevron-back" size={20} color={sc.accent} />
-            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>{t(locale, "common.back.dashboard", "Retour")}</Text>
-          </TouchableOpacity>
-          <Text style={ss.title}>{t(locale, "qibla.title", "Qibla")}</Text>
-          <Text style={ss.subtitle}>{t(locale, "qibla.subtitle", "Trouve ta direction et vérifie l'azimut.")}</Text>
-        </View>
+    <View style={[qb.screen, { paddingTop: insets.top }]}>
+      {/* Top bar */}
+      <View style={qb.topBar}>
+        <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Ionicons name="chevron-back" size={24} color={qb_c.accent} />
+        </TouchableOpacity>
+        <Text style={qb.topTitle}>{t(locale, "qibla.title", "Qibla")}</Text>
+        <Ionicons name="compass-outline" size={20} color={qb_c.muted} />
+      </View>
 
-        {/* Position card */}
-        <View style={ss.card}>
-          <Text style={ss.sectionTitle}>{t(locale, "qibla.position", "Position")}</Text>
-          <TextInput
-            style={ss.input}
-            placeholder="Latitude"
-            placeholderTextColor={sc.muted}
-            keyboardType="decimal-pad"
-            value={coords.lat}
-            onChangeText={(value) => setCoords((prev) => ({ ...prev, lat: value }))}
-          />
-          <TextInput
-            style={ss.input}
-            placeholder="Longitude"
-            placeholderTextColor={sc.muted}
-            keyboardType="decimal-pad"
-            value={coords.lng}
-            onChangeText={(value) => setCoords((prev) => ({ ...prev, lng: value }))}
-          />
-          <Text style={{ color: sc.muted, fontSize: 12 }}>{info}</Text>
-          <TouchableOpacity style={[ss.primaryBtn, loading && { opacity: 0.5 }]} disabled={loading} onPress={() => void fetchQibla()}>
-            <Text style={ss.primaryBtnText}>
-              {loading ? t(locale, "qibla.button.calculating", "Calcul…") : t(locale, "qibla.button.refresh", "Actualiser")}
-            </Text>
-          </TouchableOpacity>
-          {error && <Text style={ss.errorText}>{error}</Text>}
-        </View>
-
-        {/* Direction display */}
-        <View style={{ alignItems: 'center', gap: 12, marginTop: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {/* Compass display */}
+        <View style={qb.compassSection}>
           {direction !== null ? (
             <>
-              <Text style={[ss.label, { fontSize: 13 }]}>Direction : {direction.toFixed(1)}°</Text>
-              <View style={{
-                width: 220, height: 220, borderRadius: 110,
-                borderWidth: 2, borderColor: 'rgba(0,0,0,0.1)',
-                alignItems: 'center', justifyContent: 'center',
-                backgroundColor: '#fff',
-                shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
-              }}>
-                <View style={{
-                  width: 4, height: 80,
-                  backgroundColor: sc.accent,
-                  transform: [{ rotate: `${rotation}deg` }],
-                  borderRadius: 4,
-                }} />
-                <Ionicons name="locate" size={18} color={sc.accent} style={{ marginTop: 8 }} />
-                <Text style={{ color: sc.text, fontWeight: '700', fontSize: 13, marginTop: 4 }}>Kaaba</Text>
+              <View style={qb.compassOuter}>
+                <View style={qb.compassInner}>
+                  {/* Cardinal labels */}
+                  <Text style={[qb.cardinal, { top: 8 }]}>N</Text>
+                  <Text style={[qb.cardinal, { bottom: 8 }]}>S</Text>
+                  <Text style={[qb.cardinal, { left: 8, top: '45%' }]}>W</Text>
+                  <Text style={[qb.cardinal, { right: 8, top: '45%' }]}>E</Text>
+                  {/* Needle */}
+                  <View style={[qb.needle, { transform: [{ rotate: `${rotation}deg` }] }]}>
+                    <View style={qb.needleTop} />
+                    <View style={qb.needleBottom} />
+                  </View>
+                  <View style={qb.compassCenter}>
+                    <Ionicons name="locate" size={16} color={qb_c.accent} />
+                  </View>
+                </View>
               </View>
+              <Text style={qb.degreeText}>{direction.toFixed(1)}°</Text>
+              <Text style={qb.kaabaLabel}>Direction de la Kaaba</Text>
             </>
           ) : loading ? (
-            <ActivityIndicator color={sc.accent} />
+            <View style={{ paddingVertical: 40 }}>
+              <ActivityIndicator size="large" color={qb_c.accent} />
+              <Text style={[qb.mutedText, { marginTop: 8 }]}>{t(locale, "qibla.button.calculating", "Calcul…")}</Text>
+            </View>
           ) : (
-            <Text style={ss.muted}>{t(locale, "qibla.prompt", "Saisis ou autorise ta position pour calculer la Qibla.")}</Text>
+            <View style={qb.promptCard}>
+              <Ionicons name="compass-outline" size={32} color={qb_c.muted} />
+              <Text style={qb.promptText}>{t(locale, "qibla.prompt", "Saisis ou autorise ta position pour calculer la Qibla.")}</Text>
+            </View>
           )}
+        </View>
+
+        {/* Location card */}
+        <View style={qb.card}>
+          <View style={qb.cardHeader}>
+            <Ionicons name="location-outline" size={18} color={qb_c.accent} />
+            <Text style={qb.sectionTitle}>{t(locale, "qibla.position", "Position")}</Text>
+          </View>
+
+          <View style={qb.infoBadge}>
+            <Ionicons name="navigate-outline" size={14} color={qb_c.accent} />
+            <Text style={qb.infoText}>{locLoading ? 'Détection GPS…' : locationLabel}</Text>
+          </View>
+
+          <View style={qb.coordRow}>
+            <View style={qb.coordField}>
+              <View style={qb.coordIconWrap}>
+                <Ionicons name="navigate-outline" size={14} color={qb_c.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={qb.coordLabel}>Latitude</Text>
+                <Text style={qb.coordValue}>{detectedLoc.latitude.toFixed(4)}</Text>
+              </View>
+            </View>
+            <View style={qb.coordField}>
+              <View style={qb.coordIconWrap}>
+                <Ionicons name="navigate-outline" size={14} color={qb_c.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={qb.coordLabel}>Longitude</Text>
+                <Text style={qb.coordValue}>{detectedLoc.longitude.toFixed(4)}</Text>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity style={[qb.refreshBtn, (loading || locLoading) && { opacity: 0.5 }]} disabled={loading || locLoading} onPress={() => void handleRefresh()}>
+            <Ionicons name="refresh-outline" size={18} color="#fff" />
+            <Text style={qb.refreshBtnText}>
+              {loading || locLoading ? t(locale, "qibla.button.calculating", "Calcul…") : t(locale, "qibla.button.refresh", "Actualiser")}
+            </Text>
+          </TouchableOpacity>
+          {error && <Text style={qb.errorText}>{error}</Text>}
         </View>
       </ScrollView>
     </View>
   );
 }
+
+const qb_c = {
+  bg: '#FAFAF5',
+  card: '#FFFFFF',
+  border: 'rgba(0,0,0,0.06)',
+  text: '#1A1A1A',
+  textSoft: 'rgba(26,26,26,0.6)',
+  muted: 'rgba(26,26,26,0.35)',
+  accent: colors.primaryDark,
+  accentLight: 'rgba(26,127,100,0.08)',
+};
+
+const qb = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: qb_c.bg },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: qb_c.border },
+  topTitle: { fontSize: 20, fontWeight: '700', color: qb_c.text },
+
+  compassSection: { alignItems: 'center', paddingVertical: 24 },
+  compassOuter: {
+    width: 240, height: 240, borderRadius: 120,
+    backgroundColor: qb_c.card,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
+    borderWidth: 2, borderColor: qb_c.border,
+  },
+  compassInner: {
+    width: 210, height: 210, borderRadius: 105,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)',
+    alignItems: 'center', justifyContent: 'center',
+    position: 'relative',
+  },
+  cardinal: { position: 'absolute', fontSize: 12, fontWeight: '700', color: qb_c.muted },
+  needle: { width: 4, height: 140, alignItems: 'center', justifyContent: 'center' },
+  needleTop: { width: 4, height: 70, backgroundColor: qb_c.accent, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
+  needleBottom: { width: 4, height: 70, backgroundColor: 'rgba(0,0,0,0.15)', borderBottomLeftRadius: 4, borderBottomRightRadius: 4 },
+  compassCenter: { position: 'absolute', width: 28, height: 28, borderRadius: 14, backgroundColor: qb_c.card, borderWidth: 2, borderColor: qb_c.accent, alignItems: 'center', justifyContent: 'center' },
+  degreeText: { fontSize: 32, fontWeight: '800', color: qb_c.accent, marginTop: 16 },
+  kaabaLabel: { fontSize: 13, color: qb_c.muted, fontWeight: '600', marginTop: 4 },
+
+  promptCard: { alignItems: 'center', gap: 10, paddingVertical: 30 },
+  promptText: { fontSize: 13, color: qb_c.muted, textAlign: 'center', maxWidth: 260 },
+  mutedText: { fontSize: 13, color: qb_c.muted, textAlign: 'center' },
+
+  card: { backgroundColor: qb_c.card, marginHorizontal: 16, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: qb_c.border },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: qb_c.text },
+
+  coordRow: { flexDirection: 'row', gap: 10 },
+  coordField: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: qb_c.border },
+  coordIconWrap: { width: 28, height: 28, borderRadius: 8, backgroundColor: qb_c.accentLight, alignItems: 'center', justifyContent: 'center' },
+  coordLabel: { fontSize: 9, fontWeight: '700', color: qb_c.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  coordValue: { fontSize: 14, fontWeight: '600', color: qb_c.text },
+
+  infoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, backgroundColor: qb_c.accentLight, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  infoText: { fontSize: 12, color: qb_c.accent, fontWeight: '600' },
+
+  refreshBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: qb_c.accent, borderRadius: 12, paddingVertical: 14, gap: 8, marginTop: 14 },
+  refreshBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  errorText: { color: '#C62828', fontSize: 13, marginTop: 8 },
+});

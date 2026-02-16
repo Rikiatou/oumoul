@@ -1,42 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
 import type { AuthUser, ImaneProgramItems, ImaneProgramDayResponse } from '@oumoul/api';
 import { imaneProgramApi } from '../api';
-import { sc, ss } from '../ui/theme';
 
 const DAILY_ITEMS: Array<{
   id: keyof ImaneProgramItems;
   title: string;
   description: string;
+  icon: string;
+  color: string;
+  bg: string;
 }> = [
-  {
-    id: 'coranTilawa',
-    title: 'Lecture de Coran',
-    description: 'Lire un passage (même quelques versets) avec présence du cœur.',
-  },
-  {
-    id: 'dhikrMatinSoir',
-    title: 'Dhikr matin/soir',
-    description: 'Réciter quelques adhkar authentiques du matin ou du soir.',
-  },
-  {
-    id: 'duasPersonnelles',
-    title: 'Duas personnelles',
-    description: 'Prendre quelques minutes pour invoquer Allah pour tes besoins.',
-  },
-  {
-    id: 'sadaqa',
-    title: 'Sadaqa ou service',
-    description: "Un geste de sadaqa ou de service envers quelqu’un de ton entourage.",
-  },
-  {
-    id: 'autreBienfait',
-    title: 'Un bienfait à noter',
-    description: 'Noter un bienfait d’Allah pour renforcer la gratitude.',
-  },
+  { id: 'coranTilawa', title: 'Lecture de Coran', description: 'Lire un passage avec présence du cœur.', icon: 'book-outline', color: '#2E7D32', bg: '#E8F5E9' },
+  { id: 'dhikrMatinSoir', title: 'Dhikr matin/soir', description: 'Réciter les adhkar du matin ou du soir.', icon: 'sparkles-outline', color: '#1565C0', bg: '#E3F2FD' },
+  { id: 'duasPersonnelles', title: 'Duas personnelles', description: 'Invoquer Allah pour tes besoins.', icon: 'hand-left-outline', color: '#7B1FA2', bg: '#F3E5F5' },
+  { id: 'sadaqa', title: 'Sadaqa ou service', description: 'Un geste envers ton entourage.', icon: 'heart-outline', color: '#C62828', bg: '#FFEBEE' },
+  { id: 'autreBienfait', title: 'Bienfait à noter', description: 'Renforcer la gratitude envers Allah.', icon: 'star-outline', color: '#E65100', bg: '#FFF3E0' },
+];
+
+const MOTIVATIONAL = [
+  'Chaque petit pas compte auprès d\'Allah.',
+  'La constance est plus aimée qu\'une grande action isolée.',
+  'Masha Allah, continue sur cette lancée !',
+  'Ton cœur se nourrit de chaque effort.',
+  'Allah voit tes efforts, même les plus petits.',
 ];
 
 export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
@@ -58,14 +48,19 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
     );
   }, [day]);
 
+  const progressPercent = useMemo(() => Math.round((completedCount / 5) * 100), [completedCount]);
+
+  const motivationalMessage = useMemo(() => {
+    if (completedCount === 5) return 'Masha Allah ! Programme complété !';
+    if (completedCount >= 3) return MOTIVATIONAL[2];
+    if (completedCount >= 1) return MOTIVATIONAL[0];
+    return MOTIVATIONAL[1];
+  }, [completedCount]);
+
   const readableDate = useMemo(() => {
     const d = new Date(`${selectedDateIso}T00:00:00.000Z`);
     try {
-      return d.toLocaleDateString(user.locale ?? 'fr', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-      });
+      return d.toLocaleDateString(user.locale ?? 'fr', { weekday: 'long', day: '2-digit', month: 'long' });
     } catch {
       return selectedDateIso;
     }
@@ -104,7 +99,7 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
       try {
         await imaneProgramApi.updateProgram({ date: day.date, items: nextItems });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Impossible d’enregistrer le programme.";
+        const message = err instanceof Error ? err.message : "Impossible d'enregistrer le programme.";
         setError(message);
       } finally {
         setSaving(false);
@@ -116,79 +111,174 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[ss.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={ss.mb20}>
-          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
-            <Ionicons name="chevron-back" size={20} color={sc.accent} />
-            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
-          </TouchableOpacity>
-          <Text style={ss.title}>Programme Imane</Text>
-          <Text style={ss.subtitle}>Actions simples pour nourrir ton cœur aujourd'hui.</Text>
+    <View style={[ip.screen, { paddingTop: insets.top }]}>
+      {/* Top bar */}
+      <View style={ip.topBar}>
+        <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Ionicons name="chevron-back" size={24} color={ip_c.accent} />
+        </TouchableOpacity>
+        <Text style={ip.topTitle}>Programme Imane</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {/* Day selector */}
+        <View style={ip.dayRow}>
+          {[{ label: 'Avant-hier', offset: -2 }, { label: 'Hier', offset: -1 }, { label: "Aujourd'hui", offset: 0 }].map(
+            (entry) => {
+              const date = new Date();
+              date.setDate(date.getDate() + entry.offset);
+              const iso = date.toISOString().slice(0, 10);
+              const isActive = iso === selectedDateIso;
+              return (
+                <TouchableOpacity key={entry.label} style={[ip.dayChip, isActive && ip.dayChipActive]} onPress={() => setSelectedDateIso(iso)}>
+                  <Text style={[ip.dayChipText, isActive && ip.dayChipTextActive]}>{entry.label}</Text>
+                </TouchableOpacity>
+              );
+            },
+          )}
         </View>
 
         {loading ? (
-          <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-            <ActivityIndicator color={sc.accent} />
-            <Text style={[ss.muted, { marginTop: 8 }]}>Chargement…</Text>
+          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+            <ActivityIndicator size="large" color={ip_c.accent} />
           </View>
         ) : !day ? (
-          <Text style={ss.errorText}>{error ?? 'Aucune donnée pour ce jour.'}</Text>
+          <Text style={ip.errorText}>{error ?? 'Aucune donnée pour ce jour.'}</Text>
         ) : (
-          <View style={ss.card}>
-            <Text style={ss.sectionTitle}>Checklist du {readableDate}</Text>
-            <Text style={ss.muted}>{completedCount} / 5 objectifs complétés{saving ? ' · Enregistrement…' : ''}</Text>
-            {error && <Text style={ss.errorText}>{error}</Text>}
-
-            {/* Day selector */}
-            <View style={[ss.row, ss.gap6, ss.mb12]}>
-              {[{ label: 'J-2', offset: -2 }, { label: 'J-1', offset: -1 }, { label: "Aujourd'hui", offset: 0 }].map(
-                (entry) => {
-                  const date = new Date();
-                  date.setDate(date.getDate() + entry.offset);
-                  const iso = date.toISOString().slice(0, 10);
-                  const isActive = iso === selectedDateIso;
-                  return (
-                    <TouchableOpacity key={entry.label} style={[ss.chip, isActive && ss.chipActive]} onPress={() => setSelectedDateIso(iso)}>
-                      <Text style={[ss.chipText, isActive && ss.chipTextActive]}>{entry.label}</Text>
-                    </TouchableOpacity>
-                  );
-                },
-              )}
+          <>
+            {/* Progress hero */}
+            <View style={ip.heroCard}>
+              <View style={ip.progressCircle}>
+                <Text style={ip.progressNum}>{completedCount}</Text>
+                <Text style={ip.progressDenom}>/5</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 16 }}>
+                <Text style={ip.heroDate}>{readableDate}</Text>
+                <View style={ip.progressTrack}>
+                  <View style={[ip.progressFill, { width: `${progressPercent}%` }]} />
+                </View>
+                <Text style={ip.heroMotivation}>{motivationalMessage}</Text>
+              </View>
             </View>
 
-            {/* Checklist items */}
-            <View style={{ gap: 10 }}>
+            {error && <Text style={ip.errorText}>{error}</Text>}
+            {saving && <Text style={ip.savingText}>Enregistrement…</Text>}
+
+            {/* Checklist */}
+            <View style={{ paddingHorizontal: 16, gap: 10 }}>
               {DAILY_ITEMS.map((item) => {
                 const checked = day.items[item.id];
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    style={[ss.infoRow, ss.row, { gap: 12, alignItems: 'flex-start' }]}
+                    style={[ip.checkCard, checked && { backgroundColor: item.bg, borderColor: item.color + '30' }]}
                     onPress={() => void toggleItem(item.id)}
                     activeOpacity={0.7}
                   >
-                    <View style={{
-                      width: 22, height: 22, borderRadius: 11,
-                      borderWidth: 2,
-                      borderColor: checked ? sc.accent : 'rgba(0,0,0,0.2)',
-                      backgroundColor: checked ? sc.accent : 'transparent',
-                      alignItems: 'center', justifyContent: 'center', marginTop: 2,
-                    }}>
-                      {checked && <Ionicons name="checkmark" size={14} color="#fff" />}
+                    <View style={[ip.checkIcon, { backgroundColor: checked ? item.color : 'rgba(0,0,0,0.04)' }]}>
+                      {checked ? (
+                        <Ionicons name="checkmark" size={18} color="#fff" />
+                      ) : (
+                        <Ionicons name={item.icon as any} size={18} color={item.color} />
+                      )}
                     </View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={{ color: sc.text, fontSize: 14, fontWeight: '600' }}>{item.title}</Text>
-                      <Text style={{ color: sc.textSoft, fontSize: 12 }}>{item.description}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[ip.checkTitle, checked && { color: item.color }]}>{item.title}</Text>
+                      <Text style={ip.checkDesc}>{item.description}</Text>
+                    </View>
+                    <View style={[ip.checkBox, checked && { backgroundColor: item.color, borderColor: item.color }]}>
+                      {checked && <Ionicons name="checkmark" size={14} color="#fff" />}
                     </View>
                   </TouchableOpacity>
                 );
               })}
             </View>
-          </View>
+          </>
         )}
       </ScrollView>
     </View>
   );
 }
+
+const ip_c = {
+  bg: '#FAFAF5',
+  card: '#FFFFFF',
+  border: 'rgba(0,0,0,0.06)',
+  text: '#1A1A1A',
+  textSoft: 'rgba(26,26,26,0.6)',
+  muted: 'rgba(26,26,26,0.35)',
+  accent: colors.primaryDark,
+  accentLight: 'rgba(26,127,100,0.08)',
+};
+
+const ip = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: ip_c.bg },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: ip_c.border },
+  topTitle: { fontSize: 20, fontWeight: '700', color: ip_c.text },
+
+  dayRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4 },
+  dayChip: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.04)' },
+  dayChipActive: { backgroundColor: ip_c.accent },
+  dayChipText: { fontSize: 12, fontWeight: '700', color: ip_c.text },
+  dayChipTextActive: { color: '#fff' },
+
+  heroCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ip_c.card,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: ip_c.border,
+  },
+  progressCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: ip_c.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  progressNum: { fontSize: 28, fontWeight: '800', color: ip_c.accent },
+  progressDenom: { fontSize: 14, fontWeight: '600', color: ip_c.muted, marginTop: 8 },
+  heroDate: { fontSize: 14, fontWeight: '600', color: ip_c.text, textTransform: 'capitalize', marginBottom: 8 },
+  progressTrack: { height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: 6, backgroundColor: ip_c.accent, borderRadius: 3 },
+  heroMotivation: { fontSize: 12, color: ip_c.muted, marginTop: 6, fontStyle: 'italic' },
+
+  errorText: { color: '#C62828', fontSize: 13, paddingHorizontal: 16, marginTop: 8 },
+  savingText: { color: ip_c.accent, fontSize: 12, paddingHorizontal: 16, marginTop: 4, marginBottom: 4 },
+
+  checkCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ip_c.card,
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: ip_c.border,
+  },
+  checkIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkTitle: { fontSize: 14, fontWeight: '700', color: ip_c.text },
+  checkDesc: { fontSize: 12, color: ip_c.muted, marginTop: 2 },
+  checkBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

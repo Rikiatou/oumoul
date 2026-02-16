@@ -21,6 +21,7 @@ import { appMetadata } from "@oumoul/config";
 import { colors } from "@oumoul/ui";
 import type { AuthUser, RegisterPayload } from "@oumoul/api";
 import { useAuth, AuthProvider } from "./src/context/auth-context";
+import { LocationProvider, useLocationContext } from "./src/context/location-context";
 import { useForm } from "./src/hooks/use-form";
 import { authApi } from "./src/api";
 import { DashboardScreen } from "./src/screens/dashboard";
@@ -34,6 +35,7 @@ import { QiblaScreen } from "./src/screens/qibla";
 import { HijriCalendarScreen } from "./src/screens/hijri-calendar";
 import { PrayerSettingsScreen } from "./src/screens/prayer-settings";
 import { WelcomeScreen } from "./src/screens/welcome";
+import { WelcomeLandingScreen } from "./src/screens/welcome-landing";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -110,7 +112,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
 
 function RootSwitch() {
   const { user, loading, pendingVerificationEmail } = useAuth();
-  const [welcomeDone, setWelcomeDone] = useState(false);
+  const [welcomeStep, setWelcomeStep] = useState<"slides" | "landing" | "done">("slides");
 
   if (loading) {
     return (
@@ -125,8 +127,12 @@ function RootSwitch() {
     return <VerifyEmailScreen email={pendingVerificationEmail} />;
   }
 
-  if (!user && !welcomeDone) {
-    return <WelcomeScreen onFinish={() => setWelcomeDone(true)} />;
+  if (!user && welcomeStep === "slides") {
+    return <WelcomeScreen onFinish={() => setWelcomeStep("landing")} />;
+  }
+
+  if (!user && welcomeStep === "landing") {
+    return <WelcomeLandingScreen onGetStarted={() => setWelcomeStep("done")} />;
   }
 
   if (!user) {
@@ -138,6 +144,7 @@ function RootSwitch() {
 
 function MainApp({ user }: { user: AuthUser }) {
   return (
+    <LocationProvider>
     <NavigationContainer>
       <Tab.Navigator
         screenOptions={({ route }) => ({
@@ -188,6 +195,7 @@ function MainApp({ user }: { user: AuthUser }) {
         </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
+    </LocationProvider>
   );
 }
 
@@ -297,9 +305,13 @@ type ModuleCard = {
 function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
+  const { location: detectedLoc } = useLocationContext();
   const [logoutBusy, setLogoutBusy] = useState(false);
   const greeting = useMemo(() => getGreeting(), []);
   const hijri = useMemo(() => getHijriLabel(), []);
+  const cityLabel = detectedLoc.city && detectedLoc.country
+    ? `${detectedLoc.city}, ${detectedLoc.country}`
+    : detectedLoc.city ?? null;
 
   const onLogout = useCallback(async () => {
     setLogoutBusy(true);
@@ -325,6 +337,12 @@ function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
             <Text style={s.greeting}>{greeting}</Text>
             <Text style={s.userName}>{user.firstName || user.email}</Text>
             {hijri ? <Text style={s.hijriLabel}>{hijri}</Text> : null}
+            {cityLabel ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
+                <Ionicons name="location-outline" size={12} color={C.primaryDark} />
+                <Text style={{ fontSize: 12, color: C.textSoft, fontWeight: "500" }}>{cityLabel}</Text>
+              </View>
+            ) : null}
           </View>
           <TouchableOpacity
             style={s.logoutBtn}

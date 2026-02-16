@@ -3,7 +3,7 @@
     "name": "Nissa Imane Tracker",
     "slug": "mobile",
     "owner": "kabrak",
-    "version": "1.0.4",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,6 +15,13 @@
           "sounds": [
             "./assets/adhan.wav"
           ]
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Oumoul utilise ta position pour calculer les horaires de prière, la direction de la Qibla et le calendrier Hijri.",
+          "locationWhenInUsePermission": "Oumoul utilise ta position pour calculer les horaires de prière, la direction de la Qibla et le calendrier Hijri."
         }
       ]
     ],

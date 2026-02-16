@@ -49,6 +49,7 @@ import {
 } from "../push-notifications";
 import * as SecureStore from "expo-secure-store";
 import { t, Locale } from "../i18n";
+import { useLocationContext } from "../context/location-context";
 import { prayerSettingsStorage } from "./prayer-settings";
 
 const DEFAULT_COORDS = {
@@ -162,6 +163,7 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
   const { logout } = useAuth();
   const [logoutBusy, setLogoutBusy] = useState(false);
   const locale = (user.locale as Locale | undefined) ?? "fr";
+  const { location: detectedLoc, loading: locLoading } = useLocationContext();
 
   const [prayerForm, setPrayerForm] = useState({
     latitude: DEFAULT_COORDS.latitude,
@@ -169,6 +171,19 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
     date: "",
     timeZone: DEFAULT_COORDS.timeZone,
   });
+
+  // Auto-fill prayer form from GPS location
+  useEffect(() => {
+    if (locLoading) return;
+    if (detectedLoc.latitude && detectedLoc.longitude) {
+      setPrayerForm((prev) => ({
+        ...prev,
+        latitude: String(detectedLoc.latitude),
+        longitude: String(detectedLoc.longitude),
+        timeZone: detectedLoc.timeZone ?? prev.timeZone,
+      }));
+    }
+  }, [detectedLoc, locLoading]);
 
   const [prayerSettings, setPrayerSettings] = useState<{
     method?: CalculationMethodOption;
@@ -622,6 +637,19 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
         if (raw) {
           const parsed = JSON.parse(raw) as Record<LocalReminderType, boolean>;
           setLocalReminderEnabled((prev) => ({ ...prev, ...parsed }));
+        } else {
+          // First launch: auto-enable all 5 adhan notifications (smart default)
+          const autoEnabled: Record<LocalReminderType, boolean> = {
+            AdhanFajr: true,
+            AdhanDhuhr: true,
+            AdhanAsr: true,
+            AdhanMaghrib: true,
+            AdhanIsha: true,
+            SuhoorLocal: false,
+            IftarLocal: false,
+          };
+          setLocalReminderEnabled(autoEnabled);
+          await SecureStore.setItemAsync("oumoul.localReminders", JSON.stringify(autoEnabled));
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Impossible de charger les rappels locaux.";
@@ -919,6 +947,42 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
   }, [prayerResult]);
 
   const hijriLabel = useMemo(() => getHijriDateLabel(user.locale ?? "fr-FR"), [user.locale]);
+
+  const dashLocLabel = useMemo(() => {
+    if (detectedLoc.city && detectedLoc.country) return `${detectedLoc.city}, ${detectedLoc.country}`;
+    if (detectedLoc.city) return detectedLoc.city;
+    return "Position GPS détectée";
+  }, [detectedLoc.city, detectedLoc.country]);
+
+  const todayLabel = useMemo(() => {
+    const d = new Date();
+    return d.toLocaleDateString(user.locale ?? "fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }, [user.locale]);
+
+  const ramadanDayInfo = useMemo(() => {
+    const RAMADAN_START = new Date("2026-02-18");
+    const RAMADAN_END = new Date("2026-03-19");
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (today < RAMADAN_START) {
+      const diff = Math.ceil((RAMADAN_START.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return { status: "before" as const, daysUntil: diff, dayNumber: 0, totalDays: 30 };
+    }
+    if (today > RAMADAN_END) {
+      return { status: "after" as const, daysUntil: 0, dayNumber: 30, totalDays: 30 };
+    }
+    const dayNum = Math.ceil((today.getTime() - RAMADAN_START.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return { status: "during" as const, daysUntil: 0, dayNumber: dayNum, totalDays: 30 };
+  }, []);
+
+  const nextPrayerInfo = useMemo(() => {
+    if (!prayerResult) return null;
+    const next = prayerResult.nextPrayer;
+    const nextTime = prayerResult.nextPrayerTime ? formatTime(prayerResult.nextPrayerTime) : null;
+    if (!next || !nextTime) return null;
+    return { name: next, time: nextTime };
+  }, [prayerResult, formatTime]);
+
   const insets = useSafeAreaInsets();
 
   return (
@@ -928,16 +992,63 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshAll()} tintColor={ds_c.primaryDark} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ marginBottom: 24 }}>
+        {/* Greeting header */}
+        <View style={{ marginBottom: 20 }}>
+          <Text style={ds.headerGreeting}>Assalamou Alaikoum Wa Rahmatoullahi Wa Barakouthou</Text>
           <Text style={ds.headerTitle}>
-            {t(locale, "dash.header.title", "Tableau de bord")}
+            {user.firstName} 🤲
           </Text>
-          <Text style={ds.headerSub}>
-            {t(locale, "dash.header.subtitle", "Horaires, jeûne, dhikr et rappels.")}
-          </Text>
-          {hijriLabel ? <Text style={ds.hijri}>Hijri · {hijriLabel}</Text> : null}
+          <Text style={ds.headerDate}>{todayLabel}</Text>
+          {hijriLabel ? <Text style={ds.hijri}>{hijriLabel}</Text> : null}
         </View>
 
+        {/* Next prayer highlight */}
+        {nextPrayerInfo && (
+          <View style={ds.nextPrayerCard}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={ds.nextPrayerIcon}>
+                <Ionicons name="time-outline" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={ds.nextPrayerLabel}>Prochaine prière</Text>
+                <Text style={ds.nextPrayerName}>{nextPrayerInfo.name}</Text>
+              </View>
+              <Text style={ds.nextPrayerTime}>{nextPrayerInfo.time}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Ramadan banner */}
+        <View style={ds.ramadanBanner}>
+          <Ionicons name="moon" size={20} color="#FFC107" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            {ramadanDayInfo.status === "before" && (
+              <>
+                <Text style={ds.ramadanBannerTitle}>Ramadan dans {ramadanDayInfo.daysUntil} jour{ramadanDayInfo.daysUntil > 1 ? "s" : ""}</Text>
+                <Text style={ds.ramadanBannerSub}>Prépare-toi pour le mois béni</Text>
+              </>
+            )}
+            {ramadanDayInfo.status === "during" && (
+              <>
+                <Text style={ds.ramadanBannerTitle}>Ramadan — Jour {ramadanDayInfo.dayNumber}/{ramadanDayInfo.totalDays}</Text>
+                <Text style={ds.ramadanBannerSub}>{ramadanTodayText}</Text>
+              </>
+            )}
+            {ramadanDayInfo.status === "after" && (
+              <>
+                <Text style={ds.ramadanBannerTitle}>Ramadan terminé</Text>
+                <Text style={ds.ramadanBannerSub}>{ramadanProgressText || "Eid Moubarak !"}</Text>
+              </>
+            )}
+          </View>
+          {ramadanDayInfo.status === "during" && (
+            <View style={ds.ramadanDayBadge}>
+              <Text style={ds.ramadanDayBadgeText}>{ramadanDayInfo.dayNumber}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Stats row */}
         <View style={ds.statsRow}>
           <View style={ds.statCard}>
             <View style={[ds.statIcon, { backgroundColor: "#E8F5E9" }]}>
@@ -1049,21 +1160,20 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
           <Text style={ds.mutedText}>Paramètre la réception de certains rappels côté serveur.</Text>
         </Section>
 
-        <Section title={t(locale, "dash.prayer.section.title", "Horaires de prière")} subtitle={t(locale, "dash.prayer.section.subtitle", "Définis ta position pour calculer les horaires.")}>
+        <Section title={t(locale, "dash.prayer.section.title", "Horaires de prière")} subtitle={dashLocLabel}>
           <View style={{ gap: 10 }}>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <TextInput style={[ds.input, { flex: 1 }]} placeholder="Latitude" placeholderTextColor={ds_c.muted} keyboardType="decimal-pad" value={prayerForm.latitude} onChangeText={(v) => setPrayerForm((p) => ({ ...p, latitude: v }))} />
-              <TextInput style={[ds.input, { flex: 1 }]} placeholder="Longitude" placeholderTextColor={ds_c.muted} keyboardType="decimal-pad" value={prayerForm.longitude} onChangeText={(v) => setPrayerForm((p) => ({ ...p, longitude: v }))} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(26,127,100,0.08)", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
+              <Ionicons name="location" size={14} color={ds_c.primaryDark} />
+              <Text style={{ fontSize: 12, fontWeight: "600", color: ds_c.text, flex: 1 }}>
+                {locLoading ? "Détection GPS…" : dashLocLabel}
+              </Text>
+              <Text style={{ fontSize: 11, color: ds_c.muted }}>{prayerForm.timeZone}</Text>
             </View>
-            <TextInput style={ds.input} placeholder="Date (AAAA-MM-JJ)" placeholderTextColor={ds_c.muted} value={prayerForm.date} onChangeText={(v) => setPrayerForm((p) => ({ ...p, date: v }))} />
-            <TextInput style={ds.input} placeholder="Fuseau horaire" placeholderTextColor={ds_c.muted} value={prayerForm.timeZone} onChangeText={(v) => setPrayerForm((p) => ({ ...p, timeZone: v }))} />
-            <TouchableOpacity style={ds.primaryBtn} disabled={prayerLoading} onPress={() => void fetchPrayer()}>
-              <Text style={ds.primaryBtnText}>{prayerLoading ? t(locale, "dash.button.calculating", "Calcul…") : t(locale, "dash.button.show", "Afficher")}</Text>
-            </TouchableOpacity>
             {prayerError && <Text style={ds.errorText}>{prayerError}</Text>}
-            {prayerResult && (
+            {prayerLoading ? (
+              <ActivityIndicator color={ds_c.primaryDark} />
+            ) : prayerResult ? (
               <View style={{ gap: 6 }}>
-                <Text style={ds.mutedText}>{prayerResult.location.timeZone} · {formatDate(prayerResult.date)}</Text>
                 {prayerTimesEntries.map(([key, value]) => (
                   <View key={key} style={ds.prayerRow}>
                     <Text style={ds.prayerKey}>{key}</Text>
@@ -1071,6 +1181,8 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
                   </View>
                 ))}
               </View>
+            ) : (
+              <Text style={ds.mutedText}>{t(locale, "dash.prayer.section.subtitle", "Calcul automatique en cours…")}</Text>
             )}
           </View>
         </Section>
@@ -1269,9 +1381,54 @@ const ds_c = {
 
 const ds = StyleSheet.create({
   screen: { flex: 1, backgroundColor: ds_c.bg },
+  headerGreeting: { fontSize: 12, fontWeight: "600", color: ds_c.primaryDark, letterSpacing: 0.3, marginBottom: 4 },
   headerTitle: { fontSize: 26, fontWeight: "700", color: ds_c.text, letterSpacing: -0.3 },
+  headerDate: { fontSize: 13, color: ds_c.textSoft, marginTop: 4, textTransform: "capitalize" },
   headerSub: { fontSize: 14, color: ds_c.textSoft, marginTop: 2 },
-  hijri: { fontSize: 12, color: ds_c.muted, marginTop: 4 },
+  hijri: { fontSize: 12, color: ds_c.muted, marginTop: 2 },
+
+  nextPrayerCard: {
+    backgroundColor: ds_c.primaryDark,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  nextPrayerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nextPrayerLabel: { fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: 1 },
+  nextPrayerName: { fontSize: 18, fontWeight: "700", color: "#fff", marginTop: 2 },
+  nextPrayerTime: { fontSize: 28, fontWeight: "800", color: "#fff" },
+
+  ramadanBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A2332",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+  },
+  ramadanBannerTitle: { fontSize: 14, fontWeight: "700", color: "#fff" },
+  ramadanBannerSub: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 2 },
+  ramadanDayBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFC107",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ramadanDayBadgeText: { fontSize: 18, fontWeight: "800", color: "#1A2332" },
 
   statsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 },
   statCard: {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@oumoul/ui';
@@ -118,8 +118,19 @@ function useQuranVerses({ selectedSurahId, language }: { selectedSurahId: number
   return { verses, loadingVerses: loading, error, reload: loadVerses } as const;
 }
 
+const FONT_SIZES = [
+  { arabic: 18, trans: 12, label: 'Petit' },
+  { arabic: 22, trans: 13, label: 'Normal' },
+  { arabic: 26, trans: 14, label: 'Grand' },
+  { arabic: 32, trans: 16, label: 'Très grand' },
+  { arabic: 40, trans: 18, label: 'Maximum' },
+];
+
 export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [fontSizeIndex, setFontSizeIndex] = useState(1);
+  const [showSurahList, setShowSurahList] = useState(true);
 
   const lastReadKey = useRef(`oumoul.quran.lastRead.${user.email}`).current;
   const bookmarksKey = useRef(`oumoul.quran.bookmarks.${user.email}`).current;
@@ -443,190 +454,507 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
     [language, setAndPersistLastRead],
   );
 
+  const filteredSurahs = useMemo(() => {
+    if (!searchQuery.trim()) return surahs;
+    const q = searchQuery.toLowerCase().trim();
+    return surahs.filter(
+      (s) =>
+        s.nameSimple?.toLowerCase().includes(q) ||
+        s.nameArabic?.includes(q) ||
+        String(s.id) === q ||
+        `sourate ${s.id}` === q
+    );
+  }, [surahs, searchQuery]);
+
+  const currentFont = FONT_SIZES[fontSizeIndex];
+  const selectedSurah = useMemo(() => surahs.find((s) => s.id === selectedSurahId), [surahs, selectedSurahId]);
+
+  const handleSelectSurah = useCallback((id: number) => {
+    setSelectedSurahId(id);
+    setShowSurahList(false);
+    setSearchQuery('');
+  }, [setSelectedSurahId]);
+
   const insets = useSafeAreaInsets();
 
-  return (
-    <View style={[ss.screen, { paddingTop: insets.top }]}>
-      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={ss.mb20}>
-          <TouchableOpacity onPress={onBack} style={[ss.row, ss.gap4, ss.mb12]}>
-            <Ionicons name="chevron-back" size={20} color={sc.accent} />
-            <Text style={{ color: sc.accent, fontWeight: '600', fontSize: 14 }}>Retour</Text>
+  // ── SURAH LIST VIEW ──
+  if (showSurahList) {
+    return (
+      <View style={[q.screen, { paddingTop: insets.top }]}>
+        {/* Top bar */}
+        <View style={q.topBar}>
+          <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="chevron-back" size={24} color={q_c.accent} />
           </TouchableOpacity>
-          <Text style={ss.title}>Coran & tafsir</Text>
-          <Text style={ss.subtitle}>Choisis une sourate pour lire les versets en arabe avec traduction.</Text>
+          <Text style={q.topTitle}>القرآن الكريم</Text>
+          <LanguageToggle language={language} onChange={setLanguage} />
         </View>
 
-        {/* Surahs card */}
-        <View style={ss.card}>
-          <View style={[ss.row, { justifyContent: 'space-between', marginBottom: 10 }]}>
-            <Text style={ss.sectionTitle}>Sourates</Text>
-            <LanguageToggle language={language} onChange={setLanguage} />
-          </View>
-
-          {loadingSurahs ? (
-            <ActivityIndicator color={sc.accent} />
-          ) : surahs.length === 0 ? (
-            <Text style={ss.muted}>Aucune sourate trouvée.</Text>
-          ) : (
-            <ScrollView style={{ maxHeight: 320 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-              <View style={{ gap: 6 }}>
-                {surahs.map((surah) => {
-                  const isActive = surah.id === selectedSurahId;
-                  return (
-                    <TouchableOpacity
-                      key={surah.id}
-                      style={[
-                        ss.infoRow,
-                        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-                        isActive && { backgroundColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderColor: sc.accent, borderRadius: 10 },
-                      ]}
-                      onPress={() => setSelectedSurahId(surah.id)}
-                    >
-                      <View style={{ gap: 2 }}>
-                        <Text style={{ color: sc.muted, fontSize: 10 }}>Sourate {surah.id}</Text>
-                        <Text style={{ color: sc.text, fontSize: 14, fontWeight: '600' }}>{surah.nameSimple}</Text>
-                        <Text style={{ color: sc.textSoft, fontSize: 13 }}>{surah.nameArabic}</Text>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={{ color: sc.muted, fontSize: 10 }}>
-                          {surah.revelationPlace === 'makkah' ? 'Makkiyah' : 'Madaniyah'}
-                        </Text>
-                        <Text style={{ color: sc.textSoft, fontSize: 11 }}>{surah.versesCount} versets</Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ScrollView>
+        {/* Search */}
+        <View style={q.searchContainer}>
+          <Ionicons name="search" size={18} color={q_c.muted} style={{ marginLeft: 14 }} />
+          <TextInput
+            style={q.searchInput}
+            placeholder="Rechercher une sourate..."
+            placeholderTextColor={q_c.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ paddingRight: 14 }}>
+              <Ionicons name="close-circle" size={18} color={q_c.muted} />
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* Verses card */}
-        <View style={ss.card}>
-          <View style={[ss.row, { justifyContent: 'space-between', marginBottom: 8 }]}>
-            <Text style={ss.sectionTitle}>Versets</Text>
-            {selectedSurahId !== null && (
-              <View style={[ss.row, ss.gap6]}>
+        {/* Last read banner */}
+        {lastRead && hydrated && (
+          <TouchableOpacity
+            style={q.lastReadBanner}
+            onPress={() => { handleSelectSurah(lastRead.surahId); }}
+          >
+            <Ionicons name="bookmark" size={16} color="#fff" />
+            <Text style={q.lastReadText}>
+              Continuer : {surahNameById.get(lastRead.surahId) ?? `Sourate ${lastRead.surahId}`} · Verset {lastRead.ayah}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        )}
+
+        {/* Surah list */}
+        {loadingSurahs ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={q_c.accent} />
+          </View>
+        ) : (
+          <FlatList
+            data={filteredSurahs}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item: surah }) => {
+              const isActive = surah.id === selectedSurahId;
+              const hasBookmark = bookmarks.some((b) => b.surahId === surah.id);
+              return (
                 <TouchableOpacity
-                  style={ss.outlineBtn}
-                  onPress={() => void toggleAudio()}
-                  disabled={audioLoading}
+                  style={[q.surahRow, isActive && q.surahRowActive]}
+                  onPress={() => handleSelectSurah(surah.id)}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons name={audioLoading ? 'hourglass-outline' : isPlaying ? 'pause' : 'play'} size={14} color={sc.text} />
+                  <View style={q.surahNumber}>
+                    <Text style={q.surahNumberText}>{surah.id}</Text>
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={q.surahName}>{surah.nameSimple}</Text>
+                    <Text style={q.surahMeta}>
+                      {surah.revelationPlace === 'makkah' ? 'Mecquoise' : 'Médinoise'} · {surah.versesCount} versets
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    <Text style={q.surahArabic}>{surah.nameArabic}</Text>
+                    {hasBookmark && <Ionicons name="bookmark" size={12} color={q_c.accent} />}
+                  </View>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={ss.outlineBtn}
-                  onPress={() => void stopAudio()}
-                  disabled={audioLoading || !soundRef.current}
-                >
-                  <Ionicons name="stop" size={14} color={sc.text} />
-                </TouchableOpacity>
-                {audioReciter && (
-                  <Text style={{ color: sc.muted, fontSize: 10, maxWidth: 100 }} numberOfLines={1}>{audioReciter}</Text>
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={{ color: q_c.muted, textAlign: 'center', marginTop: 40, fontSize: 14 }}>
+                Aucune sourate trouvée pour "{searchQuery}"
+              </Text>
+            }
+          />
+        )}
+      </View>
+    );
+  }
+
+  // ── READING VIEW ──
+  return (
+    <View style={[q.screen, { paddingTop: insets.top }]}>
+      {/* Reading top bar */}
+      <View style={q.readingBar}>
+        <TouchableOpacity onPress={() => setShowSurahList(true)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Ionicons name="chevron-back" size={24} color={q_c.accent} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={q.readingTitle} numberOfLines={1}>{selectedSurah?.nameSimple ?? ''}</Text>
+          <Text style={q.readingSubtitle}>{selectedSurah?.nameArabic ?? ''}</Text>
+        </View>
+        <View style={[ss.row, ss.gap6]}>
+          {/* Audio controls */}
+          <TouchableOpacity style={q.iconBtn} onPress={() => void toggleAudio()} disabled={audioLoading}>
+            <Ionicons name={audioLoading ? 'hourglass-outline' : isPlaying ? 'pause' : 'play'} size={18} color={q_c.accent} />
+          </TouchableOpacity>
+          {isPlaying && (
+            <TouchableOpacity style={q.iconBtn} onPress={() => void stopAudio()}>
+              <Ionicons name="stop" size={18} color={q_c.accent} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Font size controls */}
+      <View style={q.fontBar}>
+        <TouchableOpacity
+          style={[q.fontBtn, fontSizeIndex === 0 && { opacity: 0.3 }]}
+          onPress={() => setFontSizeIndex((i) => Math.max(0, i - 1))}
+          disabled={fontSizeIndex === 0}
+        >
+          <Text style={q.fontBtnText}>A-</Text>
+        </TouchableOpacity>
+        <Text style={q.fontLabel}>{currentFont.label}</Text>
+        <TouchableOpacity
+          style={[q.fontBtn, fontSizeIndex === FONT_SIZES.length - 1 && { opacity: 0.3 }]}
+          onPress={() => setFontSizeIndex((i) => Math.min(FONT_SIZES.length - 1, i + 1))}
+          disabled={fontSizeIndex === FONT_SIZES.length - 1}
+        >
+          <Text style={q.fontBtnText}>A+</Text>
+        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <LanguageToggle language={language} onChange={setLanguage} />
+      </View>
+
+      {audioError && <Text style={[ss.errorText, { paddingHorizontal: 20, marginBottom: 4 }]}>{audioError}</Text>}
+      {audioReciter && <Text style={{ color: q_c.muted, fontSize: 11, paddingHorizontal: 20, marginBottom: 4 }}>Récitateur : {audioReciter}</Text>}
+      {error && <Text style={[ss.errorText, { paddingHorizontal: 20, marginBottom: 4 }]}>{error}</Text>}
+
+      {/* Bismillah header */}
+      {selectedSurahId !== null && selectedSurahId !== 9 && (
+        <View style={q.bismillah}>
+          <Text style={q.bismillahText}>بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</Text>
+        </View>
+      )}
+
+      {/* Verses */}
+      {loadingVerses ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={q_c.accent} />
+        </View>
+      ) : (
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {verses.map((verse) => {
+            const isLastRead = lastRead?.surahId === selectedSurahId && lastRead?.ayah === verse.verseNumber;
+            const isBookmarked = selectedSurahId !== null && bookmarkSet.has(bookmarkKeyFor(selectedSurahId, verse.verseNumber));
+            return (
+              <View
+                key={verse.verseNumber}
+                style={[q.verseCard, isLastRead && q.verseCardActive]}
+                onLayout={(e) => {
+                  const y = e.nativeEvent.layout.y;
+                  setVerseOffsets((prev) => (prev[verse.verseNumber] === y ? prev : { ...prev, [verse.verseNumber]: y }));
+                }}
+              >
+                {/* Verse number badge + actions */}
+                <View style={q.verseHeader}>
+                  <View style={q.verseBadge}>
+                    <Text style={q.verseBadgeText}>{verse.verseNumber}</Text>
+                  </View>
+                  <View style={[ss.row, ss.gap8]}>
+                    <TouchableOpacity
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      onPress={() => markLastRead(verse.verseNumber)}
+                    >
+                      <Ionicons name="eye-outline" size={18} color={isLastRead ? q_c.accent : q_c.muted} />
+                    </TouchableOpacity>
+                    {selectedSurahId !== null && (
+                      <>
+                        <TouchableOpacity
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          onPress={() => void handleShowTafsir(selectedSurahId, verse.verseNumber)}
+                          disabled={tafSirLoading && selectedTafsirAyah === verse.verseNumber}
+                        >
+                          <Ionicons name="book-outline" size={18} color={q_c.muted} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          onPress={() => toggleBookmark(selectedSurahId, verse.verseNumber)}
+                        >
+                          <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={18} color={isBookmarked ? q_c.accent : q_c.muted} />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
+
+                {/* Arabic text */}
+                <Text style={[q.arabicText, { fontSize: currentFont.arabic, lineHeight: currentFont.arabic * 1.8 }]}>
+                  {verse.textArabic}
+                </Text>
+
+                {/* Divider */}
+                <View style={q.verseDivider} />
+
+                {/* Translation */}
+                {verse.textTranslated && (
+                  <Text style={[q.translationText, { fontSize: currentFont.trans, lineHeight: currentFont.trans * 1.6 }]}>
+                    {verse.textTranslated}
+                  </Text>
+                )}
+
+                {/* Tafsir inline */}
+                {selectedTafsirAyah === verse.verseNumber && tafSirLoading && (
+                  <ActivityIndicator color={q_c.accent} style={{ marginTop: 8 }} />
+                )}
+                {selectedTafsirAyah === verse.verseNumber && tafSirText && (
+                  <View style={q.tafsirBox}>
+                    <Text style={q.tafsirLabel}>Tafsir</Text>
+                    <Text style={[q.tafsirText, { fontSize: currentFont.trans, lineHeight: currentFont.trans * 1.6 }]}>{tafSirText}</Text>
+                  </View>
                 )}
               </View>
-            )}
-          </View>
-          {audioError && <Text style={[ss.errorText, ss.mb8]}>{audioError}</Text>}
-          {error && <Text style={[ss.errorText, ss.mb8]}>{error}</Text>}
-          {loadingVerses ? (
-            <ActivityIndicator color={sc.accent} />
-          ) : verses.length === 0 ? (
-            <Text style={ss.muted}>Sélectionne une sourate pour afficher ses versets.</Text>
-          ) : (
-            <View style={{ gap: 10 }}>
-              {verses.map((verse) => {
-                const isLastRead = lastRead?.surahId === selectedSurahId && lastRead?.ayah === verse.verseNumber;
-                return (
-                  <TouchableOpacity
-                    key={verse.verseNumber}
-                    activeOpacity={0.9}
-                    style={[
-                      ss.infoRow,
-                      { gap: 6 },
-                      isLastRead && { backgroundColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderColor: sc.accent, borderRadius: 10 },
-                    ]}
-                    onPress={() => markLastRead(verse.verseNumber)}
-                    onLayout={(e) => {
-                      const y = e.nativeEvent.layout.y;
-                      setVerseOffsets((prev) => (prev[verse.verseNumber] === y ? prev : { ...prev, [verse.verseNumber]: y }));
-                    }}
-                  >
-                    <View style={[ss.row, { justifyContent: 'space-between', marginBottom: 4 }]}>
-                      <Text style={ss.label}>Verset {verse.verseNumber}</Text>
-                      {selectedSurahId !== null && (
-                        <View style={[ss.row, ss.gap6]}>
-                          <TouchableOpacity
-                            style={ss.outlineBtn}
-                            onPress={(e) => { e.stopPropagation(); void handleShowTafsir(selectedSurahId, verse.verseNumber); }}
-                            disabled={tafSirLoading && selectedTafsirAyah === verse.verseNumber}
-                          >
-                            <Text style={ss.outlineBtnText}>
-                              {tafSirLoading && selectedTafsirAyah === verse.verseNumber ? 'Résumé…' : 'Résumé'}
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={ss.outlineBtn}
-                            onPress={(e) => { e.stopPropagation(); toggleBookmark(selectedSurahId, verse.verseNumber); }}
-                          >
-                            <Ionicons
-                              name={bookmarkSet.has(bookmarkKeyFor(selectedSurahId, verse.verseNumber)) ? 'bookmark' : 'bookmark-outline'}
-                              size={14}
-                              color={sc.accent}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={{ color: sc.text, fontSize: 20, textAlign: 'right', lineHeight: 34 }}>
-                      {verse.textArabic}
-                    </Text>
-                    {verse.textTranslated && (
-                      <Text style={{ color: sc.textSoft, fontSize: 13, lineHeight: 20, marginTop: 4 }}>
-                        {verse.textTranslated}
-                      </Text>
-                    )}
-                    {selectedTafsirAyah === verse.verseNumber && tafSirText && (
-                      <View style={{ marginTop: 6, backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 12 }}>
-                        <Text style={{ color: sc.text, fontSize: 13, lineHeight: 20 }}>{tafSirText}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </View>
+            );
+          })}
+        </ScrollView>
+      )}
 
-        {/* Bookmarks card */}
-        {sortedBookmarks.length > 0 && (
-          <View style={ss.card}>
-            <View style={[ss.row, { justifyContent: 'space-between', marginBottom: 8 }]}>
-              <Text style={ss.sectionTitle}>Bookmarks ({sortedBookmarks.length})</Text>
-              <TouchableOpacity style={ss.outlineBtn} onPress={() => clearBookmarks()}>
-                <Text style={ss.outlineBtnText}>Tout effacer</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ gap: 6 }}>
-              {sortedBookmarks.slice(0, 30).map((b) => (
-                <View key={`${b.surahId}:${b.ayah}`} style={[ss.infoRow, ss.row, { justifyContent: 'space-between' }]}>
-                  <TouchableOpacity style={{ flex: 1 }} onPress={() => jumpToBookmark(b)}>
-                    <Text style={{ color: sc.text, fontWeight: '600', fontSize: 13 }}>
-                      {surahNameById.get(b.surahId) ?? `Sourate ${b.surahId}`} · Verset {b.ayah}
-                    </Text>
-                    <Text style={{ color: sc.muted, fontSize: 11 }}>Tap pour revenir</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={ss.outlineBtn} onPress={() => removeBookmark(b)}>
-                    <Ionicons name="trash-outline" size={14} color={sc.error} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-      </ScrollView>
+      {/* Bookmarks floating button */}
+      {sortedBookmarks.length > 0 && (
+        <View style={q.bookmarkFab}>
+          <TouchableOpacity
+            style={q.fabBtn}
+            onPress={() => {
+              if (sortedBookmarks.length > 0) {
+                jumpToBookmark(sortedBookmarks[0]);
+              }
+            }}
+          >
+            <Ionicons name="bookmarks" size={20} color="#fff" />
+            <Text style={q.fabText}>{sortedBookmarks.length}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
+
+// ── Quran-specific colors & styles ──
+const q_c = {
+  bg: '#FAFAF5',
+  card: '#FFFFFF',
+  cardActive: '#F0F7F4',
+  border: 'rgba(0,0,0,0.06)',
+  text: '#1A1A1A',
+  textSoft: 'rgba(26,26,26,0.6)',
+  muted: 'rgba(26,26,26,0.35)',
+  accent: colors.primaryDark,
+  accentLight: 'rgba(26,127,100,0.1)',
+  error: '#D32F2F',
+};
+
+const q = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: q_c.bg },
+
+  // Top bar
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: q_c.border,
+  },
+  topTitle: { fontSize: 22, fontWeight: '700', color: q_c.accent },
+
+  // Search
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: q_c.border,
+  },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: q_c.text,
+  },
+
+  // Last read banner
+  lastReadBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: q_c.accent,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  lastReadText: { flex: 1, color: '#fff', fontWeight: '600', fontSize: 13 },
+
+  // Surah list
+  surahRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: q_c.card,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: q_c.border,
+    gap: 14,
+  },
+  surahRowActive: {
+    borderColor: q_c.accent,
+    backgroundColor: q_c.accentLight,
+  },
+  surahNumber: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: q_c.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  surahNumberText: { fontSize: 14, fontWeight: '700', color: q_c.accent },
+  surahName: { fontSize: 15, fontWeight: '600', color: q_c.text },
+  surahMeta: { fontSize: 12, color: q_c.muted },
+  surahArabic: { fontSize: 18, color: q_c.text, fontWeight: '500' },
+
+  // Reading bar
+  readingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: q_c.border,
+    gap: 8,
+  },
+  readingTitle: { fontSize: 16, fontWeight: '700', color: q_c.text },
+  readingSubtitle: { fontSize: 14, color: q_c.muted },
+
+  // Font bar
+  fontBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: q_c.border,
+  },
+  fontBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fontBtnText: { fontSize: 15, fontWeight: '700', color: q_c.text },
+  fontLabel: { fontSize: 12, color: q_c.muted, minWidth: 60, textAlign: 'center' },
+
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: q_c.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Bismillah
+  bismillah: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  bismillahText: { fontSize: 26, color: q_c.accent, fontWeight: '500' },
+
+  // Verse card
+  verseCard: {
+    backgroundColor: q_c.card,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: q_c.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  verseCardActive: {
+    borderColor: q_c.accent,
+    backgroundColor: q_c.cardActive,
+  },
+  verseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  verseBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: q_c.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verseBadgeText: { fontSize: 12, fontWeight: '700', color: q_c.accent },
+
+  arabicText: {
+    color: q_c.text,
+    textAlign: 'right',
+    fontWeight: '400',
+  },
+  verseDivider: {
+    height: 1,
+    backgroundColor: q_c.border,
+    marginVertical: 12,
+  },
+  translationText: {
+    color: q_c.textSoft,
+  },
+
+  // Tafsir
+  tafsirBox: {
+    marginTop: 12,
+    backgroundColor: 'rgba(26,127,100,0.06)',
+    borderRadius: 12,
+    padding: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: q_c.accent,
+  },
+  tafsirLabel: { fontSize: 11, fontWeight: '700', color: q_c.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+  tafsirText: { color: q_c.text },
+
+  // Bookmark FAB
+  bookmarkFab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+  },
+  fabBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: q_c.accent,
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+});
