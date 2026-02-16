@@ -271,35 +271,34 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
 
         {error && <Text style={ps.errorText}>{error}</Text>}
 
-        {/* Location card */}
+        {/* Location card — auto-detected, read-only */}
         <View style={ps.card}>
           <View style={ps.cardHeader}>
             <Ionicons name="location-outline" size={18} color={ps_c.accent} />
             <Text style={ps.sectionTitle}>Localisation</Text>
           </View>
-          <ProField
-            label="Latitude"
-            icon="navigate-outline"
-            value={settings.latitude}
-            onChangeText={(v) => setSettings((prev) => ({ ...prev, latitude: v }))}
-            placeholder="4.0511"
-            keyboardType="decimal-pad"
-          />
-          <ProField
-            label="Longitude"
-            icon="navigate-outline"
-            value={settings.longitude}
-            onChangeText={(v) => setSettings((prev) => ({ ...prev, longitude: v }))}
-            placeholder="9.7679"
-            keyboardType="decimal-pad"
-          />
-          <ProField
-            label="Fuseau horaire"
-            icon="time-outline"
-            value={settings.timeZone}
-            onChangeText={(v) => setSettings((prev) => ({ ...prev, timeZone: v }))}
-            placeholder="Africa/Douala"
-          />
+          <View style={{ backgroundColor: "rgba(26,127,100,0.08)", borderRadius: 12, padding: 14, gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="navigate" size={16} color={ps_c.accent} />
+              <Text style={{ fontSize: 14, fontWeight: "600", color: ps_c.text, flex: 1 }}>
+                {locLoading ? "Détection GPS…" : (detectedLoc.city && detectedLoc.country ? `${detectedLoc.city}, ${detectedLoc.country}` : "Position GPS détectée")}
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: 16 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: "600", color: ps_c.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Latitude</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: ps_c.text }}>{settings.latitude}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: "600", color: ps_c.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Longitude</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: ps_c.text }}>{settings.longitude}</Text>
+              </View>
+            </View>
+            <View>
+              <Text style={{ fontSize: 10, fontWeight: "600", color: ps_c.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Fuseau horaire</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: ps_c.text }}>{settings.timeZone}</Text>
+            </View>
+          </View>
         </View>
 
         {/* Method card */}

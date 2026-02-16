@@ -43,6 +43,8 @@ import { useAuth } from "../context/auth-context";
 import {
   cancelReminder,
   scheduleAdhanReminder,
+  scheduleDhikrMorningReminder,
+  scheduleDhikrEveningReminder,
   scheduleIftarReminder,
   scheduleSuhoorReminder,
   syncPushTokenWithBackend,
@@ -107,6 +109,8 @@ const LOCAL_REMINDER_TYPES = [
   "AdhanIsha",
   "SuhoorLocal",
   "IftarLocal",
+  "DhikrMorning",
+  "DhikrEvening",
 ] as const;
 
 type LocalReminderType = (typeof LOCAL_REMINDER_TYPES)[number];
@@ -119,6 +123,8 @@ const LOCAL_REMINDER_LABELS: Record<LocalReminderType, string> = {
   AdhanIsha: "Adhan Isha",
   SuhoorLocal: "Suhoor (30 min avant Fajr)",
   IftarLocal: "Iftar (Maghrib)",
+  DhikrMorning: "Adhkar du matin (06h30)",
+  DhikrEvening: "Adhkar du soir (18h00)",
 };
 
 function createReminderRecord<T>(value: T): Record<ReminderType, T> {
@@ -655,7 +661,7 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
           const parsed = JSON.parse(raw) as Record<LocalReminderType, boolean>;
           setLocalReminderEnabled((prev) => ({ ...prev, ...parsed }));
         } else {
-          // First launch: auto-enable all 5 adhan notifications (smart default)
+          // First launch: auto-enable adhan + dhikr reminders (smart default)
           const autoEnabled: Record<LocalReminderType, boolean> = {
             AdhanFajr: true,
             AdhanDhuhr: true,
@@ -664,6 +670,8 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
             AdhanIsha: true,
             SuhoorLocal: false,
             IftarLocal: false,
+            DhikrMorning: true,
+            DhikrEvening: true,
           };
           setLocalReminderEnabled(autoEnabled);
           await SecureStore.setItemAsync("oumoul.localReminders", JSON.stringify(autoEnabled));
@@ -695,6 +703,10 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
           ? "suhoor"
           : type === "IftarLocal"
           ? "iftar"
+          : type === "DhikrMorning"
+          ? "dhikr-morning"
+          : type === "DhikrEvening"
+          ? "dhikr-evening"
           : `adhan-${type.replace("Adhan", "")}`;
 
       if (currentlyEnabled) {
@@ -738,6 +750,10 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
             return;
           }
           await scheduleIftarReminder(maghrib.hour, maghrib.minute);
+        } else if (type === "DhikrMorning") {
+          await scheduleDhikrMorningReminder();
+        } else if (type === "DhikrEvening") {
+          await scheduleDhikrEveningReminder();
         }
 
         setLocalReminderEnabled((prev) => {
@@ -791,6 +807,15 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
       if (enabled.IftarLocal && times.Maghrib) {
         push(cancelReminder("iftar").catch(() => undefined));
         push(scheduleIftarReminder(times.Maghrib.hour, times.Maghrib.minute));
+      }
+
+      if (enabled.DhikrMorning) {
+        push(cancelReminder("dhikr-morning").catch(() => undefined));
+        push(scheduleDhikrMorningReminder());
+      }
+      if (enabled.DhikrEvening) {
+        push(cancelReminder("dhikr-evening").catch(() => undefined));
+        push(scheduleDhikrEveningReminder());
       }
 
       try {
@@ -1017,6 +1042,12 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
           </Text>
           <Text style={ds.headerDate}>{todayLabel}</Text>
           {hijriLabel ? <Text style={ds.hijri}>{hijriLabel}</Text> : null}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
+            <Ionicons name="location" size={12} color={ds_c.primaryDark} />
+            <Text style={{ fontSize: 12, color: ds_c.textSoft, fontWeight: "500" }}>
+              {locLoading ? "Détection GPS…" : dashLocLabel}
+            </Text>
+          </View>
         </View>
 
         {/* Next prayer highlight */}
@@ -1172,11 +1203,6 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
           </View>
         ) : null}
 
-        <Section title={t(locale, "dash.reminders.section.title", "Rappels")} subtitle={t(locale, "dash.reminders.subtitle.detail", "Rappels serveur.")}>
-          {reminderState.error ? <Text style={ds.errorText}>{reminderState.error}</Text> : null}
-          <Text style={ds.mutedText}>Paramètre la réception de certains rappels côté serveur.</Text>
-        </Section>
-
         <Section title={t(locale, "dash.prayer.section.title", "Horaires de prière")} subtitle={dashLocLabel}>
           <View style={{ gap: 10 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(26,127,100,0.08)", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
@@ -1328,38 +1354,27 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
           )}
         </Section>
 
-        <Section title="Rappels personnalisés" subtitle="Active ou ajuste tes notifications.">
+        <Section title="Rappels intelligents" subtitle="Notifications automatiques pour ta pratique.">
           {reminderState.loading ? (
             <ActivityIndicator color={ds_c.primaryDark} />
           ) : reminderState.error ? (
             <Text style={ds.errorText}>{reminderState.error}</Text>
           ) : reminderState.list.length === 0 ? (
-            <Text style={ds.mutedText}>Aucun rappel configuré.</Text>
+            <Text style={ds.mutedText}>Aucun rappel disponible.</Text>
           ) : (
             <View style={{ gap: 10 }}>
               {reminderState.list.map((pref) => (
-                <View key={pref.type} style={ds.infoRow}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={ds.infoTitle}>{REMINDER_LABELS[pref.type]}</Text>
-                      <Text style={ds.infoSub}>{pref.sendTime ? `Envoi à ${pref.sendTime}` : "Heure par défaut"}</Text>
-                    </View>
-                    <Switch
-                      value={pref.isEnabled}
-                      onValueChange={() => void handleReminderToggle(pref)}
-                      trackColor={{ true: ds_c.primaryDark, false: "rgba(0,0,0,0.1)" }}
-                      thumbColor={pref.isEnabled ? colors.primary : "#ccc"}
-                      disabled={reminderState.updating[pref.type]}
-                    />
+                <View key={pref.type} style={ds.switchRow}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={ds.switchLabel}>{REMINDER_LABELS[pref.type]}</Text>
+                    {pref.sendTime ? <Text style={{ fontSize: 11, color: ds_c.muted, marginTop: 2 }}>Envoi à {pref.sendTime}</Text> : null}
                   </View>
-                  <TextInput
-                    style={ds.input}
-                    placeholder="HH:MM"
-                    placeholderTextColor={ds_c.muted}
-                    value={reminderState.times[pref.type] ?? ""}
-                    onChangeText={(value) => setReminderState((prev) => ({ ...prev, times: { ...prev.times, [pref.type]: value } }))}
-                    onEndEditing={() => void handleReminderTimeBlur(pref, reminderState.times[pref.type] ?? "")}
-                    editable={pref.isEnabled && !reminderState.updating[pref.type]}
+                  <Switch
+                    value={pref.isEnabled}
+                    onValueChange={() => void handleReminderToggle(pref)}
+                    trackColor={{ true: ds_c.primaryDark, false: "rgba(0,0,0,0.1)" }}
+                    thumbColor={pref.isEnabled ? colors.primary : "#ccc"}
+                    disabled={reminderState.updating[pref.type]}
                   />
                 </View>
               ))}

@@ -197,6 +197,26 @@ export async function scheduleIftarReminder(hour: number, minute: number) {
   });
 }
 
+export async function scheduleDhikrMorningReminder() {
+  return scheduleDailyReminder({
+    id: "dhikr-morning",
+    title: "Adhkar du matin ☀️",
+    body: "N'oublie pas tes invocations du matin",
+    hour: 6,
+    minute: 30,
+  });
+}
+
+export async function scheduleDhikrEveningReminder() {
+  return scheduleDailyReminder({
+    id: "dhikr-evening",
+    title: "Adhkar du soir 🌙",
+    body: "N'oublie pas tes invocations du soir",
+    hour: 18,
+    minute: 0,
+  });
+}
+
 export async function cancelReminder(id: string) {
   try {
     await Notifications.cancelScheduledNotificationAsync(id);

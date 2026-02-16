@@ -2,7 +2,6 @@ import { StatusBar } from "expo-status-bar";
 import React, { Component, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -116,7 +115,7 @@ function RootSwitch() {
 
   if (loading) {
     return (
-      <View style={[a.center, { flex: 1, backgroundColor: C.bg }]}>
+      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color={C.primaryDark} />
         <Text style={{ color: C.textSoft, marginTop: 12, fontSize: 14 }}>Chargement...</Text>
       </View>
@@ -205,12 +204,6 @@ function HomeStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="HomeScreen">
         {(props) => <HomeScreen {...props} user={user} />}
       </Stack.Screen>
-      <Stack.Screen name="Dashboard" options={{ animation: "slide_from_right" }}>
-        {(props) => <DashboardScreen user={user} />}
-      </Stack.Screen>
-      <Stack.Screen name="PrayerSettings" options={{ animation: "slide_from_right" }}>
-        {(props) => <PrayerSettingsScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -273,131 +266,35 @@ function MoreStack({ user }: { user: AuthUser }) {
   );
 }
 
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 5) return "Bonne nuit";
-  if (h < 12) return "Sabah al-khayr";
-  if (h < 18) return "Bon après-midi";
-  return "Bonsoir";
-}
-
-function getHijriLabel(): string {
-  try {
-    const fmt = new Intl.DateTimeFormat("fr-u-ca-islamic-umalqura", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-    return fmt.format(new Date());
-  } catch {
-    return "";
-  }
-}
-
-type ModuleCard = {
-  key: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  onPress: () => void;
-};
-
 function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
-  const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
-  const { location: detectedLoc } = useLocationContext();
-  const [logoutBusy, setLogoutBusy] = useState(false);
-  const greeting = useMemo(() => getGreeting(), []);
-  const hijri = useMemo(() => getHijriLabel(), []);
-  const cityLabel = detectedLoc.city && detectedLoc.country
-    ? `${detectedLoc.city}, ${detectedLoc.country}`
-    : detectedLoc.city ?? null;
-
-  const onLogout = useCallback(async () => {
-    setLogoutBusy(true);
-    try { await logout(); } finally { setLogoutBusy(false); }
-  }, [logout]);
-
-  const modules: ModuleCard[] = [
-    { key: "dashboard", label: "Tableau de bord", icon: "stats-chart", color: "#E8D5E0", onPress: () => navigation.navigate("Dashboard") },
-    { key: "prayer", label: "Prière", icon: "time", color: "#D5E8D5", onPress: () => navigation.navigate("PrayerSettings") },
-    { key: "quran", label: "Coran", icon: "book", color: "#D5D8E8", onPress: () => navigation.getParent()?.navigate("Coran") },
-    { key: "dhikr", label: "Dhikr", icon: "heart", color: "#E8E0D5", onPress: () => navigation.getParent()?.navigate("Dhikr") },
-    { key: "ramadan", label: "Ramadan", icon: "moon", color: "#D5E0E8", onPress: () => navigation.getParent()?.navigate("Ramadan") },
-    { key: "calendar", label: "Calendrier", icon: "calendar", color: "#E8D5D5", onPress: () => navigation.getParent()?.navigate("Plus", { screen: "HijriCalendar" }) },
-    { key: "qibla", label: "Qibla", icon: "compass", color: "#D5E8E0", onPress: () => navigation.getParent()?.navigate("Plus", { screen: "Qibla" }) },
-    { key: "program", label: "Programme", icon: "checkbox", color: "#E0D5E8", onPress: () => navigation.getParent()?.navigate("Plus", { screen: "ImaneProgram" }) },
-  ];
-
-  return (
-    <View style={[s.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-        <View style={s.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.greeting}>{greeting}</Text>
-            <Text style={s.userName}>{user.firstName || user.email}</Text>
-            {hijri ? <Text style={s.hijriLabel}>{hijri}</Text> : null}
-            {cityLabel ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
-                <Ionicons name="location-outline" size={12} color={C.primaryDark} />
-                <Text style={{ fontSize: 12, color: C.textSoft, fontWeight: "500" }}>{cityLabel}</Text>
-              </View>
-            ) : null}
-          </View>
-          <TouchableOpacity
-            style={s.logoutBtn}
-            onPress={() => void onLogout()}
-            disabled={logoutBusy}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="log-out-outline" size={20} color={C.primaryDark} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={s.heroCard}>
-          <Text style={s.heroEmoji}>{"  "}</Text>
-          <Text style={s.heroTitle}>Bismillah</Text>
-          <Text style={s.heroSub}>Que cette journée soit remplie de baraka et de sérénité.</Text>
-        </View>
-
-        <Text style={s.sectionTitle}>Modules</Text>
-        <View style={s.grid}>
-          {modules.map((m) => (
-            <TouchableOpacity key={m.key} style={[s.moduleCard, { backgroundColor: m.color }]} onPress={m.onPress} activeOpacity={0.75}>
-              <View style={s.moduleIconWrap}>
-                <Ionicons name={m.icon} size={24} color={C.primaryDark} />
-              </View>
-              <Text style={s.moduleLabel}>{m.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
-  );
+  return <DashboardScreen user={user} />;
 }
 
 function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
+  const { location: detectedLoc } = useLocationContext();
 
-  const items: Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; screen: string }> = [
+  const toolItems: Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; screen: string }> = [
     { key: "cal", label: "Calendrier Hijri", icon: "calendar", screen: "HijriCalendar" },
     { key: "qibla", label: "Direction Qibla", icon: "compass", screen: "Qibla" },
     { key: "prog", label: "Programme Imane", icon: "checkbox", screen: "ImaneProgram" },
+  ];
+
+  const settingsItems: Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; screen: string }> = [
     { key: "prayer", label: "Réglages prière", icon: "settings", screen: "PrayerSettingsMore" },
   ];
+
+  const cityLabel = detectedLoc.city && detectedLoc.country
+    ? `${detectedLoc.city}, ${detectedLoc.country}`
+    : detectedLoc.city ?? "GPS actif";
 
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-        <Text style={[s.sectionTitle, { marginTop: 16 }]}>Plus</Text>
-        {items.map((item) => (
-          <TouchableOpacity
-            key={item.key}
-            style={s.listItem}
-            onPress={() => navigation.navigate(item.screen)}
-            activeOpacity={0.7}
-          >
+        <Text style={[s.sectionTitle, { marginTop: 16 }]}>Outils</Text>
+        {toolItems.map((item) => (
+          <TouchableOpacity key={item.key} style={s.listItem} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.7}>
             <View style={s.listIconWrap}>
               <Ionicons name={item.icon} size={20} color={C.primaryDark} />
             </View>
@@ -405,6 +302,40 @@ function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
             <Ionicons name="chevron-forward" size={18} color={C.tabInactive} />
           </TouchableOpacity>
         ))}
+
+        <Text style={[s.sectionTitle, { marginTop: 20 }]}>Réglages</Text>
+        {settingsItems.map((item) => (
+          <TouchableOpacity key={item.key} style={s.listItem} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.7}>
+            <View style={s.listIconWrap}>
+              <Ionicons name={item.icon} size={20} color={C.primaryDark} />
+            </View>
+            <Text style={s.listLabel}>{item.label}</Text>
+            <Ionicons name="chevron-forward" size={18} color={C.tabInactive} />
+          </TouchableOpacity>
+        ))}
+
+        {/* Location info */}
+        <View style={[s.listItem, { marginTop: 20, backgroundColor: "rgba(26,127,100,0.06)" }]}>
+          <View style={[s.listIconWrap, { backgroundColor: "rgba(26,127,100,0.12)" }]}>
+            <Ionicons name="location" size={20} color={C.primaryDark} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.listLabel}>{cityLabel}</Text>
+            <Text style={{ fontSize: 11, color: C.textSoft, marginTop: 2 }}>Position GPS automatique</Text>
+          </View>
+        </View>
+
+        {/* About */}
+        <Text style={[s.sectionTitle, { marginTop: 20 }]}>À propos</Text>
+        <View style={s.listItem}>
+          <View style={s.listIconWrap}>
+            <Ionicons name="information-circle-outline" size={20} color={C.primaryDark} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.listLabel}>{appMetadata.name}</Text>
+            <Text style={{ fontSize: 11, color: C.textSoft, marginTop: 2 }}>Version 1.1.0 · {user.email}</Text>
+          </View>
+        </View>
 
         <TouchableOpacity
           style={[s.listItem, { marginTop: 24, borderColor: "#FFCDD2" }]}
@@ -750,57 +681,9 @@ const locales: Array<{ value: RegisterPayload["locale"]; label: string }> = [
   { value: "ar", label: "AR" },
 ];
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const CARD_W = (SCREEN_W - 20 * 2 - 12) / 2;
-
-const a = StyleSheet.create({
-  center: { alignItems: "center", justifyContent: "center" },
-});
-
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
-  headerRow: { flexDirection: "row", alignItems: "center", marginTop: 16, marginBottom: 24 },
-  greeting: { fontSize: 14, color: C.textSoft, fontWeight: "500" },
-  userName: { fontSize: 24, color: C.text, fontWeight: "700", marginTop: 2 },
-  hijriLabel: { fontSize: 12, color: C.textSoft, marginTop: 4 },
-  logoutBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: C.cardBorder,
-  },
-  heroCard: {
-    backgroundColor: C.primary,
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 28,
-  },
-  heroEmoji: { fontSize: 32, marginBottom: 8 },
-  heroTitle: { fontSize: 22, fontWeight: "700", color: C.text },
-  heroSub: { fontSize: 14, color: "rgba(26,26,26,0.65)", marginTop: 6, lineHeight: 20 },
   sectionTitle: { fontSize: 18, fontWeight: "700", color: C.text, marginBottom: 16 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  moduleCard: {
-    width: CARD_W,
-    borderRadius: 16,
-    padding: 20,
-    minHeight: 110,
-    justifyContent: "space-between",
-  },
-  moduleIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  moduleLabel: { fontSize: 14, fontWeight: "600", color: C.text },
   listItem: {
     flexDirection: "row",
     alignItems: "center",
