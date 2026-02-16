@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import React, { Component, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -481,15 +482,17 @@ function LoginScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "fo
 
   const handleSubmit = useCallback(async () => {
     setError(null);
+    Alert.alert("DEBUG", `URL: ${API_URL}\nEmail: ${form.email.trim()}`);
     try {
       await login(form.email.trim(), form.password);
+      Alert.alert("LOGIN OK", "Connexion réussie!");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur de connexion";
+      const msg = err instanceof Error ? err.message : String(err);
+      Alert.alert("LOGIN ERROR", msg || "(empty error message)");
       if (msg.toLowerCase().includes("not verified") || msg.toLowerCase().includes("non vérifié")) {
-        // Trigger verification screen by setting pending email
         setError("Email non vérifié. Veuillez vérifier votre boîte mail.");
       } else {
-        setError(msg);
+        setError(msg || "Erreur inconnue");
       }
     }
   }, [login, form]);
@@ -517,10 +520,14 @@ function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | 
 
   const handleSubmit = useCallback(async () => {
     setError(null);
+    Alert.alert("DEBUG REGISTER", `URL: ${API_URL}\nEmail: ${form.email.trim()}`);
     try {
       await register({ firstName: form.firstName.trim(), lastName: form.lastName.trim(), email: form.email.trim(), password: form.password, locale: form.locale });
+      Alert.alert("REGISTER OK", "Inscription réussie! Vérifie ton email.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur d'inscription");
+      const msg = err instanceof Error ? err.message : String(err);
+      Alert.alert("REGISTER ERROR", msg || "(empty error message)");
+      setError(msg || "Erreur inconnue");
     }
   }, [register, form]);
 
