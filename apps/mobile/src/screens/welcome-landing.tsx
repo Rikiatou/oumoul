@@ -27,12 +27,8 @@ export function WelcomeLandingScreen({ onGetStarted }: WelcomeLandingProps) {
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* Islamic geometric pattern overlay */}
-      <Image
-        source={require('../../assets/islamic-pattern.png')}
-        style={s.patternOverlay}
-        resizeMode="cover"
-      />
+      {/* Subtle overlay */}
+      <View style={s.patternOverlay} />
 
       {/* Decorative circles */}
       <View style={[s.circle, { top: -60, right: -40, opacity: 0.08 }]} />
