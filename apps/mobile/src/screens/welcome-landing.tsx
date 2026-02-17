@@ -27,6 +27,13 @@ export function WelcomeLandingScreen({ onGetStarted }: WelcomeLandingProps) {
         style={StyleSheet.absoluteFillObject}
       />
 
+      {/* Islamic geometric pattern overlay */}
+      <Image
+        source={require('../../assets/islamic-pattern.png')}
+        style={s.patternOverlay}
+        resizeMode="cover"
+      />
+
       {/* Decorative circles */}
       <View style={[s.circle, { top: -60, right: -40, opacity: 0.08 }]} />
       <View style={[s.circle, { bottom: 120, left: -80, opacity: 0.06, width: 260, height: 260 }]} />
@@ -60,7 +67,7 @@ export function WelcomeLandingScreen({ onGetStarted }: WelcomeLandingProps) {
         <TouchableOpacity style={s.btn} onPress={async () => {
           try { await Location.requestForegroundPermissionsAsync(); } catch {}
           onGetStarted();
-        }} activeOpacity={0.85}>
+        }} activeOpacity={0.85} accessibilityLabel="Commencer" accessibilityRole="button">
           <Text style={s.btnText}>Commencer</Text>
         </TouchableOpacity>
         <Text style={s.version}>Bismillah Ar-Rahman Ar-Rahim</Text>
@@ -82,6 +89,14 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "space-between",
+  },
+  patternOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
+    opacity: 0.07,
   },
   circle: {
     position: "absolute",

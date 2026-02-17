@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from "@oumoul/ui";
+import { Magnetometer } from 'expo-sensors';
 import { apiRoutes } from "@oumoul/config";
 import type { AuthUser } from "@oumoul/api";
 import { httpClient } from "../api";
 import { t, Locale } from "../i18n";
 import { useLocationContext } from "../context/location-context";
+import { palette } from "../theme";
 
 export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const locale = (user.locale as Locale | undefined) ?? "fr";
@@ -55,7 +56,57 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
     }
   }, [refreshLoc, fetchQibla]);
 
-  const rotation = direction ?? 0;
+  // ── Live compass via magnetometer ──
+  const [heading, setHeading] = useState<number>(0);
+  const [magnetometerAvailable, setMagnetometerAvailable] = useState(true);
+  const compassAnim = useRef(new Animated.Value(0)).current;
+  const prevHeadingRef = useRef(0);
+
+  useEffect(() => {
+    let sub: { remove: () => void } | null = null;
+    const start = async () => {
+      const available = await Magnetometer.isAvailableAsync();
+      setMagnetometerAvailable(available);
+      if (!available) return;
+      Magnetometer.setUpdateInterval(100);
+      sub = Magnetometer.addListener((data) => {
+        const { x, y } = data;
+        let angle = Math.atan2(y, x) * (180 / Math.PI);
+        // atan2 gives angle from x-axis; convert to compass heading (0=N, 90=E)
+        angle = 90 - angle;
+        if (angle < 0) angle += 360;
+        setHeading(angle);
+      });
+    };
+    void start();
+    return () => { sub?.remove(); };
+  }, []);
+
+  // Animate compass rotation smoothly
+  useEffect(() => {
+    if (direction === null) return;
+    // qiblaRelative = how much to rotate the needle from current device heading
+    const target = direction - heading;
+    // Shortest path rotation
+    let delta = target - prevHeadingRef.current;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    const newVal = prevHeadingRef.current + delta;
+    prevHeadingRef.current = newVal;
+    Animated.timing(compassAnim, {
+      toValue: newVal,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [heading, direction, compassAnim]);
+
+  const compassRotation = compassAnim.interpolate({
+    inputRange: [-360, 360],
+    outputRange: ['-360deg', '360deg'],
+  });
+
+  // Static fallback rotation when magnetometer is not available
+  const staticRotation = direction ?? 0;
 
   const insets = useSafeAreaInsets();
 
@@ -82,11 +133,18 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
                   <Text style={[qb.cardinal, { bottom: 8 }]}>S</Text>
                   <Text style={[qb.cardinal, { left: 8, top: '45%' }]}>W</Text>
                   <Text style={[qb.cardinal, { right: 8, top: '45%' }]}>E</Text>
-                  {/* Needle */}
-                  <View style={[qb.needle, { transform: [{ rotate: `${rotation}deg` }] }]}>
-                    <View style={qb.needleTop} />
-                    <View style={qb.needleBottom} />
-                  </View>
+                  {/* Needle — live rotation when magnetometer available, static otherwise */}
+                  {magnetometerAvailable ? (
+                    <Animated.View style={[qb.needle, { transform: [{ rotate: compassRotation }] }]}>
+                      <View style={qb.needleTop} />
+                      <View style={qb.needleBottom} />
+                    </Animated.View>
+                  ) : (
+                    <View style={[qb.needle, { transform: [{ rotate: `${staticRotation}deg` }] }]}>
+                      <View style={qb.needleTop} />
+                      <View style={qb.needleBottom} />
+                    </View>
+                  )}
                   <View style={qb.compassCenter}>
                     <Ionicons name="locate" size={16} color={qb_c.accent} />
                   </View>
@@ -94,6 +152,11 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
               </View>
               <Text style={qb.degreeText}>{direction.toFixed(1)}°</Text>
               <Text style={qb.kaabaLabel}>Direction de la Kaaba</Text>
+              {magnetometerAvailable ? (
+                <Text style={qb.liveLabel}>🧭 Boussole active</Text>
+              ) : (
+                <Text style={[qb.liveLabel, { color: '#E65100' }]}>Boussole non disponible</Text>
+              )}
             </>
           ) : loading ? (
             <View style={{ paddingVertical: 40 }}>
@@ -155,14 +218,14 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
 }
 
 const qb_c = {
-  bg: '#FAFAF5',
-  card: '#FFFFFF',
-  border: 'rgba(0,0,0,0.06)',
-  text: '#1A1A1A',
-  textSoft: 'rgba(26,26,26,0.6)',
-  muted: 'rgba(26,26,26,0.35)',
-  accent: colors.primaryDark,
-  accentLight: 'rgba(26,127,100,0.08)',
+  bg: palette.bgAlt,
+  card: palette.card,
+  border: palette.border,
+  text: palette.text,
+  textSoft: palette.textSoft,
+  muted: palette.muted,
+  accent: palette.primaryDark,
+  accentLight: palette.accentLight,
 };
 
 const qb = StyleSheet.create({
@@ -191,6 +254,7 @@ const qb = StyleSheet.create({
   compassCenter: { position: 'absolute', width: 28, height: 28, borderRadius: 14, backgroundColor: qb_c.card, borderWidth: 2, borderColor: qb_c.accent, alignItems: 'center', justifyContent: 'center' },
   degreeText: { fontSize: 32, fontWeight: '800', color: qb_c.accent, marginTop: 16 },
   kaabaLabel: { fontSize: 13, color: qb_c.muted, fontWeight: '600', marginTop: 4 },
+  liveLabel: { fontSize: 12, color: qb_c.accent, fontWeight: '600', marginTop: 8 },
 
   promptCard: { alignItems: 'center', gap: 10, paddingVertical: 30 },
   promptText: { fontSize: 13, color: qb_c.muted, textAlign: 'center', maxWidth: 260 },

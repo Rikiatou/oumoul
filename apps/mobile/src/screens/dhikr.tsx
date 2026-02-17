@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@oumoul/ui';
 import type { AuthUser, DhikrCategory, DhikrEntry, DhikrRecord } from '@oumoul/api';
 import { dhikrApi } from '../api';
 import * as SecureStore from 'expo-secure-store';
+import { offlineCache, CACHE_KEYS, CACHE_TTL } from '../utils/offline-cache';
 import { t, Locale } from '../i18n';
 import * as Haptics from 'expo-haptics';
+import { palette } from '../theme';
 
 interface DhikrFormState {
   entryId: string;
@@ -64,40 +65,24 @@ export function DhikrScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
     setLoading(true);
     setError(null);
     try {
-      try {
-        const cached = await SecureStore.getItemAsync(categoriesCacheKey);
-        if (cached) {
-          const parsed = JSON.parse(cached) as DhikrCategory[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setCategories(
-              parsed
-                .map((category) => ({
-                  ...category,
-                  entries: [...category.entries].sort((a, b) => a.order - b.order),
-                }))
-                .sort((a, b) => a.order - b.order),
-            );
-          }
-        }
-      } catch {
-      }
-
-      const [categoryResponse, recordResponse] = await Promise.all([
-        dhikrApi.listCategories(),
-        dhikrApi.listRecords(),
-      ]);
-      const sortedCategories = categoryResponse
-        .map((category) => ({
-          ...category,
-          entries: [...category.entries].sort((a, b) => a.order - b.order),
-        }))
-        .sort((a, b) => a.order - b.order);
+      const sortedCategories = await offlineCache.getWithFallback<DhikrCategory[]>(
+        CACHE_KEYS.DHIKR_CATEGORIES,
+        async () => {
+          const raw = await dhikrApi.listCategories();
+          return raw
+            .map((category) => ({
+              ...category,
+              entries: [...category.entries].sort((a, b) => a.order - b.order),
+            }))
+            .sort((a, b) => a.order - b.order);
+        },
+        CACHE_TTL.LONG,
+      );
       setCategories(sortedCategories);
-      setRecords(recordResponse);
-      try {
-        await SecureStore.setItemAsync(categoriesCacheKey, JSON.stringify(sortedCategories));
-      } catch {
-      }
+
+      // Records are user-specific, fetch separately
+      try { setRecords(await dhikrApi.listRecords()); } catch {}
+
       if (sortedCategories.length > 0) {
         const initialCategory = sortedCategories[0];
         setSelectedCategoryId((prev) => prev ?? initialCategory.id);
@@ -514,15 +499,15 @@ export function DhikrScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
 }
 
 const dk_c = {
-  bg: '#FAFAF5',
-  card: '#FFFFFF',
-  border: 'rgba(0,0,0,0.06)',
-  text: '#1A1A1A',
-  textSoft: 'rgba(26,26,26,0.55)',
-  muted: 'rgba(26,26,26,0.35)',
-  accent: colors.primaryDark,
-  accentLight: 'rgba(26,127,100,0.08)',
-  errorColor: '#D32F2F',
+  bg: palette.bgAlt,
+  card: palette.card,
+  border: palette.border,
+  text: palette.text,
+  textSoft: palette.textSoft,
+  muted: palette.muted,
+  accent: palette.primaryDark,
+  accentLight: palette.accentLight,
+  errorColor: palette.error,
 };
 
 const dk = StyleSheet.create({
@@ -713,14 +698,14 @@ const dk = StyleSheet.create({
   },
   favBtnActive: { backgroundColor: '#FFEBEE' },
   arabicText: {
-    color: dk_c.text,
+    color: '#1B3A2D',
     fontSize: 20,
-    lineHeight: 34,
+    lineHeight: 38,
     textAlign: 'right',
-    fontFamily: undefined,
+    fontFamily: 'Amiri-Regular',
   },
-  translitText: { color: dk_c.textSoft, fontSize: 14, fontStyle: 'italic', lineHeight: 20 },
-  translationText: { color: dk_c.textSoft, fontSize: 14, lineHeight: 20 },
+  translitText: { color: '#6B4C3B', fontSize: 14, fontStyle: 'italic', lineHeight: 22 },
+  translationText: { color: dk_c.textSoft, fontSize: 14, lineHeight: 22 },
   sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   sourceText: { fontSize: 11, color: dk_c.muted },
 

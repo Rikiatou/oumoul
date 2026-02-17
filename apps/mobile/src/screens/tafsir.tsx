@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@oumoul/ui';
 import type { AuthUser, Locale, TafsirResponse } from '@oumoul/api';
 import { quranApi, tafsirApi } from '../api';
 import { loadTafsirSelection, saveTafsirSelection } from '../storage/tafsir-selection-store';
+import { palette } from '../theme';
 
 interface TafsirFormState {
   surah: string;
@@ -32,6 +32,7 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TafsirResponse | null>(null);
+  const [arabicVerse, setArabicVerse] = useState<string | null>(null);
   const [sources, setSources] = useState<Array<{ key: string; name: string; author: string | null }>>([]);
   const [surahs, setSurahs] = useState<Array<{ id: number; name: string; nameArabic: string; versesCount: number }>>([]);
   const [ayahOptions, setAyahOptions] = useState<number[]>([]);
@@ -148,8 +149,13 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
       if (!Number.isFinite(surah) || !Number.isFinite(ayah) || surah <= 0 || ayah <= 0) {
         throw new Error('Veuillez fournir un numéro de sourate et de verset valides.');
       }
-      const response = await tafsirApi.getTafsir({ surah, ayah, locale: form.locale, source: form.source });
+      const [response, surahData] = await Promise.all([
+        tafsirApi.getTafsir({ surah, ayah, locale: form.locale, source: form.source }),
+        quranApi.getSurah(surah, 'ar').catch(() => null),
+      ]);
       setResult(response);
+      const verse = surahData?.verses?.find((v: { verseNumber: number }) => v.verseNumber === ayah);
+      setArabicVerse(verse?.textArabic ?? null);
       setToast('Tafsir chargé.');
     } catch (err) {
       const message = err instanceof Error ? err.message : "Impossible de récupérer le tafsir.";
@@ -291,6 +297,9 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
               <Ionicons name="book" size={18} color={tf_c.accent} />
               <Text style={tf.resultHeader}>Sourate {result.surah} · Verset {result.ayah}</Text>
             </View>
+            {arabicVerse ? (
+              <Text style={tf.resultArabic}>{arabicVerse}</Text>
+            ) : null}
             <View style={tf.resultSourceBadge}>
               <Ionicons name="library-outline" size={12} color={tf_c.muted} />
               <Text style={tf.resultSourceText}>{result.source}</Text>
@@ -312,14 +321,14 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
 }
 
 const tf_c = {
-  bg: '#FAFAF5',
-  card: '#FFFFFF',
-  border: 'rgba(0,0,0,0.06)',
-  text: '#1A1A1A',
-  textSoft: 'rgba(26,26,26,0.6)',
-  muted: 'rgba(26,26,26,0.35)',
-  accent: colors.primaryDark,
-  accentLight: 'rgba(26,127,100,0.08)',
+  bg: palette.bgAlt,
+  card: palette.card,
+  border: palette.border,
+  text: palette.text,
+  textSoft: palette.textSoft,
+  muted: palette.muted,
+  accent: palette.primaryDark,
+  accentLight: palette.accentLight,
 };
 
 const tf = StyleSheet.create({
@@ -364,6 +373,7 @@ const tf = StyleSheet.create({
   resultHeader: { fontSize: 15, fontWeight: '700', color: tf_c.text },
   resultSourceBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 14 },
   resultSourceText: { fontSize: 11, color: tf_c.muted, fontWeight: '600' },
+  resultArabic: { fontSize: 22, lineHeight: 40, color: '#1B3A2D', textAlign: 'right' as const, fontFamily: 'Amiri-Regular', marginBottom: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: tf_c.border },
   resultText: { color: tf_c.text, fontSize: 16, lineHeight: 26 },
 
   toast: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', backgroundColor: '#1A2332', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, marginTop: 16 },

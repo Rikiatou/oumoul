@@ -11,6 +11,10 @@ import {
   createHijriApi,
   createImaneProgramApi,
   createCycleApi,
+  createPrayerTrackingApi,
+  createQuranAudioApi,
+  createAllahNamesApi,
+  createMosqueFinderApi,
 } from '@oumoul/api';
 import { SecureTokenStore } from '../storage/secure-token-store';
 
@@ -34,5 +38,9 @@ export const ramadanApi = createRamadanApi(httpClient);
 export const hijriApi = createHijriApi(httpClient);
 export const imaneProgramApi = createImaneProgramApi(httpClient);
 export const cycleApi = createCycleApi(httpClient);
+export const prayerTrackingApi = createPrayerTrackingApi(httpClient);
+export const quranAudioApi = createQuranAudioApi(httpClient);
+export const allahNamesApi = createAllahNamesApi(httpClient);
+export const mosqueFinderApi = createMosqueFinderApi(httpClient);
 
 export { httpClient, tokenStore };

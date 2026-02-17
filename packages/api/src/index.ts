@@ -1,6 +1,7 @@
 export * from './http-client';
 export * from './token-store';
 export * from './types';
+export * from './types-additions';
 export * from './utils';
 export * from './endpoints/auth';
 export * from './endpoints/prayer';
@@ -14,3 +15,7 @@ export * from './endpoints/hadith';
 export * from './endpoints/imane-program';
 export * from './endpoints/cycle';
 export * from './endpoints/hijri';
+export * from './endpoints/prayer-tracking';
+export * from './endpoints/quran-audio';
+export * from './endpoints/allah-names';
+export * from './endpoints/mosque-finder';

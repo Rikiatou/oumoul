@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@oumoul/ui';
 import type { AuthUser, ImaneProgramItems, ImaneProgramDayResponse } from '@oumoul/api';
 import { imaneProgramApi } from '../api';
+import { palette } from '../theme';
 
 const DAILY_ITEMS: Array<{
   id: keyof ImaneProgramItems;
@@ -202,14 +202,14 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
 }
 
 const ip_c = {
-  bg: '#FAFAF5',
-  card: '#FFFFFF',
-  border: 'rgba(0,0,0,0.06)',
-  text: '#1A1A1A',
-  textSoft: 'rgba(26,26,26,0.6)',
-  muted: 'rgba(26,26,26,0.35)',
-  accent: colors.primaryDark,
-  accentLight: 'rgba(26,127,100,0.08)',
+  bg: palette.bgAlt,
+  card: palette.card,
+  border: palette.border,
+  text: palette.text,
+  textSoft: palette.textSoft,
+  muted: palette.muted,
+  accent: palette.primaryDark,
+  accentLight: palette.accentLight,
 };
 
 const ip = StyleSheet.create({

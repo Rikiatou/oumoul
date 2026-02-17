@@ -27,5 +27,9 @@ export const apiRoutes = {
     imaneProgram: "/imane/program",
     ramadan: "/ramadan",
     hijri: "/hijri",
+    prayerTracking: "/prayer-tracking",
+    quranAudio: "/quran-audio",
+    allahNames: "/allah-names",
+    mosqueFinder: "/mosques",
   },
 } as const;

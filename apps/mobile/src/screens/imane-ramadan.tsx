@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@oumoul/ui';
 import { FastingLogStatus } from '@oumoul/api';
 import type {
   AuthUser,
@@ -20,9 +19,17 @@ import type {
   RamadanSummaryResponse,
 } from '@oumoul/api';
 import { cycleApi, ramadanApi } from '../api';
-
-const RAMADAN_START_2026 = '2026-02-18';
-const RAMADAN_END_2026 = '2026-03-19';
+import { palette } from '../theme';
+import { getRamadanInfo } from '../utils/hijri-calendar';
+import * as SecureStore from 'expo-secure-store';
+import { offlineCache, CACHE_TTL } from '../utils/offline-cache';
+import { HelpTip } from '../components/HelpTip';
+import {
+  scheduleRamadanFastingReminder,
+  scheduleMakeupDayReminder,
+  cancelMakeupReminders,
+  cancelReminder,
+} from '../push-notifications';
 
 const FASTING_STATUS_LABELS: Record<FastingLogStatus, string> = {
   FASTED: 'Jeûné',
@@ -97,6 +104,35 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
   const [cycleStatusDraft, setCycleStatusDraft] = useState<CycleStatus | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
 
+  // Makeup planner & reminders
+  const [makeupPlan, setMakeupPlan] = useState<string[]>([]);
+  const [makeupPlanLoaded, setMakeupPlanLoaded] = useState(false);
+  const [fastingReminderOn, setFastingReminderOn] = useState(false);
+  const [reminderLoaded, setReminderLoaded] = useState(false);
+  const [showMakeupPlanner, setShowMakeupPlanner] = useState(false);
+  const [makeupPreference, setMakeupPreference] = useState<'mon_thu' | 'mon_only' | 'thu_only' | 'custom'>('mon_thu');
+
+  const MAKEUP_PLAN_KEY = `oumoul_makeup_plan_${year}`;
+  const FASTING_REMINDER_KEY = 'oumoul_ramadan_fasting_reminder';
+
+  // Load makeup plan & reminder preference
+  useEffect(() => {
+    SecureStore.getItemAsync(MAKEUP_PLAN_KEY).then((raw: string | null) => {
+      if (raw) { try { setMakeupPlan(JSON.parse(raw) as string[]); } catch {} }
+      setMakeupPlanLoaded(true);
+    }).catch(() => setMakeupPlanLoaded(true));
+    SecureStore.getItemAsync(FASTING_REMINDER_KEY).then((raw: string | null) => {
+      setFastingReminderOn(raw === 'true');
+      setReminderLoaded(true);
+    }).catch(() => setReminderLoaded(true));
+  }, [MAKEUP_PLAN_KEY]);
+
+  // Persist makeup plan
+  useEffect(() => {
+    if (!makeupPlanLoaded) return;
+    SecureStore.setItemAsync(MAKEUP_PLAN_KEY, JSON.stringify(makeupPlan)).catch(() => {});
+  }, [makeupPlan, makeupPlanLoaded, MAKEUP_PLAN_KEY]);
+
   const days = data?.days ?? [];
 
   const statusCounts = useMemo(() => {
@@ -117,19 +153,8 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const ramadanDayInfo = useMemo(() => {
-    const start = new Date(RAMADAN_START_2026);
-    const end = new Date(RAMADAN_END_2026);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (today < start) {
-      const diff = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      return { status: 'before' as const, daysUntil: diff, dayNumber: 0, totalDays: 30 };
-    }
-    if (today > end) {
-      return { status: 'after' as const, daysUntil: 0, dayNumber: 30, totalDays: 30 };
-    }
-    const dayNum = Math.ceil((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return { status: 'during' as const, daysUntil: 0, dayNumber: dayNum, totalDays: 30 };
+    const currentYear = new Date().getFullYear();
+    return getRamadanInfo(currentYear);
   }, []);
 
   const todayDay = useMemo(() => days.find((d) => d.date === todayIso) ?? null, [days, todayIso]);
@@ -188,7 +213,12 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
     setLoading(true);
     setError(null);
     try {
-      const response = await ramadanApi.summary(year);
+      const cacheKey = `ramadan_summary_${year}`;
+      const response = await offlineCache.getWithFallback<RamadanSummaryResponse>(
+        cacheKey,
+        () => ramadanApi.summary(year),
+        CACHE_TTL.MEDIUM,
+      );
       setData(response);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Impossible de charger le calendrier de Ramadan.';
@@ -219,6 +249,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
     setError(null);
     try {
       const updated = await ramadanApi.upsertDay({ date, fastStatus: status, notes: null });
+      await offlineCache.remove(`ramadan_summary_${year}`);
       setData((prev) => {
         if (!prev) return prev;
         const nextDays = prev.days.map((day) =>
@@ -232,7 +263,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
     } finally {
       setSavingFasting(false);
     }
-  }, []);
+  }, [year]);
 
   const handleSaveFasting = useCallback(async () => {
     if (!selectedDate || !fastStatusDraft) return;
@@ -244,6 +275,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
         fastStatus: fastStatusDraft,
         notes: notesDraft.trim() ? notesDraft.trim() : null,
       });
+      await offlineCache.remove(`ramadan_summary_${year}`);
       setData((prev) => {
         if (!prev) return prev;
         const nextDays = prev.days.map((day) =>
@@ -260,7 +292,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
     } finally {
       setSavingFasting(false);
     }
-  }, [fastStatusDraft, notesDraft, selectedDate]);
+  }, [fastStatusDraft, notesDraft, selectedDate, year]);
 
   const handleSaveCycle = useCallback(async () => {
     if (!selectedDate || !cycleStatusDraft) return;
@@ -289,6 +321,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
           fastStatus: FastingLogStatus.EXEMPTION,
           notes: null,
         });
+        await offlineCache.remove(`ramadan_summary_${year}`);
         setData((prev) => {
           if (!prev) return prev;
           const nextDays = prev.days.map((day) =>
@@ -310,24 +343,97 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
     }
   }, [cycleStatusDraft, selectedDate]);
 
+  // ── Toggle fasting reminder ──
+  const toggleFastingReminder = useCallback(async () => {
+    const next = !fastingReminderOn;
+    setFastingReminderOn(next);
+    try {
+      if (next) {
+        await scheduleRamadanFastingReminder();
+      } else {
+        await cancelReminder('ramadan-fasting');
+      }
+      await SecureStore.setItemAsync(FASTING_REMINDER_KEY, String(next));
+    } catch {}
+  }, [fastingReminderOn, FASTING_REMINDER_KEY]);
+
+  // ── Generate makeup plan ──
+  const generateMakeupPlan = useCallback(() => {
+    if (outstandingMakeupDays <= 0) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dates: string[] = [];
+    const cursor = new Date(today);
+    cursor.setDate(cursor.getDate() + 1); // start tomorrow
+
+    while (dates.length < outstandingMakeupDays) {
+      const dow = cursor.getDay(); // 0=Sun, 1=Mon, 4=Thu
+      let include = false;
+      if (makeupPreference === 'mon_thu') include = dow === 1 || dow === 4;
+      else if (makeupPreference === 'mon_only') include = dow === 1;
+      else if (makeupPreference === 'thu_only') include = dow === 4;
+      else include = true; // custom = every day
+
+      if (include) {
+        dates.push(cursor.toISOString().slice(0, 10));
+      }
+      cursor.setDate(cursor.getDate() + 1);
+      // safety: don't go beyond 1 year
+      if (cursor.getTime() - today.getTime() > 365 * 24 * 60 * 60 * 1000) break;
+    }
+    setMakeupPlan(dates);
+  }, [outstandingMakeupDays, makeupPreference]);
+
+  // ── Schedule makeup reminders ──
+  const scheduleMakeupReminders = useCallback(async () => {
+    // Cancel old ones first
+    await cancelMakeupReminders(makeupPlan);
+    // Schedule new ones
+    for (let i = 0; i < makeupPlan.length; i++) {
+      const d = new Date(`${makeupPlan[i]}T00:00:00`);
+      if (d.getTime() > Date.now()) {
+        await scheduleMakeupDayReminder(d, i + 1);
+      }
+    }
+    setInfo(`${makeupPlan.length} rappels de rattrapage programmés !`);
+  }, [makeupPlan]);
+
+  // ── Toggle a single makeup date ──
+  const toggleMakeupDate = useCallback((dateStr: string) => {
+    setMakeupPlan((prev) => {
+      if (prev.includes(dateStr)) return prev.filter((d) => d !== dateStr);
+      return [...prev, dateStr].sort();
+    });
+  }, []);
+
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[r.screen, { paddingTop: insets.top }]}>
       {/* Top bar */}
       <View style={r.topBar}>
-        <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityLabel="Retour" accessibilityRole="button">
           <Ionicons name="chevron-back" size={24} color={r_c.accent} />
         </TouchableOpacity>
-        <Text style={r.topTitle}>Ramadan</Text>
-        <View style={r.yearNav}>
-          <TouchableOpacity onPress={() => setYear((prev) => prev - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={18} color={r_c.muted} />
-          </TouchableOpacity>
-          <Text style={r.yearText}>{year}</Text>
-          <TouchableOpacity onPress={() => setYear((prev) => prev + 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-forward" size={18} color={r_c.muted} />
-          </TouchableOpacity>
+        <Text style={r.topTitle} accessibilityRole="header">Ramadan</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <HelpTip screenName="Ramadan" tips={[
+            { icon: 'moon', title: 'Suivi du jeûne', description: 'Appuie sur un jour du calendrier pour enregistrer ton statut : jeûné, raté, exemptée ou rattrapé.' },
+            { icon: 'today', title: 'Carte du jour', description: 'Pendant le Ramadan, une carte rapide te demande chaque jour si tu as jeûné.' },
+            { icon: 'notifications', title: 'Rappel de jeûne', description: 'Active le rappel quotidien pour ne pas oublier de noter ton jeûne.' },
+            { icon: 'calendar', title: 'Programme de rattrapage', description: 'Après le Ramadan, génère un programme pour rattraper les jours manqués (lundis et jeudis).' },
+            { icon: 'alarm', title: 'Notifications de rattrapage', description: 'Programme des rappels push pour chaque jour de rattrapage prévu.' },
+            { icon: 'heart-circle', title: 'Cycle', description: 'Enregistre ton cycle pour marquer automatiquement les jours d\'exemption.' },
+          ]} />
+          <View style={r.yearNav}>
+            <TouchableOpacity onPress={() => setYear((prev) => prev - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="chevron-back" size={18} color={r_c.muted} />
+            </TouchableOpacity>
+            <Text style={r.yearText}>{year}</Text>
+            <TouchableOpacity onPress={() => setYear((prev) => prev + 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="chevron-forward" size={18} color={r_c.muted} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -338,7 +444,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
           <View style={{ flex: 1, marginLeft: 12 }}>
             {ramadanDayInfo.status === 'before' && (
               <>
-                <Text style={r.heroTitle}>Ramadan dans {ramadanDayInfo.daysUntil} jour{ramadanDayInfo.daysUntil > 1 ? 's' : ''}</Text>
+                <Text style={r.heroTitle}>Ramadan dans {ramadanDayInfo.daysUntil ?? 0} jour{(ramadanDayInfo.daysUntil ?? 0) > 1 ? 's' : ''}</Text>
                 <Text style={r.heroSub}>Prépare-toi pour le mois béni</Text>
               </>
             )}
@@ -588,6 +694,160 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
             </View>
           </View>
         )}
+
+        {/* ── Fasting Reminder Toggle ── */}
+        {ramadanDayInfo.status === 'during' && (
+          <TouchableOpacity
+            style={[r.reminderToggle, fastingReminderOn && r.reminderToggleActive]}
+            onPress={() => void toggleFastingReminder()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={fastingReminderOn ? 'notifications' : 'notifications-outline'} size={20} color={fastingReminderOn ? '#fff' : r_c.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={[r.reminderTitle, fastingReminderOn && { color: '#fff' }]}>Rappel quotidien de jeûne</Text>
+              <Text style={[r.reminderSub, fastingReminderOn && { color: 'rgba(255,255,255,0.7)' }]}>
+                {fastingReminderOn ? 'Activé — rappel chaque soir à 20h' : 'Recevoir un rappel pour noter ton jeûne'}
+              </Text>
+            </View>
+            <View style={[r.toggleDot, fastingReminderOn && r.toggleDotActive]}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: fastingReminderOn ? r_c.accent : r_c.muted }}>
+                {fastingReminderOn ? 'ON' : 'OFF'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* ── End-of-Ramadan Summary ── */}
+        {ramadanDayInfo.status === 'after' && days.length > 0 && (
+          <View style={r.summaryCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <Ionicons name="trophy" size={22} color="#FFC107" />
+              <Text style={r.sectionTitle}>Bilan du Ramadan {year}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              <View style={[r.summaryItem, { backgroundColor: '#E8F5E9' }]}>
+                <Text style={[r.summaryNum, { color: '#2E7D32' }]}>{statusCounts.FASTED ?? 0}</Text>
+                <Text style={r.summaryLabel}>jours jeûnés</Text>
+              </View>
+              <View style={[r.summaryItem, { backgroundColor: '#FFEBEE' }]}>
+                <Text style={[r.summaryNum, { color: '#C62828' }]}>{statusCounts.MISSED ?? 0}</Text>
+                <Text style={r.summaryLabel}>jours ratés</Text>
+              </View>
+              <View style={[r.summaryItem, { backgroundColor: '#F3E5F5' }]}>
+                <Text style={[r.summaryNum, { color: '#7B1FA2' }]}>{statusCounts.EXEMPTION ?? 0}</Text>
+                <Text style={r.summaryLabel}>exemptions</Text>
+              </View>
+              <View style={[r.summaryItem, { backgroundColor: '#E3F2FD' }]}>
+                <Text style={[r.summaryNum, { color: '#1565C0' }]}>{statusCounts.MADE_UP ?? 0}</Text>
+                <Text style={r.summaryLabel}>rattrapés</Text>
+              </View>
+            </View>
+            {outstandingMakeupDays > 0 && (
+              <View style={r.summaryAlert}>
+                <Ionicons name="alert-circle" size={18} color="#E65100" />
+                <Text style={r.summaryAlertText}>
+                  Il te reste {outstandingMakeupDays} jour{outstandingMakeupDays > 1 ? 's' : ''} à rattraper avant le prochain Ramadan.
+                </Text>
+              </View>
+            )}
+            {outstandingMakeupDays === 0 && (statusCounts.MISSED ?? 0) > 0 && (
+              <View style={[r.summaryAlert, { backgroundColor: '#E8F5E9' }]}>
+                <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
+                <Text style={[r.summaryAlertText, { color: '#2E7D32' }]}>
+                  Tous les jours manqués ont été rattrapés. Masha Allah !
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ── Makeup Planner ── */}
+        {outstandingMakeupDays > 0 && (
+          <View style={r.makeupCard}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              onPress={() => setShowMakeupPlanner(!showMakeupPlanner)}
+              activeOpacity={0.7}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Ionicons name="calendar-outline" size={20} color={r_c.accent} />
+                <View>
+                  <Text style={r.sectionTitle}>Programme de rattrapage</Text>
+                  <Text style={{ fontSize: 12, color: r_c.muted }}>{outstandingMakeupDays} jour{outstandingMakeupDays > 1 ? 's' : ''} à rattraper</Text>
+                </View>
+              </View>
+              <Ionicons name={showMakeupPlanner ? 'chevron-up' : 'chevron-down'} size={18} color={r_c.muted} />
+            </TouchableOpacity>
+
+            {showMakeupPlanner && (
+              <View style={{ marginTop: 14 }}>
+                {/* Preference selector */}
+                <Text style={r.editorLabel}>Jours de rattrapage</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {([
+                    { key: 'mon_thu' as const, label: 'Lun & Jeu' },
+                    { key: 'mon_only' as const, label: 'Lundis' },
+                    { key: 'thu_only' as const, label: 'Jeudis' },
+                    { key: 'custom' as const, label: 'Chaque jour' },
+                  ]).map((opt) => (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[r.statusBtn, makeupPreference === opt.key && { backgroundColor: r_c.accentLight, borderColor: r_c.accent }]}
+                      onPress={() => setMakeupPreference(opt.key)}
+                    >
+                      <Text style={[r.statusBtnText, makeupPreference === opt.key && { color: r_c.accent, fontWeight: '700' }]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Generate button */}
+                <TouchableOpacity style={r.generateBtn} onPress={generateMakeupPlan} activeOpacity={0.8}>
+                  <Ionicons name="sparkles" size={16} color="#fff" />
+                  <Text style={r.generateBtnText}>Générer le programme</Text>
+                </TouchableOpacity>
+
+                {/* Plan list */}
+                {makeupPlan.length > 0 && (
+                  <View style={{ marginTop: 14 }}>
+                    <Text style={[r.editorLabel, { marginTop: 0 }]}>
+                      {makeupPlan.length} jour{makeupPlan.length > 1 ? 's' : ''} planifié{makeupPlan.length > 1 ? 's' : ''}
+                    </Text>
+                    {makeupPlan.slice(0, 12).map((dateStr, idx) => {
+                      const d = new Date(`${dateStr}T00:00:00`);
+                      const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                      const isPast = new Date(dateStr) < new Date(new Date().toISOString().slice(0, 10));
+                      return (
+                        <TouchableOpacity
+                          key={dateStr}
+                          style={[r.makeupDateRow, isPast && { opacity: 0.5 }]}
+                          onPress={() => toggleMakeupDate(dateStr)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="checkmark-circle" size={18} color={r_c.accent} />
+                          <Text style={r.makeupDateText}>Jour {idx + 1} — {label}</Text>
+                          <Ionicons name="close-circle-outline" size={16} color={r_c.muted} />
+                        </TouchableOpacity>
+                      );
+                    })}
+                    {makeupPlan.length > 12 && (
+                      <Text style={{ fontSize: 12, color: r_c.muted, textAlign: 'center', marginTop: 6 }}>
+                        + {makeupPlan.length - 12} autres jours
+                      </Text>
+                    )}
+
+                    {/* Schedule reminders button */}
+                    <TouchableOpacity style={r.reminderBtn} onPress={() => void scheduleMakeupReminders()} activeOpacity={0.8}>
+                      <Ionicons name="notifications-outline" size={16} color={r_c.accent} />
+                      <Text style={r.reminderBtnText}>Programmer les rappels push</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -595,14 +855,14 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
 
 // ── Ramadan-specific colors & styles ──
 const r_c = {
-  bg: '#FAFAF5',
-  card: '#FFFFFF',
-  border: 'rgba(0,0,0,0.06)',
-  text: '#1A1A1A',
-  textSoft: 'rgba(26,26,26,0.6)',
-  muted: 'rgba(26,26,26,0.35)',
-  accent: colors.primaryDark,
-  accentLight: 'rgba(26,127,100,0.1)',
+  bg: palette.bgAlt,
+  card: palette.card,
+  border: palette.border,
+  text: palette.text,
+  textSoft: palette.textSoft,
+  muted: palette.muted,
+  accent: palette.primaryDark,
+  accentLight: palette.accentLightAlt,
 };
 
 const r = StyleSheet.create({
@@ -848,4 +1108,110 @@ const r = StyleSheet.create({
     borderColor: r_c.border,
   },
   cycleSaveBtnText: { color: r_c.text, fontWeight: '600', fontSize: 14 },
+
+  // ── Fasting Reminder Toggle ──
+  reminderToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: r_c.card,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: r_c.border,
+  },
+  reminderToggleActive: {
+    backgroundColor: r_c.accent,
+    borderColor: r_c.accent,
+  },
+  reminderTitle: { fontSize: 14, fontWeight: '700', color: r_c.text },
+  reminderSub: { fontSize: 11, color: r_c.muted, marginTop: 2 },
+  toggleDot: {
+    width: 36,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleDotActive: {
+    backgroundColor: '#fff',
+  },
+
+  // ── End-of-Ramadan Summary ──
+  summaryCard: {
+    backgroundColor: r_c.card,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: r_c.border,
+  },
+  summaryItem: {
+    flex: 1,
+    minWidth: 70,
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    gap: 2,
+  },
+  summaryNum: { fontSize: 24, fontWeight: '800' },
+  summaryLabel: { fontSize: 10, fontWeight: '600', color: r_c.muted, textTransform: 'uppercase' },
+  summaryAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 10,
+    padding: 12,
+    gap: 10,
+    marginTop: 14,
+  },
+  summaryAlertText: { flex: 1, fontSize: 13, color: '#E65100', lineHeight: 18 },
+
+  // ── Makeup Planner ──
+  makeupCard: {
+    backgroundColor: r_c.card,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: r_c.border,
+  },
+  generateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: r_c.accent,
+    borderRadius: 12,
+    paddingVertical: 12,
+    gap: 8,
+    marginTop: 14,
+  },
+  generateBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  makeupDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: r_c.border,
+  },
+  makeupDateText: { flex: 1, fontSize: 13, fontWeight: '500', color: r_c.text },
+  reminderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: r_c.accent,
+    borderRadius: 12,
+    paddingVertical: 12,
+    gap: 8,
+    marginTop: 14,
+  },
+  reminderBtnText: { color: r_c.accent, fontWeight: '700', fontSize: 14 },
 });

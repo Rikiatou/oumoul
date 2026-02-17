@@ -217,10 +217,103 @@ export async function scheduleDhikrEveningReminder() {
   });
 }
 
+export async function scheduleJumuahReminder(hour: number = 12, minute: number = 0) {
+  await ensureChannel();
+  const ok = await ensureLocalNotificationPermission();
+  if (!ok) {
+    throw new Error("Permission notifications refusée");
+  }
+  const baseTrigger: Notifications.WeeklyTriggerInput = {
+    type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+    weekday: 6, // 1=Sunday … 6=Friday in Expo
+    hour,
+    minute,
+  };
+  const trigger: Notifications.NotificationTriggerInput =
+    Platform.OS === "android" ? { ...baseTrigger, channelId: CHANNEL_ID } : baseTrigger;
+
+  return Notifications.scheduleNotificationAsync({
+    identifier: "jumuah-reminder",
+    content: {
+      title: "Jumu'ah Moubarak 🕌",
+      body: "N'oublie pas la prière du vendredi et d'envoyer des salawat sur le Prophète ﷺ",
+      sound: "default",
+    },
+    trigger,
+  });
+}
+
 export async function cancelReminder(id: string) {
   try {
     await Notifications.cancelScheduledNotificationAsync(id);
   } catch (err) {
     console.warn("cancelReminder failed", id, err);
+  }
+}
+
+export async function scheduleTasbihReminder(hour: number = 9, minute: number = 0) {
+  return scheduleDailyReminder({
+    id: "tasbih-reminder",
+    title: "Tasbih 📿",
+    body: "N'oublie pas ton dhikr quotidien",
+    hour,
+    minute,
+  });
+}
+
+export async function scheduleNameOfDayReminder(hour: number = 8, minute: number = 0) {
+  return scheduleDailyReminder({
+    id: "allah-name-daily",
+    title: "Nom d'Allah du jour ✨",
+    body: "Découvre et mémorise un nouveau nom d'Allah",
+    hour,
+    minute,
+  });
+}
+
+export async function scheduleHadithReminder(hour: number = 7, minute: number = 30) {
+  return scheduleDailyReminder({
+    id: "hadith-daily",
+    title: "Hadith du jour 📖",
+    body: "Un nouveau hadith t'attend",
+    hour,
+    minute,
+  });
+}
+
+export async function schedulePrayerTrackingReminder(hour: number = 21, minute: number = 30) {
+  return scheduleDailyReminder({
+    id: "prayer-tracking",
+    title: "Suivi des prières 🕌",
+    body: "As-tu enregistré tes prières d'aujourd'hui ?",
+    hour,
+    minute,
+  });
+}
+
+export async function scheduleRamadanFastingReminder(hour: number = 20, minute: number = 0) {
+  return scheduleDailyReminder({
+    id: "ramadan-fasting",
+    title: "Ramadan — Suivi du jeûne 🌙",
+    body: "N'oublie pas de noter si tu as jeûné aujourd'hui",
+    hour,
+    minute,
+  });
+}
+
+export async function scheduleMakeupDayReminder(date: Date, dayNumber: number) {
+  const d = new Date(date);
+  d.setHours(8, 0, 0, 0);
+  return scheduleDateReminder({
+    title: "Rattrapage de jeûne 🗓️",
+    body: `Jour de rattrapage n°${dayNumber} prévu aujourd'hui. Bon courage !`,
+    date: d,
+    id: `makeup-${date.toISOString().slice(0, 10)}`,
+  });
+}
+
+export async function cancelMakeupReminders(dates: string[]) {
+  for (const dateStr of dates) {
+    await cancelReminder(`makeup-${dateStr}`);
   }
 }

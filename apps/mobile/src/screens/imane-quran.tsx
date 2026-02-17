@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@oumoul/ui';
 import type { AuthUser } from '@oumoul/api';
 import type { QuranSurahSummary, QuranVerse } from '@oumoul/api';
 import { quranApi, tafsirApi } from '../api';
 import * as SecureStore from 'expo-secure-store';
+import { offlineCache, CACHE_KEYS, CACHE_TTL } from '../utils/offline-cache';
 import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { sc, ss } from '../ui/theme';
+import { palette } from '../theme';
+import { HelpTip } from '../components/HelpTip';
 
 type LastReadState = {
   surahId: number;
@@ -58,7 +60,12 @@ function useQuranSurahs(language: 'fr' | 'en') {
     setLoading(true);
     setError(null);
     try {
-      const response = await quranApi.listSurahs(language);
+      const cacheKey = `${CACHE_KEYS.QURAN_SURAHS}_${language}`;
+      const response = await offlineCache.getWithFallback(
+        cacheKey,
+        () => quranApi.listSurahs(language),
+        CACHE_TTL.WEEK,
+      );
       setSurahs(response.surahs);
       if (response.surahs.length > 0) {
         setSelectedSurahId((prev) => prev ?? response.surahs[0].id);
@@ -100,7 +107,12 @@ function useQuranVerses({ selectedSurahId, language }: { selectedSurahId: number
     setLoading(true);
     setError(null);
     try {
-      const response = await quranApi.getSurah(selectedSurahId, language);
+      const cacheKey = `quran_surah_${selectedSurahId}_${language}`;
+      const response = await offlineCache.getWithFallback(
+        cacheKey,
+        () => quranApi.getSurah(selectedSurahId, language),
+        CACHE_TTL.WEEK,
+      );
       setVerses(response.verses);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Impossible de charger les versets.';
@@ -441,7 +453,12 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
       setTafsirError(null);
       setAndPersistLastRead({ surahId, ayah: ayahNumber, language });
       try {
-        const response = await tafsirApi.getTafsir({ surah: surahId, ayah: ayahNumber, locale: language });
+        const tafsirCacheKey = `tafsir_${surahId}_${ayahNumber}_${language}`;
+        const response = await offlineCache.getWithFallback(
+          tafsirCacheKey,
+          () => tafsirApi.getTafsir({ surah: surahId, ayah: ayahNumber, locale: language }),
+          CACHE_TTL.WEEK,
+        );
         setTafsirText(response.text);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Impossible de charger le résumé.';
@@ -487,7 +504,17 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
             <Ionicons name="chevron-back" size={24} color={q_c.accent} />
           </TouchableOpacity>
           <Text style={q.topTitle}>القرآن الكريم</Text>
-          <LanguageToggle language={language} onChange={setLanguage} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <HelpTip screenName="Lire le Coran" tips={[
+              { icon: 'book', title: 'Parcourir les sourates', description: 'Sélectionne une sourate dans la liste pour lire ses versets avec traduction.' },
+              { icon: 'language', title: 'Langue', description: 'Bascule entre français et anglais avec le bouton FR/EN.' },
+              { icon: 'text', title: 'Taille de police', description: 'Ajuste la taille du texte arabe et de la traduction avec le curseur.' },
+              { icon: 'bookmark', title: 'Signets', description: 'Appuie sur l\'icône signet pour marquer un verset. Retrouve tes signets dans le panneau dédié.' },
+              { icon: 'play', title: 'Audio', description: 'Appuie sur l\'icône lecture pour écouter la récitation du verset.' },
+              { icon: 'time', title: 'Dernière lecture', description: 'Ta position de lecture est sauvegardée automatiquement.' },
+            ]} />
+            <LanguageToggle language={language} onChange={setLanguage} />
+          </View>
         </View>
 
         {/* Search */}
@@ -735,16 +762,16 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
 
 // ── Quran-specific colors & styles ──
 const q_c = {
-  bg: '#FAFAF5',
-  card: '#FFFFFF',
+  bg: palette.bgAlt,
+  card: palette.card,
   cardActive: '#F0F7F4',
-  border: 'rgba(0,0,0,0.06)',
-  text: '#1A1A1A',
-  textSoft: 'rgba(26,26,26,0.6)',
-  muted: 'rgba(26,26,26,0.35)',
-  accent: colors.primaryDark,
-  accentLight: 'rgba(26,127,100,0.1)',
-  error: '#D32F2F',
+  border: palette.border,
+  text: palette.text,
+  textSoft: palette.textSoft,
+  muted: palette.muted,
+  accent: palette.primaryDark,
+  accentLight: palette.accentLightAlt,
+  error: palette.error,
 };
 
 const q = StyleSheet.create({
@@ -823,7 +850,7 @@ const q = StyleSheet.create({
   surahNumberText: { fontSize: 14, fontWeight: '700', color: q_c.accent },
   surahName: { fontSize: 15, fontWeight: '600', color: q_c.text },
   surahMeta: { fontSize: 12, color: q_c.muted },
-  surahArabic: { fontSize: 18, color: q_c.text, fontWeight: '500' },
+  surahArabic: { fontSize: 20, color: q_c.text, fontFamily: 'Amiri-Regular' },
 
   // Reading bar
   readingBar: {
@@ -874,7 +901,7 @@ const q = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
   },
-  bismillahText: { fontSize: 26, color: q_c.accent, fontWeight: '500' },
+  bismillahText: { fontSize: 28, color: q_c.accent, fontFamily: 'Amiri-Bold' },
 
   // Verse card
   verseCard: {
@@ -911,9 +938,9 @@ const q = StyleSheet.create({
   verseBadgeText: { fontSize: 12, fontWeight: '700', color: q_c.accent },
 
   arabicText: {
-    color: q_c.text,
+    color: '#1B3A2D',
     textAlign: 'right',
-    fontWeight: '400',
+    fontFamily: 'Amiri-Regular',
   },
   verseDivider: {
     height: 1,

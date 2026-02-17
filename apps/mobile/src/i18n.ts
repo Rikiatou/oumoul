@@ -173,6 +173,187 @@ const messages: Record<string, Partial<Record<Locale, string>>> = {
   },
   "dash.common.deleting": { fr: "Suppression…", en: "Deleting…", ar: "جارٍ الحذف..." },
   "dash.common.delete": { fr: "Supprimer", en: "Delete", ar: "حذف" },
+
+  // ── Navigation tabs ──
+  "tab.home": { fr: "Accueil", en: "Home", ar: "الرئيسية" },
+  "tab.quran": { fr: "Coran", en: "Quran", ar: "القرآن" },
+  "tab.dhikr": { fr: "Dhikr", en: "Dhikr", ar: "الذكر" },
+  "tab.ramadan": { fr: "Ramadan", en: "Ramadan", ar: "رمضان" },
+  "tab.more": { fr: "Plus", en: "More", ar: "المزيد" },
+
+  // ── More screen ──
+  "more.title": { fr: "Plus", en: "More", ar: "المزيد" },
+  "more.tools": { fr: "Outils", en: "Tools", ar: "الأدوات" },
+  "more.settings": { fr: "Réglages", en: "Settings", ar: "الإعدادات" },
+  "more.search": { fr: "Recherche globale", en: "Global Search", ar: "بحث شامل" },
+  "more.guide": { fr: "Guide de l'app", en: "App Guide", ar: "دليل التطبيق" },
+  "more.hijri": { fr: "Calendrier Hijri", en: "Hijri Calendar", ar: "التقويم الهجري" },
+  "more.qibla": { fr: "Direction Qibla", en: "Qibla Direction", ar: "اتجاه القبلة" },
+  "more.imane": { fr: "Programme Imane", en: "Imane Program", ar: "برنامج الإيمان" },
+  "more.prayer": { fr: "Suivi des prières", en: "Prayer Tracking", ar: "متابعة الصلاة" },
+  "more.audio": { fr: "Écouter le Coran", en: "Listen to Quran", ar: "استمع للقرآن" },
+  "more.names": { fr: "99 Noms d'Allah", en: "99 Names of Allah", ar: "أسماء الله الحسنى" },
+  "more.tasbih": { fr: "Tasbih", en: "Tasbih", ar: "التسبيح" },
+  "more.mosque": { fr: "Mosquées", en: "Mosques", ar: "المساجد" },
+  "more.hadith": { fr: "Hadith du jour", en: "Daily Hadith", ar: "حديث اليوم" },
+  "more.zakat": { fr: "Calculateur Zakat", en: "Zakat Calculator", ar: "حاسبة الزكاة" },
+  "more.eid": { fr: "Cartes de vœux", en: "Greeting Cards", ar: "بطاقات تهنئة" },
+  "more.words": { fr: "Vocabulaire Coran", en: "Quran Vocabulary", ar: "مفردات القرآن" },
+  "more.prayerSettings": { fr: "Réglages prière", en: "Prayer Settings", ar: "إعدادات الصلاة" },
+  "more.darkMode": { fr: "Mode sombre", en: "Dark Mode", ar: "الوضع الداكن" },
+  "more.language": { fr: "Langue", en: "Language", ar: "اللغة" },
+  "more.logout": { fr: "Se déconnecter", en: "Log out", ar: "تسجيل الخروج" },
+  "more.loggingOut": { fr: "Déconnexion…", en: "Logging out…", ar: "جارٍ تسجيل الخروج..." },
+
+  // ── Welcome & Onboarding ──
+  "welcome.greeting": { fr: "Assalamou Alaikoum", en: "Assalamu Alaikum", ar: "السلام عليكم" },
+  "welcome.tagline": { fr: "Ton compagnon spirituel\nau quotidien", en: "Your daily spiritual\ncompanion", ar: "رفيقك الروحي\nاليومي" },
+  "welcome.start": { fr: "Commencer", en: "Get Started", ar: "ابدأ" },
+  "welcome.bismillah": { fr: "Bismillah Ar-Rahman Ar-Rahim", en: "Bismillah Ar-Rahman Ar-Rahim", ar: "بسم الله الرحمن الرحيم" },
+  "welcome.feature.prayer": { fr: "Horaires de prière précis", en: "Accurate prayer times", ar: "مواقيت صلاة دقيقة" },
+  "welcome.feature.quran": { fr: "Coran, Tafsir & Recherche", en: "Quran, Tafsir & Search", ar: "القرآن والتفسير والبحث" },
+  "welcome.feature.ramadan": { fr: "Suivi Ramadan intelligent", en: "Smart Ramadan tracker", ar: "متتبع رمضان ذكي" },
+  "welcome.feature.dhikr": { fr: "Dhikr & Invocations", en: "Dhikr & Supplications", ar: "الأذكار والأدعية" },
+
+  // ── Onboarding steps ──
+  "onboarding.skip": { fr: "Passer", en: "Skip", ar: "تخطي" },
+  "onboarding.next": { fr: "Suivant", en: "Next", ar: "التالي" },
+  "onboarding.done": { fr: "C'est parti !", en: "Let's go!", ar: "هيا بنا!" },
+
+  // ── Prayer tracking ──
+  "prayer.title": { fr: "Suivi des prières", en: "Prayer Tracking", ar: "متابعة الصلاة" },
+  "prayer.streak": { fr: "Série en cours 🔥", en: "Current streak 🔥", ar: "سلسلة متواصلة 🔥" },
+  "prayer.days": { fr: "jours", en: "days", ar: "أيام" },
+  "prayer.accomplished": { fr: "des prières accomplies", en: "of prayers accomplished", ar: "من الصلوات المؤداة" },
+  "prayer.fajr": { fr: "Fajr", en: "Fajr", ar: "الفجر" },
+  "prayer.dhuhr": { fr: "Dhuhr", en: "Dhuhr", ar: "الظهر" },
+  "prayer.asr": { fr: "Asr", en: "Asr", ar: "العصر" },
+  "prayer.maghrib": { fr: "Maghrib", en: "Maghrib", ar: "المغرب" },
+  "prayer.isha": { fr: "Isha", en: "Isha", ar: "العشاء" },
+  "prayer.onTime": { fr: "À l'heure", en: "On time", ar: "في الوقت" },
+  "prayer.late": { fr: "En retard", en: "Late", ar: "متأخر" },
+  "prayer.missed": { fr: "Manquée", en: "Missed", ar: "فائتة" },
+  "prayer.week": { fr: "Semaine", en: "Week", ar: "الأسبوع" },
+  "prayer.month": { fr: "Mois", en: "Month", ar: "الشهر" },
+
+  // ── Ramadan ──
+  "ramadan.title": { fr: "Ramadan", en: "Ramadan", ar: "رمضان" },
+  "ramadan.fasted": { fr: "Jeûné", en: "Fasted", ar: "صام" },
+  "ramadan.missed": { fr: "Raté", en: "Missed", ar: "فائت" },
+  "ramadan.exemption": { fr: "Exemptée", en: "Exempt", ar: "معفاة" },
+  "ramadan.madeUp": { fr: "Rattrapé", en: "Made up", ar: "قضاء" },
+  "ramadan.daysToMakeUp": { fr: "jours à rattraper", en: "days to make up", ar: "أيام للقضاء" },
+  "ramadan.reminder": { fr: "Rappel de jeûne", en: "Fasting reminder", ar: "تذكير بالصيام" },
+  "ramadan.summary": { fr: "Bilan de Ramadan", en: "Ramadan Summary", ar: "ملخص رمضان" },
+  "ramadan.makeupPlan": { fr: "Programme de rattrapage", en: "Makeup Plan", ar: "برنامج القضاء" },
+  "ramadan.today": { fr: "As-tu jeûné aujourd'hui ?", en: "Did you fast today?", ar: "هل صمت اليوم؟" },
+  "ramadan.yes": { fr: "Oui", en: "Yes", ar: "نعم" },
+  "ramadan.no": { fr: "Non", en: "No", ar: "لا" },
+  "ramadan.notes": { fr: "Notes", en: "Notes", ar: "ملاحظات" },
+  "ramadan.save": { fr: "Enregistrer", en: "Save", ar: "حفظ" },
+  "ramadan.saved": { fr: "Enregistré avec succès", en: "Saved successfully", ar: "تم الحفظ بنجاح" },
+
+  // ── Tasbih ──
+  "tasbih.title": { fr: "Tasbih", en: "Tasbih", ar: "التسبيح" },
+  "tasbih.reset": { fr: "Réinitialiser", en: "Reset", ar: "إعادة تعيين" },
+  "tasbih.target": { fr: "Objectif", en: "Target", ar: "الهدف" },
+  "tasbih.sessions": { fr: "Sessions", en: "Sessions", ar: "الجلسات" },
+  "tasbih.custom": { fr: "Dhikr personnalisé", en: "Custom Dhikr", ar: "ذكر مخصص" },
+
+  // ── Allah Names ──
+  "names.title": { fr: "99 Noms d'Allah", en: "99 Names of Allah", ar: "أسماء الله الحسنى" },
+  "names.memorized": { fr: "mémorisés", en: "memorized", ar: "محفوظة" },
+  "names.quiz": { fr: "Quiz", en: "Quiz", ar: "اختبار" },
+  "names.search": { fr: "Rechercher un nom…", en: "Search a name…", ar: "ابحث عن اسم..." },
+  "names.benefit": { fr: "Bienfait", en: "Benefit", ar: "الفائدة" },
+
+  // ── Quran ──
+  "quran.title": { fr: "Lire le Coran", en: "Read Quran", ar: "اقرأ القرآن" },
+  "quran.listen": { fr: "Écouter le Coran", en: "Listen to Quran", ar: "استمع للقرآن" },
+  "quran.search": { fr: "Rechercher une sourate…", en: "Search a surah…", ar: "ابحث عن سورة..." },
+  "quran.verses": { fr: "versets", en: "verses", ar: "آيات" },
+  "quran.bookmarks": { fr: "Signets", en: "Bookmarks", ar: "المرجعيات" },
+  "quran.lastRead": { fr: "Dernière lecture", en: "Last read", ar: "آخر قراءة" },
+  "quran.tafsir": { fr: "Tafsir", en: "Tafsir", ar: "التفسير" },
+
+  // ── Hadith ──
+  "hadith.title": { fr: "Hadith du jour", en: "Daily Hadith", ar: "حديث اليوم" },
+  "hadith.favorite": { fr: "Favoris", en: "Favorites", ar: "المفضلة" },
+  "hadith.share": { fr: "Partager", en: "Share", ar: "مشاركة" },
+  "hadith.topics.all": { fr: "Tous", en: "All", ar: "الكل" },
+  "hadith.topics.faith": { fr: "Foi", en: "Faith", ar: "الإيمان" },
+  "hadith.topics.prayer": { fr: "Prière", en: "Prayer", ar: "الصلاة" },
+  "hadith.topics.charity": { fr: "Charité", en: "Charity", ar: "الصدقة" },
+  "hadith.topics.patience": { fr: "Patience", en: "Patience", ar: "الصبر" },
+  "hadith.topics.knowledge": { fr: "Savoir", en: "Knowledge", ar: "العلم" },
+  "hadith.topics.family": { fr: "Famille", en: "Family", ar: "الأسرة" },
+  "hadith.topics.manners": { fr: "Bonnes manières", en: "Good Manners", ar: "حسن الخلق" },
+
+  // ── Zakat ──
+  "zakat.title": { fr: "Calculateur Zakat", en: "Zakat Calculator", ar: "حاسبة الزكاة" },
+  "zakat.assets": { fr: "Actifs", en: "Assets", ar: "الأصول" },
+  "zakat.debts": { fr: "Dettes", en: "Debts", ar: "الديون" },
+  "zakat.result": { fr: "Résultat", en: "Result", ar: "النتيجة" },
+  "zakat.due": { fr: "Zakat due", en: "Zakat due", ar: "الزكاة المستحقة" },
+  "zakat.nisab": { fr: "Nisab", en: "Nisab", ar: "النصاب" },
+
+  // ── Mosque ──
+  "mosque.title": { fr: "Mosquées à proximité", en: "Nearby Mosques", ar: "المساجد القريبة" },
+  "mosque.search": { fr: "Rechercher une mosquée…", en: "Search a mosque…", ar: "ابحث عن مسجد..." },
+  "mosque.distance": { fr: "Distance", en: "Distance", ar: "المسافة" },
+  "mosque.directions": { fr: "Itinéraire", en: "Directions", ar: "الاتجاهات" },
+
+  // ── Quran Words ──
+  "words.title": { fr: "Vocabulaire du Coran", en: "Quran Vocabulary", ar: "مفردات القرآن" },
+  "words.learned": { fr: "mots appris", en: "words learned", ar: "كلمات محفوظة" },
+
+  // ── Hijri Calendar ──
+  "hijri.title": { fr: "Calendrier Hijri", en: "Hijri Calendar", ar: "التقويم الهجري" },
+
+  // ── Eid Greetings ──
+  "eid.title": { fr: "Cartes de vœux", en: "Greeting Cards", ar: "بطاقات تهنئة" },
+  "eid.share": { fr: "Partager", en: "Share", ar: "مشاركة" },
+  "eid.customize": { fr: "Personnaliser", en: "Customize", ar: "تخصيص" },
+
+  // ── Cycle ──
+  "cycle.title": { fr: "Suivi du cycle", en: "Cycle Tracking", ar: "متابعة الدورة" },
+  "cycle.pure": { fr: "Pure", en: "Pure", ar: "طاهرة" },
+  "cycle.menses": { fr: "Règles", en: "Menses", ar: "حيض" },
+  "cycle.spotting": { fr: "Spotting", en: "Spotting", ar: "استحاضة" },
+  "cycle.postpartum": { fr: "Postpartum", en: "Postpartum", ar: "نفاس" },
+
+  // ── App Guide ──
+  "guide.title": { fr: "Guide de l'app", en: "App Guide", ar: "دليل التطبيق" },
+  "guide.modules": { fr: "modules disponibles", en: "modules available", ar: "وحدات متاحة" },
+  "guide.features": { fr: "Fonctionnalités", en: "Features", ar: "الميزات" },
+  "guide.open": { fr: "Ouvrir", en: "Open", ar: "فتح" },
+  "guide.banner": {
+    fr: "Bienvenue dans Oumoul ! Découvre ci-dessous toutes les fonctionnalités de l'app.",
+    en: "Welcome to Oumoul! Discover all the app features below.",
+    ar: "مرحباً في أمول! اكتشف جميع ميزات التطبيق أدناه.",
+  },
+  "guide.all": { fr: "Tous", en: "All", ar: "الكل" },
+
+  // ── Common ──
+  "common.loading": { fr: "Chargement…", en: "Loading…", ar: "جارٍ التحميل..." },
+  "common.error": { fr: "Erreur", en: "Error", ar: "خطأ" },
+  "common.retry": { fr: "Réessayer", en: "Retry", ar: "إعادة المحاولة" },
+  "common.save": { fr: "Enregistrer", en: "Save", ar: "حفظ" },
+  "common.cancel": { fr: "Annuler", en: "Cancel", ar: "إلغاء" },
+  "common.close": { fr: "Fermer", en: "Close", ar: "إغلاق" },
+  "common.search": { fr: "Rechercher…", en: "Search…", ar: "بحث..." },
+  "common.noResults": { fr: "Aucun résultat", en: "No results", ar: "لا توجد نتائج" },
+
+  // ── Dashboard header ──
+  "dash.greeting": {
+    fr: "Assalamou Alaikoum Wa Rahmatoullahi Wa Barakouthou",
+    en: "Assalamu Alaikum Wa Rahmatullahi Wa Barakatuh",
+    ar: "السلام عليكم ورحمة الله وبركاته",
+  },
+  "dash.gps": { fr: "Détection GPS…", en: "Detecting GPS…", ar: "جارٍ تحديد الموقع..." },
+  "dash.nextPrayer": { fr: "Prochaine prière", en: "Next prayer", ar: "الصلاة التالية" },
+  "dash.inspiration": { fr: "Inspiration du jour", en: "Daily Inspiration", ar: "إلهام اليوم" },
+  "dash.streaks": { fr: "Séries", en: "Streaks", ar: "السلاسل" },
 };
 
 export function t(locale: Locale | undefined, key: string, fallback?: string) {

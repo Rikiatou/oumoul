@@ -3,7 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
-    "types": ["nativewind/types"],
+    "types": ["nativewind/types", "jest"],
     "paths": {
       "@/*": ["./*"],
       "@oumoul/api": ["../../packages/api/src/index.ts"],
@@ -14,5 +14,6 @@
       "@oumoul/ui/*": ["../../packages/ui/src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "global.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx", "global.d.ts"],
+  "exclude": ["**/__tests__/**"]
 }

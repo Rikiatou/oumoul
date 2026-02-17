@@ -12,9 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@oumoul/ui";
 import * as Notifications from "expo-notifications";
 import {
   FastingLogStatus,
@@ -47,13 +45,25 @@ import {
   scheduleDhikrEveningReminder,
   scheduleIftarReminder,
   scheduleSuhoorReminder,
+  scheduleJumuahReminder,
   syncPushTokenWithBackend,
 } from "../push-notifications";
 import * as SecureStore from "expo-secure-store";
+import { offlineCache, CACHE_KEYS, CACHE_TTL } from "../utils/offline-cache";
 import { t, Locale } from "../i18n";
 import { useLocationContext } from "../context/location-context";
 import { prayerSettingsStorage } from "./prayer-settings";
 import { Skeleton, SkeletonCard } from "../ui/skeleton";
+import { getTodayInspiration } from "../data/daily-inspiration";
+import { palette } from "../theme";
+import { getRamadanInfo, getCurrentHijriDate } from "../utils/hijri-calendar";
+import { Header } from "./dashboard/Header";
+import { NextPrayerCard } from "./dashboard/NextPrayerCard";
+import { DailyInspirationCard } from "./dashboard/DailyInspirationCard";
+import { RamadanBanner } from "./dashboard/RamadanBanner";
+import { StatsRow } from "./dashboard/StatsRow";
+import { LocalRemindersSection } from "./dashboard/LocalRemindersSection";
+import { StreakCard } from "./dashboard/StreakCard";
 
 const DEFAULT_COORDS = {
   latitude: "4.0511",
@@ -112,6 +122,7 @@ const LOCAL_REMINDER_TYPES = [
   "IftarLocal",
   "DhikrMorning",
   "DhikrEvening",
+  "JumuahReminder",
 ] as const;
 
 type LocalReminderType = (typeof LOCAL_REMINDER_TYPES)[number];
@@ -126,6 +137,7 @@ const LOCAL_REMINDER_LABELS: Record<LocalReminderType, string> = {
   IftarLocal: "Iftar (Maghrib)",
   DhikrMorning: "Adhkar du matin (06h30)",
   DhikrEvening: "Adhkar du soir (18h00)",
+  JumuahReminder: "Rappel Jumu'ah (vendredi 12h)",
 };
 
 function createReminderRecord<T>(value: T): Record<ReminderType, T> {
@@ -144,20 +156,6 @@ function createLocalReminderRecord<T>(value: T): Record<LocalReminderType, T> {
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-function getHijriDateLabel(locale: string = "fr-FR") {
-  try {
-    const formatter = new Intl.DateTimeFormat(locale, {
-      calendar: "islamic-umalqura",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-    return formatter.format(new Date());
-  } catch {
-    return "";
-  }
-}
-
 interface ReminderUIState {
   list: ReminderPreferenceListItem[];
   loading: boolean;
@@ -166,7 +164,7 @@ interface ReminderUIState {
   times: Record<ReminderType, string>;
 }
 
-export function DashboardScreen({ user }: { user: AuthUser }) {
+export function DashboardScreen({ user, onSearch }: { user: AuthUser; onSearch?: () => void }) {
   const { logout } = useAuth();
   const [logoutBusy, setLogoutBusy] = useState(false);
   const locale = (user.locale as Locale | undefined) ?? "fr";
@@ -455,22 +453,13 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
       if (effective.maghribAdjustment !== undefined) params.maghribAdjustment = effective.maghribAdjustment;
       if (effective.ishaAdjustment !== undefined) params.ishaAdjustment = effective.ishaAdjustment;
 
-      const result = await prayerApi.getPrayerTimes(params);
+      const result = await offlineCache.getWithFallback<PrayerTimesResponse>(
+        CACHE_KEYS.PRAYER_TIMES,
+        () => prayerApi.getPrayerTimes(params),
+        CACHE_TTL.SHORT,
+      );
       setPrayerResult(result);
-      // Cache for offline use
-      try { await SecureStore.setItemAsync("oumoul.prayerTimesCache", JSON.stringify(result)); } catch {}
     } catch (error) {
-      // Try loading cached prayer times if network fails
-      if (!prayerResult) {
-        try {
-          const cached = await SecureStore.getItemAsync("oumoul.prayerTimesCache");
-          if (cached) {
-            setPrayerResult(JSON.parse(cached) as PrayerTimesResponse);
-            setPrayerError("Horaires en cache (hors ligne)");
-            return;
-          }
-        } catch {}
-      }
       const message = error instanceof Error ? error.message : "Impossible de calculer les horaires.";
       setPrayerError(message);
       setPrayerResult(null);
@@ -686,6 +675,7 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
             IftarLocal: false,
             DhikrMorning: true,
             DhikrEvening: true,
+            JumuahReminder: true,
           };
           setLocalReminderEnabled(autoEnabled);
           await SecureStore.setItemAsync("oumoul.localReminders", JSON.stringify(autoEnabled));
@@ -721,6 +711,8 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
           ? "dhikr-morning"
           : type === "DhikrEvening"
           ? "dhikr-evening"
+          : type === "JumuahReminder"
+          ? "jumuah-reminder"
           : `adhan-${type.replace("Adhan", "")}`;
 
       if (currentlyEnabled) {
@@ -768,6 +760,8 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
           await scheduleDhikrMorningReminder();
         } else if (type === "DhikrEvening") {
           await scheduleDhikrEveningReminder();
+        } else if (type === "JumuahReminder") {
+          await scheduleJumuahReminder();
         }
 
         setLocalReminderEnabled((prev) => {
@@ -830,6 +824,11 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
       if (enabled.DhikrEvening) {
         push(cancelReminder("dhikr-evening").catch(() => undefined));
         push(scheduleDhikrEveningReminder());
+      }
+
+      if (enabled.JumuahReminder) {
+        push(cancelReminder("jumuah-reminder").catch(() => undefined));
+        push(scheduleJumuahReminder());
       }
 
       try {
@@ -1002,7 +1001,25 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
     return Object.entries(prayerResult.times) as Array<[string, string]>;
   }, [prayerResult]);
 
-  const hijriLabel = useMemo(() => getHijriDateLabel(user.locale ?? "fr-FR"), [user.locale]);
+  const hijriLabel = useMemo(() => {
+    try {
+      const hijri = getCurrentHijriDate();
+      return `${hijri.day} ${hijri.monthName} ${hijri.year} AH`;
+    } catch {
+      // Fallback to browser's Islamic calendar if available
+      try {
+        const formatter = new Intl.DateTimeFormat(user.locale ?? "fr-FR", {
+          calendar: "islamic-umalqura",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        return formatter.format(new Date());
+      } catch {
+        return "";
+      }
+    }
+  }, [user.locale]);
 
   const dashLocLabel = useMemo(() => {
     if (detectedLoc.city && detectedLoc.country) return `${detectedLoc.city}, ${detectedLoc.country}`;
@@ -1016,19 +1033,8 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
   }, [user.locale]);
 
   const ramadanDayInfo = useMemo(() => {
-    const RAMADAN_START = new Date("2026-02-18");
-    const RAMADAN_END = new Date("2026-03-19");
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (today < RAMADAN_START) {
-      const diff = Math.ceil((RAMADAN_START.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      return { status: "before" as const, daysUntil: diff, dayNumber: 0, totalDays: 30 };
-    }
-    if (today > RAMADAN_END) {
-      return { status: "after" as const, daysUntil: 0, dayNumber: 30, totalDays: 30 };
-    }
-    const dayNum = Math.ceil((today.getTime() - RAMADAN_START.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return { status: "during" as const, daysUntil: 0, dayNumber: dayNum, totalDays: 30 };
+    const currentYear = new Date().getFullYear();
+    return getRamadanInfo(currentYear);
   }, []);
 
   const nextPrayerInfo = useMemo(() => {
@@ -1039,140 +1045,76 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
     return { name: next, time: nextTime };
   }, [prayerResult, formatTime]);
 
-  const insets = useSafeAreaInsets();
+  const [countdown, setCountdown] = useState("");
+  useEffect(() => {
+    if (!prayerResult?.nextPrayerTime) { setCountdown(""); return; }
+    const target = new Date(prayerResult.nextPrayerTime).getTime();
+    const tick = () => {
+      const diff = target - Date.now();
+      if (diff <= 0) { setCountdown("maintenant"); return; }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setCountdown(h > 0 ? `dans ${h}h ${String(m).padStart(2, "0")}min` : `dans ${m}min ${String(s).padStart(2, "0")}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [prayerResult?.nextPrayerTime]);
 
   return (
-    <View style={[ds.screen, { paddingTop: insets.top }]}>
+    <View style={[ds.screen, { paddingTop: 0 }]}>
       <ScrollView
         contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshAll()} tintColor={ds_c.primaryDark} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Greeting header */}
-        <View style={{ marginBottom: 20 }}>
-          <Text style={ds.headerGreeting}>Assalamou Alaikoum Wa Rahmatoullahi Wa Barakouthou</Text>
-          <Text style={ds.headerTitle}>
-            {user.firstName} 🤲
-          </Text>
-          <Text style={ds.headerDate}>{todayLabel}</Text>
-          {hijriLabel ? <Text style={ds.hijri}>{hijriLabel}</Text> : null}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
-            <Ionicons name="location" size={12} color={ds_c.primaryDark} />
-            <Text style={{ fontSize: 12, color: ds_c.textSoft, fontWeight: "500" }}>
-              {locLoading ? "Détection GPS…" : dashLocLabel}
-            </Text>
-          </View>
-        </View>
+        <Header
+          user={user}
+          todayLabel={todayLabel}
+          hijriLabel={hijriLabel}
+          locationLabel={dashLocLabel}
+          isLocationLoading={locLoading}
+          onSearch={onSearch}
+        />
 
         {/* Next prayer highlight */}
-        {prayerLoading && !nextPrayerInfo ? (
-          <View style={ds.nextPrayerCard}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={ds.nextPrayerIcon}>
-                <Ionicons name="time-outline" size={22} color="#fff" />
-              </View>
-              <View style={{ flex: 1, gap: 6 }}>
-                <Skeleton width="50%" height={12} />
-                <Skeleton width="30%" height={18} />
-              </View>
-              <Skeleton width={60} height={24} borderRadius={6} />
-            </View>
-          </View>
-        ) : nextPrayerInfo ? (
-          <View style={ds.nextPrayerCard}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={ds.nextPrayerIcon}>
-                <Ionicons name="time-outline" size={22} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={ds.nextPrayerLabel}>Prochaine prière</Text>
-                <Text style={ds.nextPrayerName}>{nextPrayerInfo.name}</Text>
-              </View>
-              <Text style={ds.nextPrayerTime}>{nextPrayerInfo.time}</Text>
-            </View>
-          </View>
-        ) : null}
+        <NextPrayerCard
+          isLoading={prayerLoading && !nextPrayerInfo}
+          nextPrayerInfo={nextPrayerInfo}
+          countdown={countdown}
+        />
+
+        {/* Dua / Ayah of the Day */}
+        <DailyInspirationCard locale={locale} />
+
+        {/* Streak Card */}
+        <StreakCard />
 
         {/* Ramadan banner */}
-        <View style={ds.ramadanBanner}>
-          <Ionicons name="moon" size={20} color="#FFC107" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            {ramadanDayInfo.status === "before" && (
-              <>
-                <Text style={ds.ramadanBannerTitle}>Ramadan dans {ramadanDayInfo.daysUntil} jour{ramadanDayInfo.daysUntil > 1 ? "s" : ""}</Text>
-                <Text style={ds.ramadanBannerSub}>Prépare-toi pour le mois béni</Text>
-              </>
-            )}
-            {ramadanDayInfo.status === "during" && (
-              <>
-                <Text style={ds.ramadanBannerTitle}>Ramadan — Jour {ramadanDayInfo.dayNumber}/{ramadanDayInfo.totalDays}</Text>
-                <Text style={ds.ramadanBannerSub}>{ramadanTodayText}</Text>
-              </>
-            )}
-            {ramadanDayInfo.status === "after" && (
-              <>
-                <Text style={ds.ramadanBannerTitle}>Ramadan terminé</Text>
-                <Text style={ds.ramadanBannerSub}>{ramadanProgressText || "Eid Moubarak !"}</Text>
-              </>
-            )}
-          </View>
-          {ramadanDayInfo.status === "during" && (
-            <View style={ds.ramadanDayBadge}>
-              <Text style={ds.ramadanDayBadgeText}>{ramadanDayInfo.dayNumber}</Text>
-            </View>
-          )}
-        </View>
+        <RamadanBanner
+          ramadanDayInfo={ramadanDayInfo}
+          ramadanTodayText={ramadanTodayText}
+          ramadanProgressText={ramadanProgressText}
+        />
 
         {/* Stats row */}
-        <View style={ds.statsRow}>
-          <View style={ds.statCard}>
-            <View style={[ds.statIcon, { backgroundColor: "#E8F5E9" }]}>
-              <Ionicons name="time" size={18} color="#388E3C" />
-            </View>
-            <Text style={ds.statLabel}>{t(locale, "dash.prayer.status.title", "Prière")}</Text>
-            <Text style={ds.statValue} numberOfLines={2}>{prayerStatusText}</Text>
-          </View>
-          <View style={ds.statCard}>
-            <View style={[ds.statIcon, { backgroundColor: "#E3F2FD" }]}>
-              <Ionicons name="moon" size={18} color="#1565C0" />
-            </View>
-            <Text style={ds.statLabel}>{t(locale, "dash.ramadan.title", "Ramadan")}</Text>
-            <Text style={ds.statValue} numberOfLines={2}>{ramadanTodayText}</Text>
-            {ramadanProgressText ? <Text style={ds.statExtra}>{ramadanProgressText}</Text> : null}
-          </View>
-          {fastingSummary && (
-            <View style={ds.statCard}>
-              <View style={[ds.statIcon, { backgroundColor: "#FFF3E0" }]}>
-                <Ionicons name="refresh" size={18} color="#E65100" />
-              </View>
-              <Text style={ds.statLabel}>{t(locale, "dash.makeup.title", "Rattrapages")}</Text>
-              <Text style={ds.statValue}>
-                {fastingSummary.outstandingMakeupDays} {t(locale, "dash.makeup.label", "jour(s)")}
-              </Text>
-            </View>
-          )}
-        </View>
+        <StatsRow
+          prayerStatusText={prayerStatusText}
+          ramadanTodayText={ramadanTodayText}
+          ramadanProgressText={ramadanProgressText}
+          fastingSummary={fastingSummary}
+          locale={locale}
+        />
 
-        <Section title={t(locale, "notif.local.title", "Notifications locales")} subtitle={t(locale, "notif.local.subtitle", "Adhan, Suhoor, Iftar (sur cet appareil)")}>
-          {localReminderLoading ? (
-            <ActivityIndicator color={ds_c.primaryDark} />
-          ) : (
-            <View style={{ gap: 10 }}>
-              {localReminderError ? <Text style={ds.errorText}>{localReminderError}</Text> : null}
-              {LOCAL_REMINDER_TYPES.map((type) => (
-                <View key={type} style={ds.switchRow}>
-                  <Text style={ds.switchLabel}>{t(locale, `notif.local.label.${type}`, LOCAL_REMINDER_LABELS[type])}</Text>
-                  <Switch
-                    value={localReminderEnabled[type]}
-                    onValueChange={() => void toggleLocalReminder(type)}
-                    trackColor={{ true: ds_c.primaryDark, false: "rgba(0,0,0,0.1)" }}
-                    thumbColor={localReminderEnabled[type] ? colors.primary : "#ccc"}
-                  />
-                </View>
-              ))}
-            </View>
-          )}
-        </Section>
+        <LocalRemindersSection
+          isLoading={localReminderLoading}
+          error={localReminderError}
+          enabled={localReminderEnabled}
+          onToggle={toggleLocalReminder}
+          locale={locale}
+        />
 
         <Section title={t(locale, "dash.makeup.plan.title", "Plan de rattrapage")} subtitle={t(locale, "dash.makeup.plan.subtitle", "Rappels pour rattraper tes jours manqués.")}>
           {makeupPlanError ? <Text style={ds.errorText}>{makeupPlanError}</Text> : null}
@@ -1400,7 +1342,7 @@ export function DashboardScreen({ user }: { user: AuthUser }) {
                     value={pref.isEnabled}
                     onValueChange={() => void handleReminderToggle(pref)}
                     trackColor={{ true: ds_c.primaryDark, false: "rgba(0,0,0,0.1)" }}
-                    thumbColor={pref.isEnabled ? colors.primary : "#ccc"}
+                    thumbColor={pref.isEnabled ? palette.primary : "#ccc"}
                     disabled={reminderState.updating[pref.type]}
                   />
                 </View>
@@ -1428,14 +1370,14 @@ function toListItem(pref: ReminderPreference): ReminderPreferenceListItem {
 }
 
 const ds_c = {
-  bg: "#FAF5EF",
-  card: "#FFFFFF",
-  border: "rgba(0,0,0,0.06)",
-  text: "#1A1A1A",
-  textSoft: "rgba(26,26,26,0.55)",
-  muted: "rgba(26,26,26,0.35)",
-  primaryDark: colors.primaryDark,
-  error: "#D32F2F",
+  bg: palette.bg,
+  card: palette.card,
+  border: palette.border,
+  text: palette.text,
+  textSoft: palette.textSoft,
+  muted: palette.muted,
+  primaryDark: palette.primaryDark,
+  error: palette.error,
 };
 
 const ds = StyleSheet.create({
@@ -1468,6 +1410,7 @@ const ds = StyleSheet.create({
   nextPrayerLabel: { fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: 1 },
   nextPrayerName: { fontSize: 18, fontWeight: "700", color: "#fff", marginTop: 2 },
   nextPrayerTime: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  nextPrayerCountdown: { fontSize: 12, fontWeight: "600", color: "rgba(255,255,255,0.7)", marginTop: 2 },
 
   ramadanBanner: {
     flexDirection: "row",
@@ -1552,7 +1495,7 @@ const ds = StyleSheet.create({
   },
 
   primaryBtn: {
-    backgroundColor: colors.primaryDark,
+    backgroundColor: palette.primaryDark,
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: "center",
@@ -1569,7 +1512,7 @@ const ds = StyleSheet.create({
   outlineBtnText: { color: ds_c.text, fontWeight: "600", fontSize: 13 },
 
   smallBtn: {
-    backgroundColor: colors.primaryDark,
+    backgroundColor: palette.primaryDark,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -1646,7 +1589,7 @@ const ds = StyleSheet.create({
     paddingVertical: 6,
   },
   chipActive: {
-    backgroundColor: colors.primaryDark,
+    backgroundColor: palette.primaryDark,
   },
 
   arabicCard: {
@@ -1657,8 +1600,43 @@ const ds = StyleSheet.create({
   },
   arabicText: {
     fontSize: 22,
-    color: ds_c.text,
+    color: "#1B3A2D",
     textAlign: "right",
-    lineHeight: 36,
+    lineHeight: 38,
+    fontFamily: "Amiri-Regular",
   },
+
+  dailyCard: {
+    backgroundColor: ds_c.card,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: ds_c.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  dailyIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(26,127,100,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dailyLabel: { fontSize: 14, fontWeight: "700", color: ds_c.text },
+  dailyArabic: {
+    fontSize: 22,
+    lineHeight: 40,
+    color: "#1B3A2D",
+    textAlign: "right",
+    fontFamily: "Amiri-Regular",
+    marginBottom: 8,
+  },
+  dailyTranslit: { fontSize: 13, fontStyle: "italic", color: "#6B4C3B", lineHeight: 20, marginBottom: 4 },
+  dailyTranslation: { fontSize: 14, color: ds_c.textSoft, lineHeight: 22, marginBottom: 8 },
+  dailySource: { fontSize: 11, color: ds_c.muted, fontWeight: "600" },
 });

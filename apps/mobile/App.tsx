@@ -1,11 +1,13 @@
 import { StatusBar } from "expo-status-bar";
-import React, { Component, useCallback, useMemo, useState } from "react";
+import React, { Component, useCallback, useEffect, useMemo, useState } from "react";
+import { useFonts } from "expo-font";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -21,6 +23,9 @@ import { colors } from "@oumoul/ui";
 import type { AuthUser, RegisterPayload } from "@oumoul/api";
 import { useAuth, AuthProvider } from "./src/context/auth-context";
 import { LocationProvider, useLocationContext } from "./src/context/location-context";
+import { ThemeProvider, useTheme } from "./src/context/theme-context";
+import { palette } from "./src/theme";
+import * as SecureStore from "expo-secure-store";
 import { useForm } from "./src/hooks/use-form";
 import { authApi } from "./src/api";
 import { DashboardScreen } from "./src/screens/dashboard";
@@ -35,26 +40,38 @@ import { HijriCalendarScreen } from "./src/screens/hijri-calendar";
 import { PrayerSettingsScreen } from "./src/screens/prayer-settings";
 import { WelcomeScreen } from "./src/screens/welcome";
 import { WelcomeLandingScreen } from "./src/screens/welcome-landing";
+import { PrayerTrackingScreen } from "./src/screens/prayer-tracking";
+import { QuranAudioScreen } from "./src/screens/quran-audio";
+import { AllahNamesScreen } from "./src/screens/allah-names";
+import { TasbihScreen } from "./src/screens/tasbih";
+import { MosqueFinderScreen } from "./src/screens/mosque-finder";
+import { HadithDailyScreen } from "./src/screens/hadith-daily";
+import { OnboardingTourScreen } from "./src/screens/onboarding-tour";
+import { ZakatCalculatorScreen } from "./src/screens/zakat-calculator";
+import { EidGreetingsScreen } from "./src/screens/eid-greetings";
+import { QuranWordsScreen } from "./src/screens/quran-words";
+import { GlobalSearchScreen } from "./src/screens/global-search";
+import { AppGuideScreen } from "./src/screens/app-guide";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 const C = {
-  bg: "#FAF5EF",
-  card: "#FFFFFF",
-  cardBorder: "rgba(0,0,0,0.06)",
-  primary: colors.primary,
-  primaryDark: colors.primaryDark,
-  accent: colors.accent,
-  text: colors.neutral900,
-  textSoft: "rgba(26,26,26,0.55)",
-  textOnPrimary: "#FFFFFF",
-  inputBg: "rgba(0,0,0,0.04)",
-  inputBorder: "rgba(0,0,0,0.10)",
-  tabBar: "#FFFFFF",
-  tabInactive: "rgba(26,26,26,0.35)",
-  error: "#D32F2F",
-  errorBg: "#FFEBEE",
+  bg: palette.bg,
+  card: palette.card,
+  cardBorder: palette.border,
+  primary: palette.primary,
+  primaryDark: palette.primaryDark,
+  accent: palette.accent,
+  text: palette.text,
+  textSoft: palette.textSoft,
+  textOnPrimary: palette.textOnPrimary,
+  inputBg: palette.inputBg,
+  inputBorder: palette.inputBorder,
+  tabBar: palette.tabBar,
+  tabInactive: palette.tabInactive,
+  error: palette.error,
+  errorBg: palette.errorBg,
 };
 
 function translateError(msg: string): string {
@@ -77,14 +94,33 @@ function translateError(msg: string): string {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    "Amiri-Regular": require("./assets/fonts/Amiri-Regular.ttf"),
+    "Amiri-Bold": require("./assets/fonts/Amiri-Bold.ttf"),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator size="large" color={C.primaryDark} />
+          </View>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="dark" />
-        <ErrorBoundary>
-          <RootSwitch />
-        </ErrorBoundary>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <StatusBar style="dark" />
+          <ErrorBoundary>
+            <RootSwitch />
+          </ErrorBoundary>
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
@@ -112,6 +148,21 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
 function RootSwitch() {
   const { user, loading, pendingVerificationEmail } = useAuth();
   const [welcomeStep, setWelcomeStep] = useState<"slides" | "landing" | "done">("slides");
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check if user has seen onboarding
+  useEffect(() => {
+    if (user) {
+      SecureStore.getItemAsync("oumoul_onboarding_done").then((val: string | null) => {
+        if (!val) setShowOnboarding(true);
+      }).catch(() => {});
+    }
+  }, [user]);
+
+  const finishOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    SecureStore.setItemAsync("oumoul_onboarding_done", "true").catch(() => {});
+  }, []);
 
   if (loading) {
     return (
@@ -136,6 +187,10 @@ function RootSwitch() {
 
   if (!user) {
     return <AuthFlow />;
+  }
+
+  if (showOnboarding) {
+    return <OnboardingTourScreen onFinish={finishOnboarding} />;
   }
 
   return <MainApp user={user} />;
@@ -262,23 +317,68 @@ function MoreStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="PrayerSettingsMore" options={{ animation: "slide_from_right" }}>
         {(props) => <PrayerSettingsScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
+      <Stack.Screen name="PrayerTracking" options={{ animation: "slide_from_right" }}>
+        {(props) => <PrayerTrackingScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
+        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="AllahNames" options={{ animation: "slide_from_right" }}>
+        {(props) => <AllahNamesScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Tasbih" options={{ animation: "slide_from_right" }}>
+        {(props) => <TasbihScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="MosqueFinder" options={{ animation: "slide_from_right" }}>
+        {(props) => <MosqueFinderScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="HadithDaily" options={{ animation: "slide_from_right" }}>
+        {(props) => <HadithDailyScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ZakatCalculator" options={{ animation: "slide_from_right" }}>
+        {(props) => <ZakatCalculatorScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="EidGreetings" options={{ animation: "slide_from_right" }}>
+        {(props) => <EidGreetingsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
+        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="GlobalSearch" options={{ animation: "slide_from_right" }}>
+        {(props) => <GlobalSearchScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => (props.navigation as any).navigate(screen)} />}
+      </Stack.Screen>
+      <Stack.Screen name="AppGuide" options={{ animation: "slide_from_right" }}>
+        {(props) => <AppGuideScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => (props.navigation as any).navigate(screen)} />}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }
 
 function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
-  return <DashboardScreen user={user} />;
+  return <DashboardScreen user={user} onSearch={() => navigation.getParent()?.navigate("Plus", { screen: "GlobalSearch" })} />;
 }
 
 function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
   const { location: detectedLoc } = useLocationContext();
+  const { isDark, toggleTheme } = useTheme();
 
   const toolItems: Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; screen: string }> = [
+    { key: "search", label: "Recherche globale", icon: "search", screen: "GlobalSearch" },
+    { key: "prayerTrack", label: "Suivi des prières", icon: "checkmark-done", screen: "PrayerTracking" },
+    { key: "quranAudio", label: "Écouter le Coran", icon: "musical-notes", screen: "QuranAudio" },
+    { key: "quranWords", label: "Vocabulaire du Coran", icon: "language", screen: "QuranWords" },
+    { key: "hadith", label: "Hadith du jour", icon: "book", screen: "HadithDaily" },
+    { key: "allahNames", label: "99 Noms d'Allah", icon: "heart", screen: "AllahNames" },
+    { key: "tasbih", label: "Tasbih", icon: "radio-button-on", screen: "Tasbih" },
+    { key: "mosque", label: "Mosquées à proximité", icon: "business", screen: "MosqueFinder" },
+    { key: "zakat", label: "Calculateur Zakat", icon: "calculator", screen: "ZakatCalculator" },
+    { key: "eid", label: "Cartes de vœux", icon: "gift", screen: "EidGreetings" },
     { key: "cal", label: "Calendrier Hijri", icon: "calendar", screen: "HijriCalendar" },
     { key: "qibla", label: "Direction Qibla", icon: "compass", screen: "Qibla" },
     { key: "prog", label: "Programme Imane", icon: "checkbox", screen: "ImaneProgram" },
+    { key: "guide", label: "Guide de l'app", icon: "help-circle", screen: "AppGuide" },
   ];
 
   const settingsItems: Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; screen: string }> = [
@@ -313,6 +413,20 @@ function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
             <Ionicons name="chevron-forward" size={18} color={C.tabInactive} />
           </TouchableOpacity>
         ))}
+
+        {/* Dark mode toggle */}
+        <View style={s.listItem}>
+          <View style={[s.listIconWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(26,127,100,0.08)" }]}>
+            <Ionicons name={isDark ? "moon" : "sunny"} size={20} color={C.primaryDark} />
+          </View>
+          <Text style={[s.listLabel, { flex: 1 }]}>Mode sombre</Text>
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: "#E0E0E0", true: C.primaryDark }}
+            thumbColor="#fff"
+          />
+        </View>
 
         {/* Location info */}
         <View style={[s.listItem, { marginTop: 20, backgroundColor: "rgba(26,127,100,0.06)" }]}>
