@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDhikrRecordDto } from './dto/create-dhikr-record.dto';
 import { UpdateDhikrRecordDto } from './dto/update-dhikr-record.dto';
+import { dhikrSeedCategories } from '../../prisma/seed-data/dhikr/index';
 
 @Injectable()
 export class DhikrService {
+  private readonly logger = new Logger(DhikrService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async listCategories() {
@@ -19,7 +22,7 @@ export class DhikrService {
         include: { entries: { orderBy: { order: 'asc' } } },
       });
     } catch (error) {
-      console.error('Error loading dhikr categories:', error);
+      this.logger.error('Error loading dhikr categories', error);
       return [];
     }
   }
@@ -329,8 +332,50 @@ export class DhikrService {
         });
       });
     } catch (error) {
-      console.error('Error bootstrapping dhikr categories:', error);
+      this.logger.error('Error bootstrapping dhikr categories', error);
     }
+  }
+
+  async seedCategories(): Promise<{ added: number; updated: number }> {
+    let added = 0;
+    let updated = 0;
+    for (const cat of dhikrSeedCategories) {
+      const existing = await this.prisma.dhikrCategory.findFirst({ where: { name: cat.name.fr } });
+      let categoryId: string;
+      if (!existing) {
+        const created = await this.prisma.dhikrCategory.create({
+          data: { name: cat.name.fr, description: cat.description?.fr ?? null, order: cat.order },
+        });
+        categoryId = created.id;
+        added++;
+      } else {
+        await this.prisma.dhikrCategory.update({
+          where: { id: existing.id },
+          data: { description: cat.description?.fr ?? null, order: cat.order },
+        });
+        categoryId = existing.id;
+        updated++;
+      }
+      for (const entry of cat.entries) {
+        const existingEntry = await this.prisma.dhikrEntry.findFirst({
+          where: { categoryId, title: entry.title.fr },
+        });
+        if (!existingEntry) {
+          await this.prisma.dhikrEntry.create({
+            data: {
+              categoryId,
+              title: entry.title.fr,
+              arabicText: entry.arabicText,
+              translit: entry.transliteration,
+              translation: entry.translation.fr,
+              source: entry.source,
+              order: entry.order,
+            },
+          });
+        }
+      }
+    }
+    return { added, updated };
   }
 
   private async ensureEntryExists(entryId: string) {
