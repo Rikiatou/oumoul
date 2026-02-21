@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import type { AuthUser } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
 
@@ -79,12 +80,20 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
   const [selectedQari, setSelectedQari] = useState<QariOption>(QARIS[0]);
   const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
   const [playbackState, setPlaybackState] = useState<PlaybackState>('idle');
+  const playbackStateRef = useRef<PlaybackState>('idle');
   const [showQariPicker, setShowQariPicker] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all'>('none');
+  const repeatModeRef = useRef<'none' | 'one' | 'all'>('none');
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [search, setSearch] = useState('');
   const soundRef = useRef<Audio.Sound | null>(null);
+  const isCleaningUpRef = useRef(false);
+
+  const setPlayback = (state: PlaybackState) => {
+    playbackStateRef.current = state;
+    setPlaybackState(state);
+  };
 
   const filteredSurahs = useMemo(() => {
     if (!search.trim()) return SURAHS;
@@ -95,13 +104,21 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
   }, [search]);
 
   const cleanup = useCallback(async () => {
-    if (soundRef.current) {
-      try { await soundRef.current.unloadAsync(); } catch {}
-      soundRef.current = null;
+    isCleaningUpRef.current = true;
+    const sound = soundRef.current;
+    soundRef.current = null;
+    if (sound) {
+      try {
+        await sound.stopAsync();
+      } catch {}
+      try {
+        await sound.unloadAsync();
+      } catch {}
     }
-    setPlaybackState('idle');
+    setPlayback('idle');
     setProgress(0);
     setDuration(0);
+    isCleaningUpRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -111,7 +128,7 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
   const playSurah = useCallback(async (surah: Surah) => {
     await cleanup();
     setSelectedSurah(surah);
-    setPlaybackState('loading');
+    setPlayback('loading');
 
     try {
       await Audio.setAudioModeAsync({
@@ -124,39 +141,48 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
         { uri: audioUrl },
         { shouldPlay: true },
         (status) => {
+          if (isCleaningUpRef.current) return;
           if (!status.isLoaded) return;
           setProgress(status.positionMillis ?? 0);
           setDuration(status.durationMillis ?? 0);
+          if (status.isPlaying && playbackStateRef.current === 'loading') {
+            setPlayback('playing');
+          }
           if (status.didJustFinish) {
-            if (repeatMode === 'one') {
+            if (repeatModeRef.current === 'one') {
               void sound.replayAsync();
             } else {
-              setPlaybackState('idle');
+              setPlayback('idle');
             }
           }
         }
       );
+      if (isCleaningUpRef.current) {
+        try { await sound.unloadAsync(); } catch {}
+        return;
+      }
       soundRef.current = sound;
-      setPlaybackState('playing');
+      setPlayback('playing');
     } catch (err) {
-      setPlaybackState('idle');
+      setPlayback('idle');
     }
-  }, [cleanup, selectedQari, repeatMode]);
+  }, [cleanup, selectedQari]);
 
   const togglePlayPause = useCallback(async () => {
     if (!soundRef.current) return;
-    if (playbackState === 'playing') {
+    const current = playbackStateRef.current;
+    if (current === 'playing') {
       await soundRef.current.pauseAsync();
-      setPlaybackState('paused');
-    } else if (playbackState === 'paused') {
+      setPlayback('paused');
+    } else if (current === 'paused') {
       await soundRef.current.playAsync();
-      setPlaybackState('playing');
+      setPlayback('playing');
     }
-  }, [playbackState]);
+  }, []);
 
   const stopPlayback = useCallback(async () => {
-    await cleanup();
     setSelectedSurah(null);
+    await cleanup();
   }, [cleanup]);
 
   const formatMs = (ms: number) => {
@@ -170,9 +196,7 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn} accessibilityLabel="Retour" accessibilityRole="button">
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={st.headerTitle} accessibilityRole="header">Écouter le Coran</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <HelpTip screenName="Écouter le Coran" tips={[
@@ -208,10 +232,10 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
       )}
 
       {/* Now Playing Bar */}
-      {selectedSurah && (
+      {(selectedSurah || playbackState !== 'idle') && (
         <View style={st.nowPlaying}>
           <View style={{ flex: 1 }}>
-            <Text style={st.npTitle}>{selectedSurah.arabicName} — {selectedSurah.name}</Text>
+            <Text style={st.npTitle}>{selectedSurah ? `${selectedSurah.arabicName} — ${selectedSurah.name}` : '...'}</Text>
             <Text style={st.npQari}>{selectedQari.name}</Text>
             {duration > 0 && (
               <View style={st.npProgressRow}>
@@ -225,7 +249,7 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
           </View>
           <View style={st.npControls}>
             <TouchableOpacity
-              onPress={() => setRepeatMode(repeatMode === 'none' ? 'one' : 'none')}
+              onPress={() => { const next = repeatMode === 'none' ? 'one' : 'none'; repeatModeRef.current = next; setRepeatMode(next); }}
               style={st.npBtn}
             >
               <Ionicons name="repeat" size={20} color={repeatMode === 'one' ? palette.primaryDark : palette.textSoft} />
