@@ -29,7 +29,7 @@ import { palette } from "./src/theme";
 import * as SecureStore from "expo-secure-store";
 import { useForm } from "./src/hooks/use-form";
 import { authApi } from "./src/api";
-import { DashboardScreen } from "./src/screens/dashboard";
+import { ModernDashboard } from "./src/screens/dashboard/ModernDashboard";
 import { TafsirScreen } from "./src/screens/tafsir";
 import { ImaneQuranScreen } from "./src/screens/imane-quran";
 import { ImaneProgramScreen } from "./src/screens/imane-program";
@@ -423,7 +423,7 @@ function MoreStack({ user }: { user: AuthUser }) {
 }
 
 function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
-  return <DashboardScreen user={user} onSearch={() => navigation.getParent()?.navigate("Plus", { screen: "GlobalSearch" })} />;
+  return <ModernDashboard user={user} onSearch={() => navigation.getParent()?.navigate("Plus", { screen: "GlobalSearch" })} />;
 }
 
 function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
