@@ -8,10 +8,21 @@ import type { AuthUser } from "@oumoul/api";
 import { httpClient } from "../api";
 import { t, Locale } from "../i18n";
 import { useLocationContext } from "../context/location-context";
-import { palette } from "../theme";
+import { useTheme } from "../context/theme-context";
 
 export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const locale = (user.locale as Locale | undefined) ?? "fr";
+  const { palette } = useTheme();
+  const qb_c = {
+    bg: palette.bgAlt,
+    card: palette.card,
+    border: palette.border,
+    text: palette.text,
+    textSoft: palette.textSoft,
+    muted: palette.muted,
+    accent: palette.primaryDark,
+    accentLight: palette.accentLight,
+  };
   const { location: detectedLoc, loading: locLoading, refresh: refreshLoc } = useLocationContext();
   const [direction, setDirection] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -111,13 +122,13 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[qb.screen, { paddingTop: insets.top }]}>
+    <View style={[qb.screen, { paddingTop: insets.top, backgroundColor: qb_c.bg }]}>
       {/* Top bar */}
-      <View style={qb.topBar}>
+      <View style={[qb.topBar, { borderBottomColor: qb_c.border }]}>
         <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Ionicons name="chevron-back" size={24} color={qb_c.accent} />
         </TouchableOpacity>
-        <Text style={qb.topTitle}>{t(locale, "qibla.title", "Qibla")}</Text>
+        <Text style={[qb.topTitle, { color: qb_c.text }]}>{t(locale, "qibla.title", "Qibla")}</Text>
         <Ionicons name="compass-outline" size={20} color={qb_c.muted} />
       </View>
 
@@ -126,59 +137,81 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
         <View style={qb.compassSection}>
           {direction !== null ? (
             <>
-              <View style={qb.compassOuter}>
+              {/* Instructions */}
+              <View style={[qb.instructionCard, { backgroundColor: qb_c.accentLight }]}>
+                <Text style={[qb.instructionText, { color: qb_c.accent }]}>
+                  {magnetometerAvailable
+                    ? '📱 Tiens ton téléphone à plat, horizontalement. La flèche verte pointe vers la Kaaba.'
+                    : '📐 Oriente-toi à ' + direction.toFixed(0) + '° depuis le Nord pour faire face à la Kaaba.'}
+                </Text>
+              </View>
+
+              <View style={[qb.compassOuter, { backgroundColor: qb_c.card, borderColor: qb_c.accent }]}>
                 <View style={qb.compassInner}>
                   {/* Cardinal labels */}
-                  <Text style={[qb.cardinal, { top: 8 }]}>N</Text>
-                  <Text style={[qb.cardinal, { bottom: 8 }]}>S</Text>
-                  <Text style={[qb.cardinal, { left: 8, top: '45%' }]}>W</Text>
-                  <Text style={[qb.cardinal, { right: 8, top: '45%' }]}>E</Text>
-                  {/* Needle — live rotation when magnetometer available, static otherwise */}
+                  <Text style={[qb.cardinal, { top: 8, color: '#C62828', fontWeight: '900' }]}>N</Text>
+                  <Text style={[qb.cardinal, { bottom: 8, color: qb_c.muted }]}>S</Text>
+                  <Text style={[qb.cardinal, { left: 8, top: '45%', color: qb_c.muted }]}>O</Text>
+                  <Text style={[qb.cardinal, { right: 8, top: '45%', color: qb_c.muted }]}>E</Text>
+                  {/* Qibla needle — green tip points to Kaaba */}
                   {magnetometerAvailable ? (
                     <Animated.View style={[qb.needle, { transform: [{ rotate: compassRotation }] }]}>
-                      <View style={qb.needleTop} />
-                      <View style={qb.needleBottom} />
+                      <View style={[qb.needleTop, { backgroundColor: '#15803d' }]} />
+                      <View style={[qb.needleBottom, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
                     </Animated.View>
                   ) : (
                     <View style={[qb.needle, { transform: [{ rotate: `${staticRotation}deg` }] }]}>
-                      <View style={qb.needleTop} />
-                      <View style={qb.needleBottom} />
+                      <View style={[qb.needleTop, { backgroundColor: '#15803d' }]} />
+                      <View style={[qb.needleBottom, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
                     </View>
                   )}
-                  <View style={qb.compassCenter}>
-                    <Ionicons name="locate" size={16} color={qb_c.accent} />
+                  {/* Kaaba at center */}
+                  <View style={[qb.compassCenter, { backgroundColor: '#15803d', borderColor: '#15803d' }]}>
+                    <Text style={{ fontSize: 14 }}>🕋</Text>
                   </View>
                 </View>
               </View>
-              <Text style={qb.degreeText}>{direction.toFixed(1)}°</Text>
-              <Text style={qb.kaabaLabel}>Direction de la Kaaba</Text>
+
+              <View style={qb.directionRow}>
+                <View style={[qb.directionBadge, { backgroundColor: qb_c.accentLight }]}>
+                  <Text style={[qb.degreeText, { color: qb_c.accent }]}>{direction.toFixed(1)}°</Text>
+                  <Text style={[qb.kaabaLabel, { color: qb_c.accent }]}>vers la Kaaba</Text>
+                </View>
+              </View>
+
               {magnetometerAvailable ? (
-                <Text style={qb.liveLabel}>🧭 Boussole active</Text>
+                <View style={[qb.statusBadge, { backgroundColor: '#dcfce7' }]}>
+                  <Text style={{ fontSize: 12 }}>🧭</Text>
+                  <Text style={[qb.liveLabel, { color: '#15803d' }]}>Boussole active — direction en temps réel</Text>
+                </View>
               ) : (
-                <Text style={[qb.liveLabel, { color: '#E65100' }]}>Boussole non disponible</Text>
+                <View style={[qb.statusBadge, { backgroundColor: '#fff3e0' }]}>
+                  <Text style={{ fontSize: 12 }}>⚠️</Text>
+                  <Text style={[qb.liveLabel, { color: '#E65100' }]}>Boussole non disponible — direction statique</Text>
+                </View>
               )}
             </>
           ) : loading ? (
             <View style={{ paddingVertical: 40 }}>
               <ActivityIndicator size="large" color={qb_c.accent} />
-              <Text style={[qb.mutedText, { marginTop: 8 }]}>{t(locale, "qibla.button.calculating", "Calcul…")}</Text>
+              <Text style={[qb.mutedText, { marginTop: 8, color: qb_c.muted }]}>{t(locale, "qibla.button.calculating", "Calcul…")}</Text>
             </View>
           ) : (
             <View style={qb.promptCard}>
               <Ionicons name="compass-outline" size={32} color={qb_c.muted} />
-              <Text style={qb.promptText}>{t(locale, "qibla.prompt", "Saisis ou autorise ta position pour calculer la Qibla.")}</Text>
+              <Text style={[qb.promptText, { color: qb_c.muted }]}>{t(locale, "qibla.prompt", "Saisis ou autorise ta position pour calculer la Qibla.")}</Text>
             </View>
           )}
         </View>
 
         {/* Location card */}
-        <View style={qb.card}>
+        <View style={[qb.card, { backgroundColor: qb_c.card, borderColor: qb_c.border }]}>
           <View style={qb.cardHeader}>
             <Ionicons name="location-outline" size={18} color={qb_c.accent} />
-            <Text style={qb.sectionTitle}>{t(locale, "qibla.position", "Position")}</Text>
+            <Text style={[qb.sectionTitle, { color: qb_c.text }]}>{t(locale, "qibla.position", "Position")}</Text>
           </View>
 
-          <View style={qb.infoBadge}>
+          <View style={[qb.infoBadge, { backgroundColor: qb_c.accentLight }]}>
             <Ionicons name="navigate-outline" size={14} color={qb_c.accent} />
             <Text style={qb.infoText}>{locLoading ? 'Détection GPS…' : locationLabel}</Text>
           </View>
@@ -189,8 +222,8 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
                 <Ionicons name="navigate-outline" size={14} color={qb_c.accent} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={qb.coordLabel}>Latitude</Text>
-                <Text style={qb.coordValue}>{detectedLoc.latitude.toFixed(4)}</Text>
+                <Text style={[qb.coordLabel, { color: qb_c.muted }]}>Latitude</Text>
+                <Text style={[qb.coordValue, { color: qb_c.text }]}>{detectedLoc.latitude.toFixed(4)}</Text>
               </View>
             </View>
             <View style={qb.coordField}>
@@ -198,13 +231,13 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
                 <Ionicons name="navigate-outline" size={14} color={qb_c.accent} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={qb.coordLabel}>Longitude</Text>
-                <Text style={qb.coordValue}>{detectedLoc.longitude.toFixed(4)}</Text>
+                <Text style={[qb.coordLabel, { color: qb_c.muted }]}>Longitude</Text>
+                <Text style={[qb.coordValue, { color: qb_c.text }]}>{detectedLoc.longitude.toFixed(4)}</Text>
               </View>
             </View>
           </View>
 
-          <TouchableOpacity style={[qb.refreshBtn, (loading || locLoading) && { opacity: 0.5 }]} disabled={loading || locLoading} onPress={() => void handleRefresh()}>
+          <TouchableOpacity style={[qb.refreshBtn, { backgroundColor: qb_c.accent }, (loading || locLoading) && { opacity: 0.5 }]} disabled={loading || locLoading} onPress={() => void handleRefresh()}>
             <Ionicons name="refresh-outline" size={18} color="#fff" />
             <Text style={qb.refreshBtnText}>
               {loading || locLoading ? t(locale, "qibla.button.calculating", "Calcul…") : t(locale, "qibla.button.refresh", "Actualiser")}
@@ -217,29 +250,22 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
   );
 }
 
-const qb_c = {
-  bg: palette.bgAlt,
-  card: palette.card,
-  border: palette.border,
-  text: palette.text,
-  textSoft: palette.textSoft,
-  muted: palette.muted,
-  accent: palette.primaryDark,
-  accentLight: palette.accentLight,
-};
-
 const qb = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: qb_c.bg },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: qb_c.border },
-  topTitle: { fontSize: 20, fontWeight: '700', color: qb_c.text },
+  screen: { flex: 1 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  topTitle: { fontSize: 20, fontWeight: '700' },
 
-  compassSection: { alignItems: 'center', paddingVertical: 24 },
+  compassSection: { alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16 },
+  instructionCard: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16, width: '100%' },
+  instructionText: { fontSize: 13, fontWeight: '600', lineHeight: 20, textAlign: 'center' },
+  directionRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 16 },
+  directionBadge: { borderRadius: 16, paddingHorizontal: 24, paddingVertical: 12, alignItems: 'center' },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginTop: 12 },
   compassOuter: {
     width: 240, height: 240, borderRadius: 120,
-    backgroundColor: qb_c.card,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
-    borderWidth: 2, borderColor: qb_c.border,
+    borderWidth: 2,
   },
   compassInner: {
     width: 210, height: 210, borderRadius: 105,
@@ -247,33 +273,33 @@ const qb = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     position: 'relative',
   },
-  cardinal: { position: 'absolute', fontSize: 12, fontWeight: '700', color: qb_c.muted },
-  needle: { width: 4, height: 140, alignItems: 'center', justifyContent: 'center' },
-  needleTop: { width: 4, height: 70, backgroundColor: qb_c.accent, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
-  needleBottom: { width: 4, height: 70, backgroundColor: 'rgba(0,0,0,0.15)', borderBottomLeftRadius: 4, borderBottomRightRadius: 4 },
-  compassCenter: { position: 'absolute', width: 28, height: 28, borderRadius: 14, backgroundColor: qb_c.card, borderWidth: 2, borderColor: qb_c.accent, alignItems: 'center', justifyContent: 'center' },
-  degreeText: { fontSize: 32, fontWeight: '800', color: qb_c.accent, marginTop: 16 },
-  kaabaLabel: { fontSize: 13, color: qb_c.muted, fontWeight: '600', marginTop: 4 },
-  liveLabel: { fontSize: 12, color: qb_c.accent, fontWeight: '600', marginTop: 8 },
+  cardinal: { position: 'absolute', fontSize: 12, fontWeight: '700' },
+  needle: { width: 6, height: 150, alignItems: 'center', justifyContent: 'center' },
+  needleTop: { width: 6, height: 75, borderTopLeftRadius: 6, borderTopRightRadius: 6 },
+  needleBottom: { width: 6, height: 75, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 },
+  compassCenter: { position: 'absolute', width: 28, height: 28, borderRadius: 14, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  degreeText: { fontSize: 28, fontWeight: '800' },
+  kaabaLabel: { fontSize: 12, fontWeight: '600', marginTop: 2 },
+  liveLabel: { fontSize: 12, fontWeight: '600' },
 
   promptCard: { alignItems: 'center', gap: 10, paddingVertical: 30 },
-  promptText: { fontSize: 13, color: qb_c.muted, textAlign: 'center', maxWidth: 260 },
-  mutedText: { fontSize: 13, color: qb_c.muted, textAlign: 'center' },
+  promptText: { fontSize: 13, textAlign: 'center', maxWidth: 260 },
+  mutedText: { fontSize: 13, textAlign: 'center' },
 
-  card: { backgroundColor: qb_c.card, marginHorizontal: 16, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: qb_c.border },
+  card: { marginHorizontal: 16, borderRadius: 16, padding: 18, borderWidth: 1 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: qb_c.text },
+  sectionTitle: { fontSize: 16, fontWeight: '700' },
 
   coordRow: { flexDirection: 'row', gap: 10 },
-  coordField: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: qb_c.border },
-  coordIconWrap: { width: 28, height: 28, borderRadius: 8, backgroundColor: qb_c.accentLight, alignItems: 'center', justifyContent: 'center' },
-  coordLabel: { fontSize: 9, fontWeight: '700', color: qb_c.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
-  coordValue: { fontSize: 14, fontWeight: '600', color: qb_c.text },
+  coordField: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1 },
+  coordIconWrap: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  coordLabel: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  coordValue: { fontSize: 14, fontWeight: '600' },
 
-  infoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, backgroundColor: qb_c.accentLight, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  infoText: { fontSize: 12, color: qb_c.accent, fontWeight: '600' },
+  infoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  infoText: { fontSize: 12, fontWeight: '600' },
 
-  refreshBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: qb_c.accent, borderRadius: 12, paddingVertical: 14, gap: 8, marginTop: 14 },
+  refreshBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingVertical: 14, gap: 8, marginTop: 14 },
   refreshBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   errorText: { color: '#C62828', fontSize: 13, marginTop: 8 },
 });
