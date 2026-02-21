@@ -11,6 +11,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -83,9 +85,8 @@ export async function syncPushTokenWithBackend() {
       }),
     });
     return true;
-  } catch (error) {
+  } catch {
     // On ne bloque pas l'auth si l'enregistrement push échoue
-    console.warn("Failed to sync push token", error);
     return false;
   }
 }
@@ -115,18 +116,21 @@ export async function scheduleDateReminder({ title, body, date, id, channelId }:
     throw new Error("Permission notifications refusée");
   }
 
-  const baseTrigger: Notifications.CalendarTriggerInput = {
-    type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-    year: date.getFullYear(),
-    month: date.getMonth() + 1,
-    day: date.getDate(),
-    hour: date.getHours(),
-    minute: date.getMinutes(),
-    repeats: false,
-  };
-
-  const trigger: Notifications.NotificationTriggerInput =
-    Platform.OS === "android" ? { ...baseTrigger, channelId: channelId ?? CHANNEL_ID } : baseTrigger;
+  const trigger: Notifications.NotificationTriggerInput = Platform.OS === "android" 
+    ? {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: date.getTime(),
+        channelId: channelId ?? CHANNEL_ID,
+      }
+    : {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+        day: date.getDate(),
+        hour: date.getHours(),
+        minute: date.getMinutes(),
+        repeats: false,
+      };
 
   return Notifications.scheduleNotificationAsync({
     identifier: id,
@@ -145,14 +149,19 @@ async function scheduleDailyReminder({ title, body, hour, minute, id, channelId,
   if (!ok) {
     throw new Error("Permission notifications refusée");
   }
-  const baseTrigger: Notifications.CalendarTriggerInput = {
-    type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-    hour,
-    minute,
-    repeats: true,
-  };
-  const trigger: Notifications.NotificationTriggerInput =
-    Platform.OS === "android" ? { ...baseTrigger, channelId: channelId ?? CHANNEL_ID } : baseTrigger;
+  const trigger: Notifications.NotificationTriggerInput = Platform.OS === "android"
+    ? {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+        channelId: channelId ?? CHANNEL_ID,
+      }
+    : {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        hour,
+        minute,
+        repeats: true,
+      };
 
   return Notifications.scheduleNotificationAsync({
     identifier: id,
@@ -243,11 +252,21 @@ export async function scheduleJumuahReminder(hour: number = 12, minute: number =
   });
 }
 
+export async function scheduleImaneProgramReminder(hour: number = 20, minute: number = 0) {
+  return scheduleDailyReminder({
+    id: "imane-program",
+    title: "Programme Imâne 📿",
+    body: "As-tu complété ton programme spirituel d'aujourd'hui ?",
+    hour,
+    minute,
+  });
+}
+
 export async function cancelReminder(id: string) {
   try {
     await Notifications.cancelScheduledNotificationAsync(id);
-  } catch (err) {
-    console.warn("cancelReminder failed", id, err);
+  } catch {
+    // Ignore — notification may have already fired or been cancelled
   }
 }
 
@@ -316,4 +335,67 @@ export async function cancelMakeupReminders(dates: string[]) {
   for (const dateStr of dates) {
     await cancelReminder(`makeup-${dateStr}`);
   }
+}
+
+export async function scheduleQuranWordReminders() {
+  const { getWordOfDay } = await import('./utils/word-of-day');
+  const today = new Date();
+  const morning = getWordOfDay(today, 0);
+  const midday  = getWordOfDay(today, 1);
+  const evening = getWordOfDay(today, 2);
+
+  await scheduleDailyReminder({
+    id: 'quran-word-morning',
+    title: `📖 ${morning.arabic} — ${morning.french}`,
+    body: `${morning.transliteration} · Mot du Coran du matin`,
+    hour: 7,
+    minute: 0,
+  });
+  await scheduleDailyReminder({
+    id: 'quran-word-midday',
+    title: `📖 ${midday.arabic} — ${midday.french}`,
+    body: `${midday.transliteration} · Mot du Coran de midi`,
+    hour: 13,
+    minute: 0,
+  });
+  await scheduleDailyReminder({
+    id: 'quran-word-evening',
+    title: `📖 ${evening.arabic} — ${evening.french}`,
+    body: `${evening.transliteration} · Mot du Coran du soir`,
+    hour: 20,
+    minute: 0,
+  });
+}
+
+export async function cancelQuranWordReminders() {
+  await cancelReminder('quran-word-morning');
+  await cancelReminder('quran-word-midday');
+  await cancelReminder('quran-word-evening');
+}
+
+export async function scheduleAllahNameReminders() {
+  const { getAllahNameOfDay } = await import('./utils/allah-name-of-day');
+  const today = new Date();
+  const morning = getAllahNameOfDay(today, 0);
+  const evening = getAllahNameOfDay(today, 1);
+
+  await scheduleDailyReminder({
+    id: 'allah-name-morning',
+    title: `✨ ${morning.name} — ${morning.transliteration}`,
+    body: `${morning.meaning} · Nom d'Allah du matin`,
+    hour: 8,
+    minute: 30,
+  });
+  await scheduleDailyReminder({
+    id: 'allah-name-evening',
+    title: `✨ ${evening.name} — ${evening.transliteration}`,
+    body: `${evening.meaning} · Rappel du soir pour mémoriser`,
+    hour: 19,
+    minute: 0,
+  });
+}
+
+export async function cancelAllahNameReminders() {
+  await cancelReminder('allah-name-morning');
+  await cancelReminder('allah-name-evening');
 }

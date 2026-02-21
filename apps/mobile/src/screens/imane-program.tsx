@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { AuthUser, ImaneProgramItems, ImaneProgramDayResponse } from '@oumoul/api';
 import { imaneProgramApi } from '../api';
 import { palette } from '../theme';
+import * as SecureStore from 'expo-secure-store';
+import { scheduleImaneProgramReminder, cancelReminder } from '../push-notifications';
 
 const DAILY_ITEMS: Array<{
   id: keyof ImaneProgramItems;
@@ -29,12 +31,16 @@ const MOTIVATIONAL = [
   'Allah voit tes efforts, même les plus petits.',
 ];
 
+const IMANE_REMINDER_KEY = 'oumoul.imaneProgramReminder';
+
 export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const [selectedDateIso, setSelectedDateIso] = useState<string>(new Date().toISOString().slice(0, 10));
   const [day, setDay] = useState<ImaneProgramDayResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderToast, setReminderToast] = useState<string | null>(null);
 
   const completedCount = useMemo(() => {
     if (!day) return 0;
@@ -88,6 +94,32 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
     void loadForDate(selectedDateIso);
   }, [loadForDate, selectedDateIso]);
 
+  // Load persisted reminder state
+  useEffect(() => {
+    SecureStore.getItemAsync(IMANE_REMINDER_KEY).then((v) => {
+      if (v === 'true') setReminderEnabled(true);
+    }).catch(() => {});
+  }, []);
+
+  const toggleReminder = useCallback(async () => {
+    try {
+      if (reminderEnabled) {
+        await cancelReminder('imane-program');
+        await SecureStore.setItemAsync(IMANE_REMINDER_KEY, 'false');
+        setReminderEnabled(false);
+        setReminderToast('Rappel désactivé');
+      } else {
+        await scheduleImaneProgramReminder(20, 0);
+        await SecureStore.setItemAsync(IMANE_REMINDER_KEY, 'true');
+        setReminderEnabled(true);
+        setReminderToast('✅ Rappel activé chaque jour à 20h00');
+      }
+    } catch (e) {
+      setReminderToast(e instanceof Error ? e.message : 'Erreur notification');
+    }
+    setTimeout(() => setReminderToast(null), 3000);
+  }, [reminderEnabled]);
+
   const toggleItem = useCallback(
     async (key: keyof ImaneProgramItems) => {
       if (!day) return;
@@ -118,8 +150,22 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
           <Ionicons name="chevron-back" size={24} color={ip_c.accent} />
         </TouchableOpacity>
         <Text style={ip.topTitle}>Programme Imane</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="notifications-outline" size={16} color={reminderEnabled ? ip_c.accent : ip_c.muted} />
+          <Switch
+            value={reminderEnabled}
+            onValueChange={() => void toggleReminder()}
+            trackColor={{ true: ip_c.accent, false: 'rgba(0,0,0,0.1)' }}
+            thumbColor={reminderEnabled ? '#fff' : '#ccc'}
+            style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+          />
+        </View>
       </View>
+      {reminderToast ? (
+        <View style={ip.toast}>
+          <Text style={ip.toastText}>{reminderToast}</Text>
+        </View>
+      ) : null}
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         {/* Day selector */}
@@ -281,4 +327,13 @@ const ip = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  toast: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    backgroundColor: '#1B3A2D',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  toastText: { color: '#fff', fontSize: 13, fontWeight: '600' },
 });
