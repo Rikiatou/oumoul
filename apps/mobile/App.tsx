@@ -12,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -34,6 +35,7 @@ import { ImaneQuranScreen } from "./src/screens/imane-quran";
 import { ImaneProgramScreen } from "./src/screens/imane-program";
 import { ImaneCycleScreen } from "./src/screens/imane-cycle";
 import { ImaneRamadanScreen } from "./src/screens/imane-ramadan";
+import { RamadanCatchupScreen } from "./src/screens/ramadan-catchup";
 import { DhikrScreen } from "./src/screens/dhikr";
 import { QiblaScreen } from "./src/screens/qibla";
 import { HijriCalendarScreen } from "./src/screens/hijri-calendar";
@@ -52,6 +54,13 @@ import { EidGreetingsScreen } from "./src/screens/eid-greetings";
 import { QuranWordsScreen } from "./src/screens/quran-words";
 import { GlobalSearchScreen } from "./src/screens/global-search";
 import { AppGuideScreen } from "./src/screens/app-guide";
+import { AboutScreen } from "./src/screens/AboutScreen";
+import { PrivacyScreen } from "./src/screens/PrivacyScreen";
+import { TermsScreen } from "./src/screens/TermsScreen";
+import { GamificationScreen } from "./src/screens/GamificationScreen";
+import { AISystemScreen } from "./src/screens/AISystemScreen";
+import { ShareSystemScreen } from "./src/screens/ShareSystemScreen";
+import { DarkModeScreen } from "./src/screens/DarkModeScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -78,19 +87,25 @@ function translateError(msg: string): string {
   const m = msg.toLowerCase();
   if (m.includes("password") && (m.includes("longer") || m.includes("short") || m.includes("least")))
     return "Le mot de passe doit contenir au moins 8 caractères.";
-  if (m.includes("email already") || m.includes("conflict"))
+  if (m.includes("email already") || m.includes("conflict") || m.includes("already exists") || m.includes("déjà utilisé"))
     return "Cet email est déjà utilisé.";
-  if (m.includes("invalid credentials"))
+  if (m.includes("invalid credentials") || m.includes("unauthorized") || m.includes("identifiants") || m.includes("incorrect") || m.includes("wrong password") || m.includes("401"))
     return "Email ou mot de passe incorrect.";
-  if (m.includes("not verified") || m.includes("non vérifié"))
+  if (m.includes("not verified") || m.includes("non vérifié") || m.includes("verify") || m.includes("403"))
     return "Email non vérifié. Vérifie ta boîte mail.";
+  if (m.includes("not found") || m.includes("404") || m.includes("no account") || m.includes("introuvable"))
+    return "Aucun compte trouvé avec cet email.";
   if (m.includes("invalid") && m.includes("email"))
     return "Adresse email invalide.";
-  if (m.includes("network") || m.includes("fetch") || m.includes("failed"))
+  if (m.includes("too many") || m.includes("rate limit") || m.includes("429"))
+    return "Trop de tentatives. Réessaie dans quelques minutes.";
+  if (m.includes("network") || m.includes("fetch") || m.includes("failed") || m.includes("load") || m.includes("connect") || m.includes("timeout"))
     return "Erreur réseau. Vérifie ta connexion internet.";
   if (m.includes("expired"))
     return "Code expiré. Demande un nouveau code.";
-  return msg;
+  if (m.includes("server") || m.includes("500") || m.includes("internal"))
+    return "Erreur serveur. Réessaie dans quelques instants.";
+  return "Une erreur est survenue. Réessaie.";
 }
 
 export default function App() {
@@ -197,6 +212,9 @@ function RootSwitch() {
 }
 
 function MainApp({ user }: { user: AuthUser }) {
+  const { palette: p } = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom;
   return (
     <LocationProvider>
     <NavigationContainer>
@@ -204,11 +222,11 @@ function MainApp({ user }: { user: AuthUser }) {
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: C.tabBar,
-            borderTopColor: C.cardBorder,
+            backgroundColor: p.tabBar,
+            borderTopColor: p.border,
             borderTopWidth: 1,
-            height: Platform.OS === "ios" ? 88 : 64,
-            paddingBottom: Platform.OS === "ios" ? 28 : 8,
+            height: Platform.OS === "ios" ? 88 : 56 + bottomInset,
+            paddingBottom: Platform.OS === "ios" ? 28 : bottomInset + 4,
             paddingTop: 8,
             elevation: 8,
             shadowColor: "#000",
@@ -216,8 +234,8 @@ function MainApp({ user }: { user: AuthUser }) {
             shadowOpacity: 0.06,
             shadowRadius: 8,
           },
-          tabBarActiveTintColor: C.primaryDark,
-          tabBarInactiveTintColor: C.tabInactive,
+          tabBarActiveTintColor: p.primaryDark,
+          tabBarInactiveTintColor: p.tabInactive,
           tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginTop: 2 },
           tabBarIcon: ({ color, size }) => {
             const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -259,6 +277,9 @@ function HomeStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="HomeScreen">
         {(props) => <HomeScreen {...props} user={user} />}
       </Stack.Screen>
+      <Stack.Screen name="ImaneCycle" options={{ animation: "slide_from_right" }}>
+        {(props) => <ImaneCycleScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -292,12 +313,13 @@ function RamadanStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="ImaneRamadan">
         {(props) => <ImaneRamadanScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="ImaneCycle" options={{ animation: "slide_from_right" }}>
-        {(props) => <ImaneCycleScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="RamadanCatchup" options={{ animation: "slide_from_right" }}>
+        {(props) => <RamadanCatchupScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
     </Stack.Navigator>
   );
 }
+
 
 function MoreStack({ user }: { user: AuthUser }) {
   return (
@@ -324,7 +346,7 @@ function MoreStack({ user }: { user: AuthUser }) {
         {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="AllahNames" options={{ animation: "slide_from_right" }}>
-        {(props) => <AllahNamesScreen user={user} onBack={() => props.navigation.goBack()} />}
+        {(props) => <AllahNamesScreen user={user} onBack={() => props.navigation.goBack()} initialNameId={(props.route.params as any)?.initialNameId} />}
       </Stack.Screen>
       <Stack.Screen name="Tasbih" options={{ animation: "slide_from_right" }}>
         {(props) => <TasbihScreen user={user} onBack={() => props.navigation.goBack()} />}
@@ -342,13 +364,59 @@ function MoreStack({ user }: { user: AuthUser }) {
         {(props) => <EidGreetingsScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} />}
+        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
       </Stack.Screen>
       <Stack.Screen name="GlobalSearch" options={{ animation: "slide_from_right" }}>
-        {(props) => <GlobalSearchScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => (props.navigation as any).navigate(screen)} />}
+        {(props) => <GlobalSearchScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
+          const parentNav = props.navigation.getParent();
+          if (screen === '__CORAN_TAB__') {
+            parentNav?.navigate('Coran');
+          } else if (screen === 'ImaneRamadan') {
+            parentNav?.navigate('Ramadan');
+          } else if (screen === 'ImaneCycle') {
+            parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
+          } else {
+            (props.navigation as any).navigate(screen);
+          }
+        }} />}
       </Stack.Screen>
       <Stack.Screen name="AppGuide" options={{ animation: "slide_from_right" }}>
-        {(props) => <AppGuideScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => (props.navigation as any).navigate(screen)} />}
+        {(props) => <AppGuideScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
+              // Handle navigation to different tabs and screens
+          const parentNav = props.navigation.getParent();
+          if (screen === '__CORAN_TAB__') {
+            parentNav?.navigate('Coran');
+          } else if (screen === 'ImaneRamadan') {
+            parentNav?.navigate('Ramadan');
+          } else if (screen === 'ImaneCycle') {
+            parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
+          } else if (screen === 'Gamification') {
+            parentNav?.navigate('Plus', { screen: 'Gamification' });
+          } else {
+            (props.navigation as any).navigate(screen);
+          }
+        }} />}
+      </Stack.Screen>
+            <Stack.Screen name="About" options={{ animation: "slide_from_right" }}>
+        {(props) => <AboutScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Privacy" options={{ animation: "slide_from_right" }}>
+        {(props) => <PrivacyScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Terms" options={{ animation: "slide_from_right" }}>
+        {(props) => <TermsScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Gamification" options={{ animation: "slide_from_right" }}>
+        {(props) => <GamificationScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="AISystem" options={{ animation: "slide_from_right" }}>
+        {(props) => <AISystemScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ShareSystem" options={{ animation: "slide_from_right" }}>
+        {(props) => <ShareSystemScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="DarkMode" options={{ animation: "slide_from_right" }}>
+        {(props) => <DarkModeScreen onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -362,24 +430,51 @@ function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
   const { location: detectedLoc } = useLocationContext();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, palette: p } = useTheme();
 
-  const toolItems: Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; screen: string }> = [
-    { key: "search", label: "Recherche globale", icon: "search", screen: "GlobalSearch" },
-    { key: "prayerTrack", label: "Suivi des prières", icon: "checkmark-done", screen: "PrayerTracking" },
-    { key: "quranAudio", label: "Écouter le Coran", icon: "musical-notes", screen: "QuranAudio" },
-    { key: "quranWords", label: "Vocabulaire du Coran", icon: "language", screen: "QuranWords" },
-    { key: "hadith", label: "Hadith du jour", icon: "book", screen: "HadithDaily" },
-    { key: "allahNames", label: "99 Noms d'Allah", icon: "heart", screen: "AllahNames" },
-    { key: "tasbih", label: "Tasbih", icon: "radio-button-on", screen: "Tasbih" },
-    { key: "mosque", label: "Mosquées à proximité", icon: "business", screen: "MosqueFinder" },
-    { key: "zakat", label: "Calculateur Zakat", icon: "calculator", screen: "ZakatCalculator" },
-    { key: "eid", label: "Cartes de vœux", icon: "gift", screen: "EidGreetings" },
-    { key: "cal", label: "Calendrier Hijri", icon: "calendar", screen: "HijriCalendar" },
-    { key: "qibla", label: "Direction Qibla", icon: "compass", screen: "Qibla" },
-    { key: "prog", label: "Programme Imane", icon: "checkbox", screen: "ImaneProgram" },
-    { key: "guide", label: "Guide de l'app", icon: "help-circle", screen: "AppGuide" },
-  ];
+  const categories = {
+  "📖 Spirituel": [
+    { key: "allahNames", label: "99 Noms d'Allah", icon: "heart" as keyof typeof Ionicons.glyphMap, screen: "AllahNames" },
+    { key: "tasbih", label: "Tasbih", icon: "radio" as keyof typeof Ionicons.glyphMap, screen: "Tasbih" },
+    { key: "hadith", label: "Hadith du jour", icon: "book" as keyof typeof Ionicons.glyphMap, screen: "HadithDaily" },
+  ],
+  "📅 Suivi": [
+    { key: "prayerTrack", label: "Suivi des prières", icon: "checkmark" as keyof typeof Ionicons.glyphMap, screen: "PrayerTracking" },
+    { key: "prog", label: "Programme Imane", icon: "checkbox" as keyof typeof Ionicons.glyphMap, screen: "ImaneProgram" },
+  ],
+  "🌙 Ramadan": [
+    { key: "ramadan", label: "Ramadan", icon: "moon" as keyof typeof Ionicons.glyphMap, screen: "ImaneRamadan" },
+    { key: "eid", label: "Cartes de vœux", icon: "gift" as keyof typeof Ionicons.glyphMap, screen: "EidGreetings" },
+  ],
+  "👩‍🦰 Cycle": [
+    { key: "cycle", label: "Suivi du cycle", icon: "heart" as keyof typeof Ionicons.glyphMap, screen: "ImaneCycle" },
+  ],
+  "📖 Coran": [
+    { key: "quranAudio", label: "Écouter le Coran", icon: "musical-note" as keyof typeof Ionicons.glyphMap, screen: "QuranAudio" },
+    { key: "quranWords", label: "Vocabulaire du Coran", icon: "language" as keyof typeof Ionicons.glyphMap, screen: "QuranWords" },
+  ],
+  "🕌 Prière": [
+    { key: "mosque", label: "Mosquées à proximité", icon: "business" as keyof typeof Ionicons.glyphMap, screen: "MosqueFinder" },
+    { key: "qibla", label: "Direction Qibla", icon: "compass" as keyof typeof Ionicons.glyphMap, screen: "Qibla" },
+    { key: "zakat", label: "Calculateur Zakat", icon: "calculator" as keyof typeof Ionicons.glyphMap, screen: "ZakatCalculator" },
+  ],
+  "⚙️ Outils": [
+    { key: "search", label: "Recherche globale", icon: "search" as keyof typeof Ionicons.glyphMap, screen: "GlobalSearch" },
+    { key: "cal", label: "Calendrier Hijri", icon: "calendar" as keyof typeof Ionicons.glyphMap, screen: "HijriCalendar" },
+    { key: "guide", label: "Guide de l'app", icon: "help-circle-outline" as keyof typeof Ionicons.glyphMap, screen: "AppGuide" },
+    { key: "darkmode", label: "Thème & Apparence", icon: "moon" as keyof typeof Ionicons.glyphMap, screen: "DarkMode" },
+  ],
+  "🚀 ULTRA Features": [
+    { key: "gamification", label: "Gamification", icon: "trophy" as keyof typeof Ionicons.glyphMap, screen: "Gamification" },
+    { key: "ai", label: "Système IA", icon: "sparkles" as keyof typeof Ionicons.glyphMap, screen: "AISystem" },
+    { key: "share", label: "Partage", icon: "share-social" as keyof typeof Ionicons.glyphMap, screen: "ShareSystem" },
+  ],
+  "📄 Légal": [
+    { key: "about", label: "À Propos", icon: "business" as keyof typeof Ionicons.glyphMap, screen: "About" },
+    { key: "privacy", label: "Confidentialité", icon: "lock-closed" as keyof typeof Ionicons.glyphMap, screen: "Privacy" },
+    { key: "terms", label: "Conditions", icon: "document-text" as keyof typeof Ionicons.glyphMap, screen: "Terms" },
+  ],
+  };
 
   const settingsItems: Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; screen: string }> = [
     { key: "prayer", label: "Réglages prière", icon: "settings", screen: "PrayerSettingsMore" },
@@ -390,40 +485,54 @@ function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
     : detectedLoc.city ?? "GPS actif";
 
   return (
-    <View style={[s.screen, { paddingTop: insets.top }]}>
+    <View style={[s.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-        <Text style={[s.sectionTitle, { marginTop: 16 }]}>Outils</Text>
-        {toolItems.map((item) => (
-          <TouchableOpacity key={item.key} style={s.listItem} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.7}>
-            <View style={s.listIconWrap}>
-              <Ionicons name={item.icon} size={20} color={C.primaryDark} />
-            </View>
-            <Text style={s.listLabel}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={18} color={C.tabInactive} />
-          </TouchableOpacity>
+        {Object.entries(categories).map(([category, items]) => (
+          <View key={category}>
+            <Text style={[s.sectionTitle, { marginTop: 16, color: p.text }]}>{category}</Text>
+            {items.map((item) => (
+              <TouchableOpacity key={item.key} style={[s.listItem, { backgroundColor: p.card, borderColor: p.border }]} onPress={() => {
+                if (item.screen === '__CORAN_TAB__') {
+                  navigation.getParent()?.navigate('Coran');
+                } else if (item.screen === '__CYCLE_TAB__') {
+                  navigation.getParent()?.navigate('Accueil', { screen: 'ImaneCycle' });
+                } else if (item.screen === 'ImaneRamadan') {
+                  navigation.getParent()?.navigate('Ramadan');
+                } else {
+                  navigation.navigate(item.screen);
+                }
+              }} activeOpacity={0.7}>
+                <View style={[s.listIconWrap, { backgroundColor: p.accentLight }]}>
+                  <Ionicons name={item.icon} size={20} color={p.primaryDark} />
+                </View>
+                <Text style={[s.listLabel, { color: p.text }]}>{item.label}</Text>
+                <Ionicons name="chevron-forward-outline" size={18} color={p.tabInactive} />
+              </TouchableOpacity>
+            ))}
+          </View>
         ))}
 
-        <Text style={[s.sectionTitle, { marginTop: 20 }]}>Réglages</Text>
+        <Text style={[s.sectionTitle, { marginTop: 20, color: p.text }]}>⚙️ Réglages</Text>
         {settingsItems.map((item) => (
-          <TouchableOpacity key={item.key} style={s.listItem} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.7}>
-            <View style={s.listIconWrap}>
-              <Ionicons name={item.icon} size={20} color={C.primaryDark} />
+          <TouchableOpacity key={item.key} style={[s.listItem, { backgroundColor: p.card, borderColor: p.border }]} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.7}>
+            <View style={[s.listIconWrap, { backgroundColor: p.accentLight }]}>
+              <Ionicons name={item.icon} size={20} color={p.primaryDark} />
             </View>
-            <Text style={s.listLabel}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={18} color={C.tabInactive} />
+            <Text style={[s.listLabel, { color: p.text }]}>{item.label}</Text>
+            <Ionicons name="chevron-forward-outline" size={18} color={p.tabInactive} />
           </TouchableOpacity>
         ))}
 
         {/* Dark mode toggle */}
-        <View style={s.listItem}>
+        <View style={[s.listItem, { backgroundColor: p.card, borderColor: p.border }]}>
           <View style={[s.listIconWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(26,127,100,0.08)" }]}>
-            <Ionicons name={isDark ? "moon" : "sunny"} size={20} color={C.primaryDark} />
+            <Ionicons name={isDark ? "moon" : "sunny"} size={20} color={p.primaryDark} />
           </View>
-          <Text style={[s.listLabel, { flex: 1 }]}>Mode sombre</Text>
+          <Text style={[s.listLabel, { flex: 1, color: p.text }]}>Mode sombre</Text>
           <Switch
             value={isDark}
             onValueChange={toggleTheme}
-            trackColor={{ false: "#E0E0E0", true: C.primaryDark }}
+            trackColor={{ false: "#E0E0E0", true: p.primaryDark }}
             thumbColor="#fff"
           />
         </View>
@@ -431,23 +540,23 @@ function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
         {/* Location info */}
         <View style={[s.listItem, { marginTop: 20, backgroundColor: "rgba(26,127,100,0.06)" }]}>
           <View style={[s.listIconWrap, { backgroundColor: "rgba(26,127,100,0.12)" }]}>
-            <Ionicons name="location" size={20} color={C.primaryDark} />
+            <Ionicons name="location" size={20} color={p.primaryDark} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.listLabel}>{cityLabel}</Text>
-            <Text style={{ fontSize: 11, color: C.textSoft, marginTop: 2 }}>Position GPS automatique</Text>
+            <Text style={[s.listLabel, { color: p.text }]}>{cityLabel}</Text>
+            <Text style={{ fontSize: 11, color: p.textSoft, marginTop: 2 }}>Position GPS automatique</Text>
           </View>
         </View>
 
         {/* About */}
-        <Text style={[s.sectionTitle, { marginTop: 20 }]}>À propos</Text>
-        <View style={s.listItem}>
+        <Text style={[s.sectionTitle, { marginTop: 20, color: p.text }]}>À propos</Text>
+        <View style={[s.listItem, { backgroundColor: p.card, borderColor: p.border }]}>
           <View style={s.listIconWrap}>
-            <Ionicons name="information-circle-outline" size={20} color={C.primaryDark} />
+            <Ionicons name="information-circle-outline" size={20} color={p.primaryDark} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.listLabel}>{appMetadata.name}</Text>
-            <Text style={{ fontSize: 11, color: C.textSoft, marginTop: 2 }}>Version 1.1.0 · {user.email}</Text>
+            <Text style={[s.listLabel, { color: p.text }]}>{appMetadata.name}</Text>
+            <Text style={{ fontSize: 11, color: p.textSoft, marginTop: 2 }}>Version 1.1.0 · {user.email}</Text>
           </View>
         </View>
 
@@ -457,9 +566,9 @@ function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
           activeOpacity={0.7}
         >
           <View style={[s.listIconWrap, { backgroundColor: "#FFEBEE" }]}>
-            <Ionicons name="log-out-outline" size={20} color={C.error} />
+            <Ionicons name="log-out-outline" size={20} color={p.error} />
           </View>
-          <Text style={[s.listLabel, { color: C.error }]}>Se déconnecter</Text>
+          <Text style={[s.listLabel, { color: p.error }]}>Se déconnecter</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -573,9 +682,14 @@ function LoginScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "fo
 
   return (
     <AuthLayout title="Connexion" subtitle="Accède à ton espace spirituel" mode="login" onSwitch={onSwitch}>
-      {error ? <Text style={auth.error}>{error}</Text> : null}
+      {error ? (
+        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
+          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
+          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        </View>
+      ) : null}
       <AuthInput placeholder="Email" value={form.email} onChangeText={(v) => updateField("email", v)} keyboardType="email-address" autoCapitalize="none" />
-      <AuthInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} secureTextEntry />
+      <PasswordInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} />
       <TouchableOpacity style={{ alignSelf: "flex-end", marginTop: 8 }} onPress={() => onSwitch("forgot")}>
         <Text style={auth.link}>Mot de passe oublié ?</Text>
       </TouchableOpacity>
@@ -603,7 +717,12 @@ function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | 
 
   return (
     <AuthLayout title="Inscription" subtitle="Commence ton parcours spirituel" mode="register" onSwitch={onSwitch}>
-      {error ? <Text style={auth.error}>{error}</Text> : null}
+      {error ? (
+        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
+          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
+          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        </View>
+      ) : null}
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
           <AuthInput placeholder="Prénom" value={form.firstName} onChangeText={(v) => updateField("firstName", v)} />
@@ -613,7 +732,7 @@ function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | 
         </View>
       </View>
       <AuthInput placeholder="Email" value={form.email} onChangeText={(v) => updateField("email", v)} keyboardType="email-address" autoCapitalize="none" />
-      <AuthInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} secureTextEntry />
+      <PasswordInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} />
       <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
         {locales.map((opt) => {
           const active = form.locale === opt.value;
@@ -707,11 +826,19 @@ function ResetPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "registe
 
   return (
     <AuthLayout title="Nouveau mot de passe" subtitle="Colle le token et choisis un nouveau mot de passe" mode="login" onSwitch={onSwitch}>
-      {error ? <Text style={auth.error}>{error}</Text> : null}
+      {error ? (
+        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
+          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
+          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        </View>
+      ) : null}
       <AuthInput placeholder="Token" value={token} onChangeText={setToken} autoCapitalize="none" />
-      <AuthInput placeholder="Nouveau mot de passe" value={password} onChangeText={setPassword} secureTextEntry />
+      <PasswordInput placeholder="Nouveau mot de passe" value={password} onChangeText={setPassword} />
       {done ? (
-        <Text style={{ color: C.text, marginTop: 16 }}>Mot de passe mis à jour !</Text>
+        <View style={[{ backgroundColor: '#dcfce7', borderLeftColor: '#22c55e', padding: 12, borderRadius: 8, marginTop: 16 }]}>
+          <Ionicons name="checkmark-circle" size={16} color="#22c55e" style={{ marginRight: 8 }} />
+          <Text style={{ color: '#166534', fontWeight: '600' }}>Mot de passe mis à jour avec succès !</Text>
+        </View>
       ) : (
         <View style={{ marginTop: 16, gap: 12 }}>
           <TouchableOpacity
@@ -740,6 +867,37 @@ function AuthInput(props: React.ComponentProps<typeof TextInput>) {
   );
 }
 
+function PasswordInput(props: Omit<React.ComponentProps<typeof TextInput>, 'secureTextEntry'>) {
+  const [showPassword, setShowPassword] = useState(false);
+  return (
+    <View style={{ position: 'relative' }}>
+      <TextInput
+        {...props}
+        secureTextEntry={!showPassword}
+        placeholderTextColor={C.tabInactive}
+        style={[auth.input, { paddingRight: 50 }]}
+      />
+      <TouchableOpacity
+        style={{ 
+          position: 'absolute', 
+          right: 16, 
+          top: 0, 
+          bottom: 0, 
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
+        onPress={() => setShowPassword(!showPassword)}
+      >
+        <Ionicons 
+          name={showPassword ? 'eye-off' : 'eye'} 
+          size={20} 
+          color={C.tabInactive} 
+        />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function AuthLayout({
   children,
   title,
@@ -763,8 +921,8 @@ function AuthLayout({
         showsVerticalScrollIndicator={false}
       >
         <View style={{ alignItems: "center", marginBottom: 32 }}>
-          <View style={auth.logoCircle}>
-            <Text style={{ fontSize: 28 }}>{"  "}</Text>
+          <View style={auth.loginImageContainer}>
+            <Image source={require("./assets/loginimage.png")} style={auth.loginImage} resizeMode="cover" />
           </View>
           <Text style={auth.appName}>{appMetadata.name}</Text>
         </View>
@@ -821,6 +979,23 @@ const s = StyleSheet.create({
 });
 
 const auth = StyleSheet.create({
+  loginImageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 20,
+    marginBottom: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  loginImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
+  },
   logoCircle: {
     width: 64,
     height: 64,
@@ -875,12 +1050,16 @@ const auth = StyleSheet.create({
   btnText: { color: "#FFF", fontSize: 15, fontWeight: "700" },
   link: { color: C.primaryDark, fontWeight: "600", fontSize: 14 },
   error: {
-    color: C.error,
-    backgroundColor: C.errorBg,
-    borderRadius: 10,
-    padding: 12,
     fontSize: 13,
+    fontWeight: "500",
+  },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 8,
+    borderLeftWidth: 4,
     overflow: "hidden",
   },
   langChip: {

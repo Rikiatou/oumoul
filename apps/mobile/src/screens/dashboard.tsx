@@ -1,25 +1,15 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from "react";
-import type { ReactNode } from "react";
 import {
-  ActivityIndicator,
   AppState,
-  RefreshControl,
-  ScrollView,
   StyleSheet,
-  Switch,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import * as Notifications from "expo-notifications";
 import {
-  FastingLogStatus,
-  RamadanDaySummary,
-  RamadanSummaryResponse,
   AuthUser,
   FastingLog,
+  FastingLogStatus,
   FastingSummary,
   MakeupPlan,
   MakeupPlanEntry,
@@ -27,6 +17,7 @@ import {
   PlanEntryStatus,
   PrayerTimesRequest,
   PrayerTimesResponse,
+  RamadanSummaryResponse,
   ReminderPreference,
   ReminderPreferenceListItem,
   DhikrCategory,
@@ -53,17 +44,9 @@ import { offlineCache, CACHE_KEYS, CACHE_TTL } from "../utils/offline-cache";
 import { t, Locale } from "../i18n";
 import { useLocationContext } from "../context/location-context";
 import { prayerSettingsStorage } from "./prayer-settings";
-import { Skeleton, SkeletonCard } from "../ui/skeleton";
-import { getTodayInspiration } from "../data/daily-inspiration";
-import { palette } from "../theme";
+import { useTheme } from "../context/theme-context";
 import { getRamadanInfo, getCurrentHijriDate } from "../utils/hijri-calendar";
-import { Header } from "./dashboard/Header";
-import { NextPrayerCard } from "./dashboard/NextPrayerCard";
-import { DailyInspirationCard } from "./dashboard/DailyInspirationCard";
-import { RamadanBanner } from "./dashboard/RamadanBanner";
-import { StatsRow } from "./dashboard/StatsRow";
-import { LocalRemindersSection } from "./dashboard/LocalRemindersSection";
-import { StreakCard } from "./dashboard/StreakCard";
+import { ModernDashboard } from "./dashboard/ModernDashboard";
 
 const DEFAULT_COORDS = {
   latitude: "4.0511",
@@ -165,6 +148,17 @@ interface ReminderUIState {
 }
 
 export function DashboardScreen({ user, onSearch }: { user: AuthUser; onSearch?: () => void }) {
+  const { palette } = useTheme();
+  const ds_c = {
+    bg: palette.bg,
+    card: palette.card,
+    border: palette.border,
+    text: palette.text,
+    textSoft: palette.textSoft,
+    muted: palette.muted,
+    primaryDark: palette.primaryDark,
+    error: palette.error,
+  };
   const { logout } = useAuth();
   const [logoutBusy, setLogoutBusy] = useState(false);
   const locale = (user.locale as Locale | undefined) ?? "fr";
@@ -625,6 +619,53 @@ export function DashboardScreen({ user, onSearch }: { user: AuthUser; onSearch?:
     void refreshAll();
   }, [refreshAll]);
 
+  // Setup daily reminders on first load
+  useEffect(() => {
+    const setupReminders = async () => {
+      try {
+        const { setupDailyReminders } = await import("../notifications/daily-reminders");
+        await setupDailyReminders();
+        
+        // Setup adaptive notifications
+        const { setupAdaptiveNotifications } = await import("../notifications/adaptive-notifications");
+        await setupAdaptiveNotifications();
+        
+        // 🧠 Setup ULTRA intelligent memorization systems
+        const { initializeUltraIntelligentSystem } = await import("../memorization/ultra-intelligent-system");
+        await initializeUltraIntelligentSystem();
+        
+        // 🎯 Setup Allah names memorization
+        const { setupIntelligentReminders } = await import("../memorization/allah-names-system");
+        await setupIntelligentReminders();
+        
+        // 📖 Setup Quran mastery system
+        const { setupQuranMasterySystem } = await import("../memorization/quran-mastery-system");
+        await setupQuranMasterySystem();
+        
+        // 🎮 Setup ultimate gamification
+        const { setupUltimateGamification } = await import("../gamification/ultimate-gamification");
+        await setupUltimateGamification();
+      } catch {
+      }
+    };
+    setupReminders();
+  }, []);
+
+  // Track app usage for analytics
+  useEffect(() => {
+    const startTime = Date.now();
+    
+    return () => {
+      const timeSpent = Math.floor((Date.now() - startTime) / (1000 * 60)); // minutes
+      const { trackDailyUsage } = require("../analytics/user-analytics");
+      trackDailyUsage({
+        appOpens: 1,
+        timeSpent,
+        featuresUsed: ["dashboard"],
+      }).catch(() => {});
+    };
+  }, []);
+
   // Re-fetch prayer times when GPS location updates coords
   useEffect(() => {
     if (!gpsCoordsKey) return;
@@ -726,12 +767,6 @@ export function DashboardScreen({ user, onSearch }: { user: AuthUser; onSearch?:
         return;
       }
 
-      const synced = await syncPushTokenWithBackend();
-      if (!synced) {
-        setToast(t(locale, "notif.local.toast.permission", "Active les notifications dans les réglages."));
-        return;
-      }
-
       try {
         if (type.startsWith("Adhan")) {
           const key = type.replace("Adhan", "") as keyof NonNullable<typeof adhanTimes>;
@@ -741,6 +776,10 @@ export function DashboardScreen({ user, onSearch }: { user: AuthUser; onSearch?:
             return;
           }
           await scheduleAdhanReminder(key, slot.hour, slot.minute);
+        // Replanifier toutes les notifications pour cohérence
+        if (adhanTimes) {
+          await rescheduleEnabledLocalReminders(adhanTimes);
+        }
         } else if (type === "SuhoorLocal") {
           const fajr = adhanTimes?.Fajr;
           if (!fajr) {
@@ -832,8 +871,6 @@ export function DashboardScreen({ user, onSearch }: { user: AuthUser; onSearch?:
       }
 
       try {
-        const synced = await syncPushTokenWithBackend();
-        if (!synced) return;
         await Promise.all(tasks);
       } catch {
         // Best effort: on ne bloque pas l'app si reschedule échoue.
@@ -1064,303 +1101,18 @@ export function DashboardScreen({ user, onSearch }: { user: AuthUser; onSearch?:
 
   return (
     <View style={[ds.screen, { paddingTop: 0 }]}>
-      <ScrollView
-        contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 20 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshAll()} tintColor={ds_c.primaryDark} />}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Greeting header */}
-        <Header
-          user={user}
-          todayLabel={todayLabel}
-          hijriLabel={hijriLabel}
-          locationLabel={dashLocLabel}
-          isLocationLoading={locLoading}
-          onSearch={onSearch}
-        />
-
-        {/* Next prayer highlight */}
-        <NextPrayerCard
-          isLoading={prayerLoading && !nextPrayerInfo}
-          nextPrayerInfo={nextPrayerInfo}
-          countdown={countdown}
-        />
-
-        {/* Dua / Ayah of the Day */}
-        <DailyInspirationCard locale={locale} />
-
-        {/* Streak Card */}
-        <StreakCard />
-
-        {/* Ramadan banner */}
-        <RamadanBanner
-          ramadanDayInfo={ramadanDayInfo}
-          ramadanTodayText={ramadanTodayText}
-          ramadanProgressText={ramadanProgressText}
-        />
-
-        {/* Stats row */}
-        <StatsRow
-          prayerStatusText={prayerStatusText}
-          ramadanTodayText={ramadanTodayText}
-          ramadanProgressText={ramadanProgressText}
-          fastingSummary={fastingSummary}
-          locale={locale}
-        />
-
-        <LocalRemindersSection
-          isLoading={localReminderLoading}
-          error={localReminderError}
-          enabled={localReminderEnabled}
-          onToggle={toggleLocalReminder}
-          locale={locale}
-        />
-
-        <Section title={t(locale, "dash.makeup.plan.title", "Plan de rattrapage")} subtitle={t(locale, "dash.makeup.plan.subtitle", "Rappels pour rattraper tes jours manqués.")}>
-          {makeupPlanError ? <Text style={ds.errorText}>{makeupPlanError}</Text> : null}
-          {fastingLoading ? (
-            <ActivityIndicator color={ds_c.primaryDark} />
-          ) : makeupPlan?.isActive ? (
-            <View style={{ gap: 10 }}>
-              <View style={ds.infoRow}>
-                <Text style={ds.infoTitle}>{t(locale, "dash.makeup.plan.active", "Plan actif")} · {MAKEUP_STRATEGY_LABELS[makeupPlan.strategy]}</Text>
-                <Text style={ds.infoSub}>{makeupPlan.completedDays}/{makeupPlan.targetDays} {t(locale, "dash.makeup.plan.done", "fait(s)")}</Text>
-              </View>
-              {upcomingMakeupEntries.length === 0 ? (
-                <Text style={ds.mutedText}>{t(locale, "dash.makeup.plan.none", "Aucune date à venir.")}</Text>
-              ) : (
-                <View style={{ gap: 8 }}>
-                  {upcomingMakeupEntries.map((entry) => (
-                    <View key={entry.id} style={ds.entryRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={ds.entryTitle}>{formatDate(entry.scheduledDate)}</Text>
-                        <Text style={ds.entrySub}>{entry.status}</Text>
-                      </View>
-                      <TouchableOpacity style={ds.smallBtn} onPress={() => void handleCompleteMakeupEntry(entry)} disabled={makeupPlanUpdatingEntryId === entry.id}>
-                        <Text style={[ds.smallBtnText, makeupPlanUpdatingEntryId === entry.id && { opacity: 0.5 }]}>
-                          {makeupPlanUpdatingEntryId === entry.id ? "…" : t(locale, "dash.makeup.plan.complete", "Fait")}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={{ gap: 10 }}>
-              <Text style={ds.mutedText}>
-                {fastingSummary ? `${fastingSummary.outstandingMakeupDays} ${t(locale, "dash.makeup.label", "jour(s) à rattraper")}` : t(locale, "dash.makeup.loading", "Chargement…")}
-              </Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <TouchableOpacity style={ds.primaryBtn} onPress={() => void handleCreateMakeupPlan(MakeupStrategy.MondaysThursdays)} disabled={!canCreateMakeupPlan || makeupPlanCreating}>
-                  <Text style={[ds.primaryBtnText, (!canCreateMakeupPlan || makeupPlanCreating) && { opacity: 0.5 }]}>{t(locale, "dash.makeup.plan.create.mondayThursday", "Lun/Jeu")}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={ds.outlineBtn} onPress={() => void handleCreateMakeupPlan(MakeupStrategy.SixDaysAfterEid)} disabled={!canCreateMakeupPlan || makeupPlanCreating}>
-                  <Text style={[ds.outlineBtnText, (!canCreateMakeupPlan || makeupPlanCreating) && { opacity: 0.5 }]}>{t(locale, "dash.makeup.plan.create.afterEid", "Après Aïd")}</Text>
-                </TouchableOpacity>
-              </View>
-              {!canCreateMakeupPlan && fastingSummary?.outstandingMakeupDays === 0 ? (
-                <Text style={ds.mutedText}>{t(locale, "dash.makeup.plan.zero", "Aucun rattrapage en attente.")}</Text>
-              ) : null}
-            </View>
-          )}
-        </Section>
-
-        {toast ? (
-          <View style={ds.toast}>
-            <Text style={{ color: ds_c.text, fontSize: 13 }}>{toast}</Text>
-          </View>
-        ) : null}
-
-        <Section title={t(locale, "dash.prayer.section.title", "Horaires de prière")} subtitle={dashLocLabel}>
-          <View style={{ gap: 10 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(26,127,100,0.08)", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
-              <Ionicons name="location" size={14} color={ds_c.primaryDark} />
-              <Text style={{ fontSize: 12, fontWeight: "600", color: ds_c.text, flex: 1 }}>
-                {locLoading ? "Détection GPS…" : dashLocLabel}
-              </Text>
-              <Text style={{ fontSize: 11, color: ds_c.muted }}>{prayerForm.timeZone}</Text>
-            </View>
-            {prayerError && <Text style={ds.errorText}>{prayerError}</Text>}
-            {prayerLoading ? (
-              <ActivityIndicator color={ds_c.primaryDark} />
-            ) : prayerResult ? (
-              <View style={{ gap: 6 }}>
-                {prayerTimesEntries.map(([key, value]) => (
-                  <View key={key} style={ds.prayerRow}>
-                    <Text style={ds.prayerKey}>{key}</Text>
-                    <Text style={ds.prayerVal}>{formatTime(value)}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text style={ds.mutedText}>{t(locale, "dash.prayer.section.subtitle", "Calcul automatique en cours…")}</Text>
-            )}
-          </View>
-        </Section>
-
-        <Section title={t(locale, "dash.ramadan.section.title", "Suivi du jeûne (30j)")} subtitle={t(locale, "dash.ramadan.subtitle", "Résumé Ramadan.")}>
-          {ramadanLoading ? (
-            <ActivityIndicator color={ds_c.primaryDark} />
-          ) : ramadanError ? (
-            <Text style={ds.errorText}>{ramadanError}</Text>
-          ) : !ramadanSummary ? (
-            <Text style={ds.mutedText}>{t(locale, "dash.ramadan.today.none", "Pas de statut saisi")}</Text>
-          ) : (
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {FASTING_STATUS_ORDER.map((status) => (
-                  <View key={status} style={ds.miniStat}>
-                    <Text style={ds.miniStatLabel}>{FASTING_STATUS_LABELS[status]}</Text>
-                    <Text style={ds.miniStatVal}>{ramadanStatusCounts[status] ?? 0}</Text>
-                  </View>
-                ))}
-              </View>
-              <Text style={ds.subHeading}>{t(locale, "dash.ramadan.recentDays", "Jours récents")}</Text>
-              {ramadanSummary.days.length === 0 ? (
-                <Text style={ds.mutedText}>{t(locale, "dash.ramadan.noDays", "Aucun jour enregistré.")}</Text>
-              ) : (
-                <View style={{ gap: 6 }}>
-                  {ramadanSummary.days
-                    .slice()
-                    .sort((a: RamadanDaySummary, b: RamadanDaySummary) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .slice(0, 7)
-                    .map((day) => (
-                      <View key={day.date} style={ds.infoRow}>
-                        <Text style={ds.infoTitle}>{formatDate(day.date)}</Text>
-                        <Text style={ds.infoSub}>
-                          {day.fastStatus ? FASTING_STATUS_LABELS[day.fastStatus] : t(locale, "dash.ramadan.unknown", "Non renseigné")}
-                          {day.cycleStatus ? ` · ${day.cycleStatus}` : ""}
-                          {day.notes ? ` · ${day.notes}` : ""}
-                        </Text>
-                      </View>
-                    ))}
-                </View>
-              )}
-            </View>
-          )}
-        </Section>
-
-        <Section title={t(locale, "dash.dhikr.section.title", "Dhikr")} subtitle={t(locale, "dash.dhikr.subtitle", "Enregistre un nouveau décompte.")}>
-          {dhikrLoading ? (
-            <ActivityIndicator color={ds_c.primaryDark} />
-          ) : dhikrError ? (
-            <Text style={ds.errorText}>{dhikrError}</Text>
-          ) : dhikrEntries.length === 0 ? (
-            <Text style={ds.mutedText}>{t(locale, "dash.dhikr.none", "Aucun dhikr enregistré.")}</Text>
-          ) : (
-            <View style={{ gap: 14 }}>
-              <View style={ds.dhikrTotal}>
-                <Text style={ds.mutedText}>{t(locale, "dash.dhikr.total", "Total enregistré")}</Text>
-                <Text style={ds.dhikrTotalNum}>{dhikrTotalCount}</Text>
-              </View>
-
-              <Text style={ds.subHeading}>{t(locale, "dash.dhikr.formula", "Formule")}</Text>
-              {dhikrCategories.map((category) => (
-                <View key={category.id} style={{ gap: 4 }}>
-                  <Text style={ds.catLabel}>{category.name}</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                    {category.entries.map((entry) => {
-                      const isActive = entry.id === dhikrForm.entryId;
-                      return (
-                        <TouchableOpacity key={entry.id} style={[ds.chip, isActive && ds.chipActive]} onPress={() => handleDhikrEntryChange(entry.id)}>
-                          <Text style={{ color: isActive ? "#fff" : ds_c.text, fontWeight: isActive ? "700" : "500", fontSize: 13 }}>{entry.title}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
-
-              <View style={{ gap: 10, marginTop: 6 }}>
-                <TextInput style={ds.input} placeholder={t(locale, "dash.dhikr.count", "Comptage")} placeholderTextColor={ds_c.muted} keyboardType="number-pad" value={String(dhikrForm.count)} onChangeText={handleDhikrCountChange} />
-                <TextInput style={[ds.input, { textAlignVertical: "top" }]} placeholder={t(locale, "dash.dhikr.notes", "Notes")} placeholderTextColor={ds_c.muted} multiline value={dhikrForm.notes} onChangeText={handleDhikrNotesChange} numberOfLines={3} />
-                <TouchableOpacity style={[ds.primaryBtn, (!dhikrForm.entryId || dhikrSaving) && { opacity: 0.5 }]} onPress={() => void handleDhikrSave()} disabled={dhikrSaving || !dhikrForm.entryId}>
-                  <Text style={ds.primaryBtnText}>{dhikrSaving ? t(locale, "dash.dhikr.saving", "Enregistrement…") : t(locale, "dash.dhikr.save", "Enregistrer")}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {activeDhikrEntry && (
-                <View style={ds.arabicCard}>
-                  <Text style={ds.subHeading}>{activeDhikrEntry.title}</Text>
-                  <Text style={ds.arabicText}>{activeDhikrEntry.arabicText}</Text>
-                  {activeDhikrEntry.translit && <Text style={ds.mutedText}>{activeDhikrEntry.translit}</Text>}
-                  {activeDhikrEntry.translation && <Text style={ds.mutedText}>{activeDhikrEntry.translation}</Text>}
-                  {activeDhikrEntry.source && <Text style={[ds.mutedText, { fontSize: 11 }]}>Source · {activeDhikrEntry.source}</Text>}
-                </View>
-              )}
-
-              <Text style={ds.subHeading}>{t(locale, "dash.dhikr.history", "Historique récent")}</Text>
-              {dhikrRecords.length === 0 ? (
-                <Text style={ds.mutedText}>{t(locale, "dash.dhikr.history.none", "Aucun enregistrement.")}</Text>
-              ) : (
-                <View style={{ gap: 8 }}>
-                  {dhikrRecords.map((record) => (
-                    <View key={record.id} style={ds.infoRow}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={ds.infoTitle}>{record.entry.title}</Text>
-                          <Text style={[ds.mutedText, { fontSize: 11 }]}>{new Date(record.notedAt).toLocaleString(user.locale ?? "fr")}</Text>
-                        </View>
-                        <Text style={{ color: ds_c.text, fontSize: 22, fontWeight: "700" }}>{record.count}</Text>
-                      </View>
-                      {record.notes && <Text style={ds.mutedText}>{record.notes}</Text>}
-                      <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
-                        <TouchableOpacity style={ds.outlineBtn} onPress={() => void handleDhikrIncrement(record)}>
-                          <Text style={ds.outlineBtnText}>+1</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[ds.outlineBtn, { borderColor: ds_c.error }]} onPress={() => void handleDhikrDelete(record.id)} disabled={dhikrDeletingId === record.id}>
-                          <Text style={[ds.outlineBtnText, { color: ds_c.error }]}>
-                            {dhikrDeletingId === record.id ? t(locale, "dash.common.deleting", "…") : t(locale, "dash.common.delete", "Supprimer")}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-        </Section>
-
-        <Section title="Rappels intelligents" subtitle="Notifications automatiques pour ta pratique.">
-          {reminderState.loading ? (
-            <ActivityIndicator color={ds_c.primaryDark} />
-          ) : reminderState.error ? (
-            <Text style={ds.errorText}>{reminderState.error}</Text>
-          ) : reminderState.list.length === 0 ? (
-            <Text style={ds.mutedText}>Aucun rappel disponible.</Text>
-          ) : (
-            <View style={{ gap: 10 }}>
-              {reminderState.list.map((pref) => (
-                <View key={pref.type} style={ds.switchRow}>
-                  <View style={{ flex: 1, marginRight: 8 }}>
-                    <Text style={ds.switchLabel}>{REMINDER_LABELS[pref.type]}</Text>
-                    {pref.sendTime ? <Text style={{ fontSize: 11, color: ds_c.muted, marginTop: 2 }}>Envoi à {pref.sendTime}</Text> : null}
-                  </View>
-                  <Switch
-                    value={pref.isEnabled}
-                    onValueChange={() => void handleReminderToggle(pref)}
-                    trackColor={{ true: ds_c.primaryDark, false: "rgba(0,0,0,0.1)" }}
-                    thumbColor={pref.isEnabled ? palette.primary : "#ccc"}
-                    disabled={reminderState.updating[pref.type]}
-                  />
-                </View>
-              ))}
-            </View>
-          )}
-        </Section>
-      </ScrollView>
-    </View>
-  );
-}
-
-function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
-  return (
-    <View style={ds.section}>
-      <Text style={ds.sectionTitle}>{title}</Text>
-      {subtitle && <Text style={ds.sectionSub}>{subtitle}</Text>}
-      <View style={{ marginTop: 12 }}>{children}</View>
+      <ModernDashboard
+        user={user}
+        locale={locale}
+        onSearch={onSearch}
+        onRefresh={refreshAll}
+        refreshing={refreshing}
+      />
+      {toast ? (
+        <View style={[ds.toast, { position: 'absolute', bottom: 24, left: 20, right: 20 }]}>
+          <Text style={{ color: ds_c.text, fontSize: 13, textAlign: 'center' }}>{toast}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1369,27 +1121,15 @@ function toListItem(pref: ReminderPreference): ReminderPreferenceListItem {
   return { type: pref.type, isEnabled: pref.isEnabled, sendTime: pref.sendTime };
 }
 
-const ds_c = {
-  bg: palette.bg,
-  card: palette.card,
-  border: palette.border,
-  text: palette.text,
-  textSoft: palette.textSoft,
-  muted: palette.muted,
-  primaryDark: palette.primaryDark,
-  error: palette.error,
-};
-
 const ds = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: ds_c.bg },
-  headerGreeting: { fontSize: 12, fontWeight: "600", color: ds_c.primaryDark, letterSpacing: 0.3, marginBottom: 4 },
-  headerTitle: { fontSize: 26, fontWeight: "700", color: ds_c.text, letterSpacing: -0.3 },
-  headerDate: { fontSize: 13, color: ds_c.textSoft, marginTop: 4, textTransform: "capitalize" },
-  headerSub: { fontSize: 14, color: ds_c.textSoft, marginTop: 2 },
-  hijri: { fontSize: 12, color: ds_c.muted, marginTop: 2 },
+  screen: { flex: 1 },
+  headerGreeting: { fontSize: 12, fontWeight: "600", letterSpacing: 0.3, marginBottom: 4 },
+  headerTitle: { fontSize: 26, fontWeight: "700", letterSpacing: -0.3 },
+  headerDate: { fontSize: 13, marginTop: 4, textTransform: "capitalize" },
+  headerSub: { fontSize: 14, marginTop: 2 },
+  hijri: { fontSize: 12, marginTop: 2 },
 
   nextPrayerCard: {
-    backgroundColor: ds_c.primaryDark,
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
@@ -1436,11 +1176,9 @@ const ds = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: 140,
-    backgroundColor: ds_c.card,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: ds_c.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -1448,29 +1186,27 @@ const ds = StyleSheet.create({
     elevation: 2,
   },
   statIcon: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center", marginBottom: 8 },
-  statLabel: { fontSize: 11, fontWeight: "600", color: ds_c.muted, textTransform: "uppercase", letterSpacing: 1 },
-  statValue: { fontSize: 13, fontWeight: "600", color: ds_c.text, marginTop: 2 },
-  statExtra: { fontSize: 11, color: ds_c.textSoft, marginTop: 2 },
+  statLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 1 },
+  statValue: { fontSize: 13, fontWeight: "600", marginTop: 2 },
+  statExtra: { fontSize: 11, marginTop: 2 },
 
   section: {
-    backgroundColor: ds_c.card,
     borderRadius: 16,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: ds_c.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
   },
-  sectionTitle: { fontSize: 17, fontWeight: "700", color: ds_c.text },
-  sectionSub: { fontSize: 13, color: ds_c.textSoft, marginTop: 2 },
-  subHeading: { fontSize: 15, fontWeight: "600", color: ds_c.text },
+  sectionTitle: { fontSize: 17, fontWeight: "700" },
+  sectionSub: { fontSize: 13, marginTop: 2 },
+  subHeading: { fontSize: 15, fontWeight: "600" },
 
-  errorText: { color: ds_c.error, fontSize: 13 },
-  mutedText: { color: ds_c.textSoft, fontSize: 13 },
+  errorText: { fontSize: 13 },
+  mutedText: { fontSize: 13 },
 
   switchRow: {
     flexDirection: "row",
@@ -1481,7 +1217,7 @@ const ds = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  switchLabel: { fontSize: 14, fontWeight: "600", color: ds_c.text, flex: 1, marginRight: 8 },
+  switchLabel: { fontSize: 14, fontWeight: "600", flex: 1, marginRight: 8 },
 
   input: {
     backgroundColor: "rgba(0,0,0,0.04)",
@@ -1489,13 +1225,11 @@ const ds = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
-    color: ds_c.text,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.08)",
   },
 
   primaryBtn: {
-    backgroundColor: palette.primaryDark,
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: "center",
@@ -1509,10 +1243,9 @@ const ds = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  outlineBtnText: { color: ds_c.text, fontWeight: "600", fontSize: 13 },
+  outlineBtnText: { fontWeight: "600", fontSize: 13 },
 
   smallBtn: {
-    backgroundColor: palette.primaryDark,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -1526,8 +1259,8 @@ const ds = StyleSheet.create({
     paddingVertical: 10,
     gap: 4,
   },
-  infoTitle: { fontSize: 14, fontWeight: "600", color: ds_c.text },
-  infoSub: { fontSize: 12, color: ds_c.textSoft },
+  infoTitle: { fontSize: 14, fontWeight: "600" },
+  infoSub: { fontSize: 12 },
 
   entryRow: {
     flexDirection: "row",
@@ -1539,8 +1272,8 @@ const ds = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
-  entryTitle: { fontSize: 14, fontWeight: "600", color: ds_c.text },
-  entrySub: { fontSize: 12, color: ds_c.textSoft },
+  entryTitle: { fontSize: 14, fontWeight: "600" },
+  entrySub: { fontSize: 12 },
 
   prayerRow: {
     flexDirection: "row",
@@ -1550,8 +1283,8 @@ const ds = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  prayerKey: { fontSize: 13, fontWeight: "600", color: ds_c.textSoft, textTransform: "uppercase", letterSpacing: 1.5 },
-  prayerVal: { fontSize: 14, fontWeight: "700", color: ds_c.text },
+  prayerKey: { fontSize: 13, fontWeight: "600", textTransform: "uppercase", letterSpacing: 1.5 },
+  prayerVal: { fontSize: 14, fontWeight: "700" },
 
   miniStat: {
     backgroundColor: "rgba(0,0,0,0.03)",
@@ -1559,13 +1292,11 @@ const ds = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  miniStatLabel: { fontSize: 10, fontWeight: "600", color: ds_c.muted, textTransform: "uppercase", letterSpacing: 1 },
-  miniStatVal: { fontSize: 18, fontWeight: "700", color: ds_c.text },
+  miniStatLabel: { fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 1 },
+  miniStatVal: { fontSize: 18, fontWeight: "700" },
 
   toast: {
-    backgroundColor: ds_c.card,
     borderWidth: 1,
-    borderColor: ds_c.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -1578,9 +1309,9 @@ const ds = StyleSheet.create({
     padding: 14,
     gap: 4,
   },
-  dhikrTotalNum: { fontSize: 28, fontWeight: "700", color: ds_c.text },
+  dhikrTotalNum: { fontSize: 28, fontWeight: "700" },
 
-  catLabel: { fontSize: 11, fontWeight: "600", color: ds_c.muted, textTransform: "uppercase", letterSpacing: 1.5 },
+  catLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 1.5 },
 
   chip: {
     backgroundColor: "rgba(0,0,0,0.05)",
@@ -1588,9 +1319,7 @@ const ds = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  chipActive: {
-    backgroundColor: palette.primaryDark,
-  },
+  chipActive: {},
 
   arabicCard: {
     backgroundColor: "rgba(0,0,0,0.03)",
@@ -1607,12 +1336,10 @@ const ds = StyleSheet.create({
   },
 
   dailyCard: {
-    backgroundColor: ds_c.card,
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: ds_c.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -1627,7 +1354,7 @@ const ds = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dailyLabel: { fontSize: 14, fontWeight: "700", color: ds_c.text },
+  dailyLabel: { fontSize: 14, fontWeight: "700" },
   dailyArabic: {
     fontSize: 22,
     lineHeight: 40,
@@ -1637,6 +1364,6 @@ const ds = StyleSheet.create({
     marginBottom: 8,
   },
   dailyTranslit: { fontSize: 13, fontStyle: "italic", color: "#6B4C3B", lineHeight: 20, marginBottom: 4 },
-  dailyTranslation: { fontSize: 14, color: ds_c.textSoft, lineHeight: 22, marginBottom: 8 },
-  dailySource: { fontSize: 11, color: ds_c.muted, fontWeight: "600" },
+  dailyTranslation: { fontSize: 14, lineHeight: 22, marginBottom: 8 },
+  dailySource: { fontSize: 11, fontWeight: "600" },
 });
