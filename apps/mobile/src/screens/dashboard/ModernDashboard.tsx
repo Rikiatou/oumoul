@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LocalRemindersSection } from "./LocalRemindersSection";
 import { Ionicons } from "@expo/vector-icons";
@@ -67,6 +67,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   const [localLoading, setLocalLoading] = useState(true);
   const [localError, setLocalError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigation = useNavigation<any>();
   const { palette } = useTheme();
   const { forceUpdate } = useForceUpdate();
@@ -89,24 +90,25 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   }, []);
 
 
-  // Load prayer times when location is available
+  // Load prayer times — use GPS if available, fallback to default coords
   useEffect(() => {
-    if (!detectedLoc.latitude || !detectedLoc.longitude || prayerLoading) return;
-    
+    if (prayerLoading) return;
+    const lat = detectedLoc.latitude ?? 4.0511;
+    const lng = detectedLoc.longitude ?? 9.7679;
+
     const fetchPrayerTimes = async () => {
       try {
         setPrayerLoading(true);
-        const result = await prayerApi.getPrayerTimes({
-          latitude: detectedLoc.latitude,
-          longitude: detectedLoc.longitude,
-        });
+        const result = await prayerApi.getPrayerTimes({ latitude: lat, longitude: lng });
+        console.log('[Prayer] result times:', JSON.stringify(result?.times));
         setPrayerResult(result);
-      } catch {
+      } catch (e) {
+        console.log('[Prayer] fetch error:', e);
       } finally {
         setPrayerLoading(false);
       }
     };
-    
+
     fetchPrayerTimes();
   }, [detectedLoc.latitude, detectedLoc.longitude]);
 
@@ -126,9 +128,15 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     try { await SecureStore.setItemAsync(LOCAL_REMINDERS_KEY, JSON.stringify(state)); } catch {}
   }, []);
 
-  // adhanTimes derived from prayerResult
+  // adhanTimes derived from prayerResult — reuses parsePrayerTime defined below
   const adhanTimes = useMemo(() => {
     if (!prayerResult?.times) return null;
+    const t = prayerResult.times;
+    // Find keys case-insensitively
+    const find = (name: string) => {
+      const key = Object.keys(t).find(k => k.toLowerCase() === name.toLowerCase());
+      return key ? t[key] : undefined;
+    };
     const parse = (v?: string) => {
       if (!v) return null;
       try {
@@ -137,13 +145,15 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
         return Number.isNaN(h) || Number.isNaN(m) ? null : { hour: h, minute: m };
       } catch { return null; }
     };
-    return {
-      Fajr: parse(prayerResult.times.Fajr),
-      Dhuhr: parse(prayerResult.times.Dhuhr),
-      Asr: parse(prayerResult.times.Asr),
-      Maghrib: parse(prayerResult.times.Maghrib),
-      Isha: parse(prayerResult.times.Isha),
+    const result = {
+      Fajr: parse(t['fajr'] ?? t['Fajr']),
+      Dhuhr: parse(t['dhuhr'] ?? t['Dhuhr']),
+      Asr: parse(t['asr'] ?? t['Asr']),
+      Maghrib: parse(t['maghrib'] ?? t['Maghrib']),
+      Isha: parse(t['isha'] ?? t['Isha']),
     };
+    console.log('[adhanTimes] keys=', Object.keys(t), 'parsed=', JSON.stringify(result));
+    return result;
   }, [prayerResult]);
 
   const subtractMinutes = useCallback((t: { hour: number; minute: number }, delta: number) => {
@@ -151,8 +161,15 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     return { hour: Math.floor(total / 60), minute: total % 60 };
   }, []);
 
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastRef.current) clearTimeout(toastRef.current);
+    toastRef.current = setTimeout(() => setToast(null), 3000);
+  }, []);
+
   const toggleLocalReminder = useCallback(async (type: LocalReminderType) => {
     const isOn = localEnabled[type];
+    console.log('[Adhan] toggle', type, 'isOn=', isOn, 'adhanTimes=', JSON.stringify(adhanTimes));
     const id = type === "SuhoorLocal" ? "suhoor"
       : type === "IftarLocal" ? "iftar"
       : type === "DhikrMorning" ? "dhikr-morning"
@@ -163,7 +180,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     if (isOn) {
       await cancelReminder(id);
       setLocalEnabled((prev) => { const next = { ...prev, [type]: false }; void persistLocal(next); return next; });
-      setToast("Rappel désactivé");
+      showToast("Rappel désactivé");
       return;
     }
 
@@ -171,16 +188,16 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
       if (type.startsWith("Adhan")) {
         const key = type.replace("Adhan", "") as keyof NonNullable<typeof adhanTimes>;
         const slot = adhanTimes?.[key];
-        if (!slot) { setToast("Horaires de prière non encore chargés. Patiente quelques secondes."); return; }
+        if (!slot) { showToast("⏳ Horaires de prière non encore chargés."); return; }
         await scheduleAdhanReminder(key, slot.hour, slot.minute);
       } else if (type === "SuhoorLocal") {
         const fajr = adhanTimes?.Fajr;
-        if (!fajr) { setToast("Horaires non chargés."); return; }
+        if (!fajr) { showToast("⏳ Horaires non chargés."); return; }
         const s = subtractMinutes(fajr, 30);
         await scheduleSuhoorReminder(s.hour, s.minute);
       } else if (type === "IftarLocal") {
         const maghrib = adhanTimes?.Maghrib;
-        if (!maghrib) { setToast("Horaires non chargés."); return; }
+        if (!maghrib) { showToast("⏳ Horaires non chargés."); return; }
         await scheduleIftarReminder(maghrib.hour, maghrib.minute);
       } else if (type === "DhikrMorning") {
         await scheduleDhikrMorningReminder();
@@ -190,11 +207,11 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
         await scheduleJumuahReminder();
       }
       setLocalEnabled((prev) => { const next = { ...prev, [type]: true }; void persistLocal(next); return next; });
-      setToast("Rappel activé ✓");
+      showToast("✅ Rappel activé");
     } catch (err) {
-      setToast(err instanceof Error ? err.message : "Impossible d'activer le rappel.");
+      showToast(err instanceof Error ? err.message : "Impossible d'activer le rappel.");
     }
-  }, [localEnabled, adhanTimes, persistLocal, subtractMinutes]);
+  }, [localEnabled, adhanTimes, persistLocal, subtractMinutes, showToast]);
 
   // Auto-reschedule when prayer times update
   useEffect(() => {
@@ -230,11 +247,11 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     
     const now = currentTime;
     const prayers = [
-      { name: 'Fajr', time: prayerResult.times.Fajr },
-      { name: 'Dhuhr', time: prayerResult.times.Dhuhr },
-      { name: 'Asr', time: prayerResult.times.Asr },
-      { name: 'Maghrib', time: prayerResult.times.Maghrib },
-      { name: 'Isha', time: prayerResult.times.Isha },
+      { name: 'Fajr', time: prayerResult.times['fajr'] },
+      { name: 'Dhuhr', time: prayerResult.times['dhuhr'] },
+      { name: 'Asr', time: prayerResult.times['asr'] },
+      { name: 'Maghrib', time: prayerResult.times['maghrib'] },
+      { name: 'Isha', time: prayerResult.times['isha'] },
     ];
     
     const currentHour = now.getHours();
@@ -258,7 +275,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     }
     
     // If all prayers passed, return tomorrow's Fajr
-    const fajrParsed = parsePrayerTime(prayerResult.times.Fajr);
+    const fajrParsed = parsePrayerTime(prayerResult.times['fajr']);
     if (!fajrParsed) return null;
     const fajrTimeInMinutes = fajrParsed.hour * 60 + fajrParsed.minute;
     const tomorrowFajrInMinutes = 24 * 60 + fajrTimeInMinutes - currentTimeInMinutes;
@@ -338,13 +355,13 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     ? `${detectedLoc.city}, ${detectedLoc.country}`
     : detectedLoc.city ?? "Détection...";
 
-  // Build all 5 prayer rows
+  // Build all 5 prayer rows (backend returns lowercase keys: fajr, dhuhr, asr, maghrib, isha)
   const allPrayers = prayerResult?.times ? [
-    { name: 'Fajr',    key: 'Fajr',    icon: 'sunny-outline'  as const, raw: prayerResult.times.Fajr },
-    { name: 'Dhuhr',   key: 'Dhuhr',   icon: 'partly-sunny'   as const, raw: prayerResult.times.Dhuhr },
-    { name: 'Asr',     key: 'Asr',     icon: 'sunny'          as const, raw: prayerResult.times.Asr },
-    { name: 'Maghrib', key: 'Maghrib', icon: 'moon-outline'   as const, raw: prayerResult.times.Maghrib },
-    { name: 'Isha',    key: 'Isha',    icon: 'moon'           as const, raw: prayerResult.times.Isha },
+    { name: 'Fajr',    key: 'fajr',    icon: 'sunny-outline'  as const, raw: prayerResult.times['fajr'] },
+    { name: 'Dhuhr',   key: 'dhuhr',   icon: 'partly-sunny'   as const, raw: prayerResult.times['dhuhr'] },
+    { name: 'Asr',     key: 'asr',     icon: 'sunny'          as const, raw: prayerResult.times['asr'] },
+    { name: 'Maghrib', key: 'maghrib', icon: 'moon-outline'   as const, raw: prayerResult.times['maghrib'] },
+    { name: 'Isha',    key: 'isha',    icon: 'moon'           as const, raw: prayerResult.times['isha'] },
   ].map(p => ({ ...p, display: (() => { const parsed = parsePrayerTime(p.raw); return parsed ? `${String(parsed.hour).padStart(2,'0')}:${String(parsed.minute).padStart(2,'0')}` : '--:--'; })() })) : [];
 
   // Eid al-Fitr countdown (Hijri 10/1)
