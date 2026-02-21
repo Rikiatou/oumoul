@@ -3,10 +3,12 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
   Query,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -16,6 +18,8 @@ import { CreateDhikrRecordDto } from './dto/create-dhikr-record.dto';
 import { UpdateDhikrRecordDto } from './dto/update-dhikr-record.dto';
 import { GetDhikrRecordsDto } from './dto/get-dhikr-records.dto';
 import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
+
+const SEED_SECRET = process.env.SEED_SECRET ?? 'oumoul-seed-2026';
 
 @ApiTags('dhikr')
 @ApiBearerAuth()
@@ -58,9 +62,4 @@ export class DhikrController {
     return this.dhikrService.deleteRecord(user.userId, id);
   }
 
-  @Post('admin/seed')
-  @ApiOkResponse({ description: 'Upsert all seed categories (admin only, idempotent).' })
-  seedCategories() {
-    return this.dhikrService.seedCategories();
-  }
 }
