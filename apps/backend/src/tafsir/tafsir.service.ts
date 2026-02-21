@@ -50,7 +50,7 @@ export class TafsirService {
       include: {
         source: true,
       },
-      orderBy: [{ ayahFrom: "asc" }],
+      orderBy: [{ ayahFrom: "desc" }],
       take: 1,
     });
 
