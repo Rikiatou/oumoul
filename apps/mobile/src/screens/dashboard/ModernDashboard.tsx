@@ -254,40 +254,36 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
       { name: 'Isha', time: prayerResult.times['isha'] },
     ];
     
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeInMinutes = currentHour * 60 + currentMinute;
-    
+    const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+    const formatCountdown = (diffSec: number) => {
+      const h = Math.floor(diffSec / 3600);
+      const m = Math.floor((diffSec % 3600) / 60);
+      const s = diffSec % 60;
+      if (h > 0) return `dans ${h}h ${String(m).padStart(2,'0')}min ${String(s).padStart(2,'0')}s`;
+      if (m > 0) return `dans ${m}min ${String(s).padStart(2,'0')}s`;
+      return `dans ${s}s`;
+    };
+
     // Find next prayer
     for (const prayer of prayers) {
       const parsed = parsePrayerTime(prayer.time);
       if (!parsed) continue;
-      const prayerTimeInMinutes = parsed.hour * 60 + parsed.minute;
-      
-      if (prayerTimeInMinutes > currentTimeInMinutes) {
-        const diffMinutes = prayerTimeInMinutes - currentTimeInMinutes;
-        const hours = Math.floor(diffMinutes / 60);
-        const minutes = diffMinutes % 60;
-        const countdown = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+      const prayerSeconds = parsed.hour * 3600 + parsed.minute * 60;
+      if (prayerSeconds > nowSeconds) {
+        const diffSec = prayerSeconds - nowSeconds;
         const displayTime = `${String(parsed.hour).padStart(2,'0')}:${String(parsed.minute).padStart(2,'0')}`;
-        return { name: prayer.name, time: displayTime, countdown };
+        return { name: prayer.name, time: displayTime, countdown: formatCountdown(diffSec) };
       }
     }
-    
-    // If all prayers passed, return tomorrow's Fajr
+
+    // All prayers passed — countdown to tomorrow's Fajr
     const fajrParsed = parsePrayerTime(prayerResult.times['fajr']);
     if (!fajrParsed) return null;
-    const fajrTimeInMinutes = fajrParsed.hour * 60 + fajrParsed.minute;
-    const tomorrowFajrInMinutes = 24 * 60 + fajrTimeInMinutes - currentTimeInMinutes;
-    const hours = Math.floor(tomorrowFajrInMinutes / 60);
-    const minutes = tomorrowFajrInMinutes % 60;
+    const fajrSeconds = fajrParsed.hour * 3600 + fajrParsed.minute * 60;
+    const diffSec = 24 * 3600 + fajrSeconds - nowSeconds;
     const displayTime = `${String(fajrParsed.hour).padStart(2,'0')}:${String(fajrParsed.minute).padStart(2,'0')}`;
-    
-    return {
-      name: 'Fajr',
-      time: displayTime,
-      countdown: hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`
-    };
+    return { name: 'Fajr', time: displayTime, countdown: formatCountdown(diffSec) };
   };
   
   const nextPrayer = getNextPrayer();
