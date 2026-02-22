@@ -168,7 +168,7 @@ async function scheduleDailyReminder({ title, body, hour, minute, id, channelId,
     content: {
       title,
       body,
-      sound: "default",
+      sound: sound ?? "default",
     },
     trigger,
   });
