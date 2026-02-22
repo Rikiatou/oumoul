@@ -331,112 +331,6 @@ function RamadanStack({ user }: { user: AuthUser }) {
   );
 }
 
-
-function MoreStack({ user }: { user: AuthUser }) {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="MoreMenu">
-        {(props) => <MoreScreen navigation={props.navigation} user={user} />}
-      </Stack.Screen>
-      <Stack.Screen name="HijriCalendar" options={{ animation: "slide_from_right" }}>
-        {(props) => <HijriCalendarScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="Qibla" options={{ animation: "slide_from_right" }}>
-        {(props) => <QiblaScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="ImaneProgram" options={{ animation: "slide_from_right" }}>
-        {(props) => <ImaneProgramScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="PrayerSettingsMore" options={{ animation: "slide_from_right" }}>
-        {(props) => <PrayerSettingsScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="PrayerTracking" options={{ animation: "slide_from_right" }}>
-        {(props) => <PrayerTrackingScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="AllahNames" options={{ animation: "slide_from_right" }}>
-        {(props) => <AllahNamesScreen user={user} onBack={() => props.navigation.goBack()} initialNameId={(props.route.params as any)?.initialNameId} />}
-      </Stack.Screen>
-      <Stack.Screen name="Tasbih" options={{ animation: "slide_from_right" }}>
-        {(props) => <TasbihScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="MosqueFinder" options={{ animation: "slide_from_right" }}>
-        {(props) => <MosqueFinderScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="HadithDaily" options={{ animation: "slide_from_right" }}>
-        {(props) => <HadithDailyScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="ZakatCalculator" options={{ animation: "slide_from_right" }}>
-        {(props) => <ZakatCalculatorScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="EidGreetings" options={{ animation: "slide_from_right" }}>
-        {(props) => <EidGreetingsScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
-      </Stack.Screen>
-      <Stack.Screen name="GlobalSearch" options={{ animation: "slide_from_right" }}>
-        {(props) => <GlobalSearchScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
-          const parentNav = props.navigation.getParent();
-          if (screen === '__CORAN_TAB__') {
-            parentNav?.navigate('Coran');
-          } else if (screen === 'ImaneRamadan') {
-            parentNav?.navigate('Ramadan');
-          } else if (screen === 'ImaneCycle') {
-            parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
-          } else {
-            (props.navigation as any).navigate(screen);
-          }
-        }} />}
-      </Stack.Screen>
-      <Stack.Screen name="AppGuide" options={{ animation: "slide_from_right" }}>
-        {(props) => <AppGuideScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
-              // Handle navigation to different tabs and screens
-          const parentNav = props.navigation.getParent();
-          if (screen === '__CORAN_TAB__') {
-            parentNav?.navigate('Coran');
-          } else if (screen === 'ImaneRamadan') {
-            parentNav?.navigate('Ramadan');
-          } else if (screen === 'ImaneCycle') {
-            parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
-          } else if (screen === 'Gamification') {
-            parentNav?.navigate('Plus', { screen: 'Gamification' });
-          } else {
-            (props.navigation as any).navigate(screen);
-          }
-        }} />}
-      </Stack.Screen>
-            <Stack.Screen name="About" options={{ animation: "slide_from_right" }}>
-        {(props) => <AboutScreen onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="Privacy" options={{ animation: "slide_from_right" }}>
-        {(props) => <PrivacyScreen onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="Terms" options={{ animation: "slide_from_right" }}>
-        {(props) => <TermsScreen onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="Gamification" options={{ animation: "slide_from_right" }}>
-        {(props) => <GamificationScreen onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="AISystem" options={{ animation: "slide_from_right" }}>
-        {(props) => <AISystemScreen onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="ShareSystem" options={{ animation: "slide_from_right" }}>
-        {(props) => <ShareSystemScreen onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="DarkMode" options={{ animation: "slide_from_right" }}>
-        {(props) => <DarkModeScreen onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-    </Stack.Navigator>
-  );
-}
-
-function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
-  return <ModernDashboard user={user} onSearch={() => navigation.getParent()?.navigate("Plus", { screen: "GlobalSearch" })} />;
-}
-
 function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
@@ -584,6 +478,111 @@ function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
       </ScrollView>
     </View>
   );
+}
+
+function MoreStack({ user }: { user: AuthUser }) {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MoreMenu">
+        {(props) => <MoreScreen navigation={props.navigation} user={user} />}
+      </Stack.Screen>
+      <Stack.Screen name="HijriCalendar" options={{ animation: "slide_from_right" }}>
+        {(props) => <HijriCalendarScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Qibla" options={{ animation: "slide_from_right" }}>
+        {(props) => <QiblaScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ImaneProgram" options={{ animation: "slide_from_right" }}>
+        {(props) => <ImaneProgramScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="PrayerSettingsMore" options={{ animation: "slide_from_right" }}>
+        {(props) => <PrayerSettingsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="PrayerTracking" options={{ animation: "slide_from_right" }}>
+        {(props) => <PrayerTrackingScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
+        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="AllahNames" options={{ animation: "slide_from_right" }}>
+        {(props) => <AllahNamesScreen user={user} onBack={() => props.navigation.goBack()} initialNameId={(props.route.params as any)?.initialNameId} />}
+      </Stack.Screen>
+      <Stack.Screen name="Tasbih" options={{ animation: "slide_from_right" }}>
+        {(props) => <TasbihScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="MosqueFinder" options={{ animation: "slide_from_right" }}>
+        {(props) => <MosqueFinderScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="HadithDaily" options={{ animation: "slide_from_right" }}>
+        {(props) => <HadithDailyScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ZakatCalculator" options={{ animation: "slide_from_right" }}>
+        {(props) => <ZakatCalculatorScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="EidGreetings" options={{ animation: "slide_from_right" }}>
+        {(props) => <EidGreetingsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
+        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
+      </Stack.Screen>
+      <Stack.Screen name="GlobalSearch" options={{ animation: "slide_from_right" }}>
+        {(props) => <GlobalSearchScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
+          const parentNav = props.navigation.getParent();
+          if (screen === '__CORAN_TAB__') {
+            parentNav?.navigate('Coran');
+          } else if (screen === 'ImaneRamadan') {
+            parentNav?.navigate('Ramadan');
+          } else if (screen === 'ImaneCycle') {
+            parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
+          } else {
+            (props.navigation as any).navigate(screen);
+          }
+        }} />}
+      </Stack.Screen>
+      <Stack.Screen name="AppGuide" options={{ animation: "slide_from_right" }}>
+        {(props) => <AppGuideScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
+              // Handle navigation to different tabs and screens
+          const parentNav = props.navigation.getParent();
+          if (screen === '__CORAN_TAB__') {
+            parentNav?.navigate('Coran');
+          } else if (screen === 'ImaneRamadan') {
+            parentNav?.navigate('Ramadan');
+          } else if (screen === 'ImaneCycle') {
+            parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
+          } else if (screen === 'Gamification') {
+            parentNav?.navigate('Plus', { screen: 'Gamification' });
+          } else {
+            (props.navigation as any).navigate(screen);
+          }
+        }} />}
+      </Stack.Screen>
+            <Stack.Screen name="About" options={{ animation: "slide_from_right" }}>
+        {(props) => <AboutScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Privacy" options={{ animation: "slide_from_right" }}>
+        {(props) => <PrivacyScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Terms" options={{ animation: "slide_from_right" }}>
+        {(props) => <TermsScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Gamification" options={{ animation: "slide_from_right" }}>
+        {(props) => <GamificationScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="AISystem" options={{ animation: "slide_from_right" }}>
+        {(props) => <AISystemScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ShareSystem" options={{ animation: "slide_from_right" }}>
+        {(props) => <ShareSystemScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="DarkMode" options={{ animation: "slide_from_right" }}>
+        {(props) => <DarkModeScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+}
+
+function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
+  return <ModernDashboard user={user} onSearch={() => navigation.getParent()?.navigate("Plus", { screen: "GlobalSearch" })} />;
 }
 
 function AuthFlow() {
