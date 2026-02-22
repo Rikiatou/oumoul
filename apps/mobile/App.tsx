@@ -85,22 +85,33 @@ const C = {
 
 function translateError(msg: string): string {
   const m = msg.toLowerCase();
+  // Password validation errors
   if (m.includes("password") && (m.includes("longer") || m.includes("short") || m.includes("least")))
     return "Le mot de passe doit contenir au moins 8 caractères.";
+  if (m.includes("password") && m.includes("minuscule"))
+    return "Le mot de passe doit contenir au moins une lettre minuscule.";
+  if (m.includes("password") && m.includes("majuscule"))
+    return "Le mot de passe doit contenir au moins une lettre majuscule.";
+  if (m.includes("password") && m.includes("chiffre"))
+    return "Le mot de passe doit contenir au moins un chiffre.";
+  // Email errors
   if (m.includes("email already") || m.includes("conflict") || m.includes("already exists") || m.includes("déjà utilisé"))
     return "Cet email est déjà utilisé.";
+  if (m.includes("invalid") && m.includes("email"))
+    return "Adresse email invalide.";
+  // Auth errors
   if (m.includes("invalid credentials") || m.includes("unauthorized") || m.includes("identifiants") || m.includes("incorrect") || m.includes("wrong password") || m.includes("401"))
     return "Email ou mot de passe incorrect.";
   if (m.includes("not verified") || m.includes("non vérifié") || m.includes("verify") || m.includes("403"))
     return "Email non vérifié. Vérifie ta boîte mail.";
   if (m.includes("not found") || m.includes("404") || m.includes("no account") || m.includes("introuvable"))
     return "Aucun compte trouvé avec cet email.";
-  if (m.includes("invalid") && m.includes("email"))
-    return "Adresse email invalide.";
+  // Rate limiting and network errors
   if (m.includes("too many") || m.includes("rate limit") || m.includes("429"))
     return "Trop de tentatives. Réessaie dans quelques minutes.";
   if (m.includes("network") || m.includes("fetch") || m.includes("failed") || m.includes("load") || m.includes("connect") || m.includes("timeout"))
     return "Erreur réseau. Vérifie ta connexion internet.";
+  // Other errors
   if (m.includes("expired"))
     return "Code expiré. Demande un nouveau code.";
   if (m.includes("server") || m.includes("500") || m.includes("internal"))
@@ -733,6 +744,13 @@ function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | 
       </View>
       <AuthInput placeholder="Email" value={form.email} onChangeText={(v) => updateField("email", v)} keyboardType="email-address" autoCapitalize="none" />
       <PasswordInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} />
+      <View style={{ backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, marginTop: 8 }}>
+        <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 4, fontWeight: '600' }}>Le mot de passe doit contenir :</Text>
+        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 8 caractères</Text>
+        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 lettre majuscule (A-Z)</Text>
+        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 lettre minuscule (a-z)</Text>
+        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 chiffre (0-9)</Text>
+      </View>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
         {locales.map((opt) => {
           const active = form.locale === opt.value;
