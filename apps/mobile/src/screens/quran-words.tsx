@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -14,16 +14,18 @@ import type { AuthUser } from '@oumoul/api';
 import { palette } from '../theme';
 import { QURAN_WORDS, WORD_CATEGORIES, QuranWord } from '../data/quran-words';
 import { HelpTip } from '../components/HelpTip';
+import { BackButton } from '../components/BackButton';
 
 const LEARNED_KEY = 'oumoul_quran_words_learned';
 
-export function QuranWordsScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function QuranWordsScreen({ user, onBack, initialWordId }: { user: AuthUser; onBack: () => void; initialWordId?: number }) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [learned, setLearned] = useState<Set<number>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [showLearnedOnly, setShowLearnedOnly] = useState(false);
+  const listRef = useRef<FlatList>(null);
 
   // Load persisted learned words
   useEffect(() => {
@@ -49,6 +51,17 @@ export function QuranWordsScreen({ user, onBack }: { user: AuthUser; onBack: () 
       return next;
     });
   }, []);
+
+  // Auto-scroll to initialWordId after load
+  useEffect(() => {
+    if (!initialWordId || !loaded) return;
+    const idx = QURAN_WORDS.findIndex((w) => w.id === initialWordId);
+    if (idx >= 0) {
+      setTimeout(() => {
+        listRef.current?.scrollToIndex({ index: Math.floor(idx / 2), animated: true, viewPosition: 0.3 });
+      }, 400);
+    }
+  }, [initialWordId, loaded]);
 
   const filteredWords = useMemo(() => {
     let words = QURAN_WORDS;
@@ -105,11 +118,9 @@ export function QuranWordsScreen({ user, onBack }: { user: AuthUser; onBack: () 
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn} accessibilityLabel="Retour" accessibilityRole="button">
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={st.headerTitle} accessibilityRole="header">Vocabulaire du Coran</Text>
+        <BackButton onPress={onBack} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={st.headerTitle} accessibilityRole="header" numberOfLines={1}>Vocabulaire du Coran</Text>
           <Text style={st.headerSub}>{stats.learnedCount}/{stats.total} mots appris ({stats.pct}%)</Text>
         </View>
         <HelpTip screenName="Vocabulaire du Coran" tips={[
@@ -174,12 +185,14 @@ export function QuranWordsScreen({ user, onBack }: { user: AuthUser; onBack: () 
 
       {/* Word list */}
       <FlatList
+        ref={listRef}
         data={filteredWords}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderWord}
         numColumns={2}
         columnWrapperStyle={st.row}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+        onScrollToIndexFailed={() => {}}
         ListEmptyComponent={
           <View style={st.empty}>
             <Ionicons name="book-outline" size={40} color={palette.muted} />
