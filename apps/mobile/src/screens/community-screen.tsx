@@ -18,7 +18,7 @@ import type { AuthUser } from '@oumoul/api';
 import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { awardEvent } from '../gamification/gamification-events';
-import { communityApi } from '../api';
+import { communityApi, type ReportReason } from '../api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +26,7 @@ type PostType = 'achievement' | 'milestone' | 'question' | 'tip' | 'motivation';
 
 interface Post {
   id: string;
+  authorId: string;
   author: string;
   initials: string;
   avatarColor: string;
@@ -36,6 +37,14 @@ interface Post {
   date: string;
   tags: string[];
 }
+
+const REPORT_REASONS: Array<{ value: ReportReason; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
+  { value: 'INAPPROPRIATE', label: 'Contenu inapproprié', icon: 'alert-circle' },
+  { value: 'SPAM', label: 'Spam', icon: 'mail-unread' },
+  { value: 'HATE_SPEECH', label: 'Discours haineux', icon: 'ban' },
+  { value: 'MISINFORMATION', label: 'Désinformation islamique', icon: 'warning' },
+  { value: 'OTHER', label: 'Autre raison', icon: 'flag' },
+];
 
 interface Challenge {
   id: string;
@@ -80,7 +89,19 @@ export function CommunityScreen({ user, onBack }: { user: AuthUser; onBack: () =
   const [newType, setNewType] = useState<PostType>('motivation');
   const [filterType, setFilterType] = useState<PostType | 'all'>('all');
   const [posting, setPosting] = useState(false);
+  const [menuPost, setMenuPost] = useState<Post | null>(null);
+  const [reportPost, setReportPost] = useState<Post | null>(null);
+  const [selectedReason, setSelectedReason] = useState<ReportReason>('INAPPROPRIATE');
+  const [reporting, setReporting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastRef.current) clearTimeout(toastRef.current);
+    toastRef.current = setTimeout(() => setToast(null), 3000);
+  }, []);
 
   useEffect(() => {
     isMounted.current = true;
@@ -95,6 +116,7 @@ export function CommunityScreen({ user, onBack }: { user: AuthUser; onBack: () =
       if (!isMounted.current) return;
       const mapped: Post[] = res.posts.map((raw) => ({
         id: raw.id,
+        authorId: raw.authorId,
         author: raw.author,
         initials: raw.initials,
         avatarColor: avatarColor(raw.initials),
@@ -147,10 +169,38 @@ export function CommunityScreen({ user, onBack }: { user: AuthUser; onBack: () =
       setNewContent('');
       setShowNewPost(false);
       await loadPosts(1);
-    } catch { /* silent */ } finally {
+    } catch (e: any) {
+      showToast(e?.message?.includes('inappropri') ? 'Contenu non autorisé. Merci de respecter les règles.' : 'Erreur lors de la publication.');
+    } finally {
       setPosting(false);
     }
-  }, [newContent, newType, posting, loadPosts]);
+  }, [newContent, newType, posting, loadPosts, showToast]);
+
+  const handleReport = useCallback(async () => {
+    if (!reportPost || reporting) return;
+    setReporting(true);
+    try {
+      const res = await communityApi.reportPost(reportPost.id, selectedReason);
+      setReportPost(null);
+      if (res.autoHidden) {
+        setPosts((prev) => prev.filter((p) => p.id !== reportPost.id));
+        showToast('Post signalé et masqué. Merci.');
+      } else {
+        showToast('Signalé. Nos modérateurs vont examiner ce post.');
+      }
+    } catch { showToast('Erreur lors du signalement.'); } finally {
+      setReporting(false);
+    }
+  }, [reportPost, selectedReason, reporting, showToast]);
+
+  const handleBlock = useCallback(async (targetUser: Post) => {
+    setMenuPost(null);
+    try {
+      await communityApi.blockUser(targetUser.authorId);
+      setPosts((prev) => prev.filter((p) => p.authorId !== targetUser.authorId));
+      showToast(`${targetUser.author} a été bloqué(e). Ses posts ne s'afficheront plus.`);
+    } catch { showToast('Erreur lors du blocage.'); }
+  }, [showToast]);
 
   const handleJoinChallenge = useCallback(async (id: string) => {
     setChallenges((prev) => prev.map((c) =>
@@ -169,6 +219,12 @@ export function CommunityScreen({ user, onBack }: { user: AuthUser; onBack: () =
 
   return (
     <View style={[cm.screen, { paddingTop: insets.top }]}>
+      {/* Toast */}
+      {toast && (
+        <View style={cm.toast}>
+          <Text style={cm.toastText}>{toast}</Text>
+        </View>
+      )}
       {/* Header */}
       <View style={cm.header}>
         <BackButton onPress={onBack} />
@@ -250,6 +306,9 @@ export function CommunityScreen({ user, onBack }: { user: AuthUser; onBack: () =
                       <Ionicons name={item.likedByMe ? 'heart' : 'heart-outline'} size={18} color={item.likedByMe ? '#C62828' : palette.muted} />
                       <Text style={[cm.likeCount, item.likedByMe && { color: '#C62828' }]}>{item.likes}</Text>
                     </TouchableOpacity>
+                    <TouchableOpacity style={cm.moreBtn} onPress={() => setMenuPost(item)}>
+                      <Ionicons name="ellipsis-horizontal" size={18} color={palette.muted} />
+                    </TouchableOpacity>
                   </View>
                 </View>
               );
@@ -299,6 +358,71 @@ export function CommunityScreen({ user, onBack }: { user: AuthUser; onBack: () =
           )}
         />
       )}
+
+      {/* Context Menu Modal */}
+      <Modal visible={!!menuPost} animationType="fade" transparent statusBarTranslucent>
+        <TouchableOpacity style={cm.modalOverlay} activeOpacity={1} onPress={() => setMenuPost(null)}>
+          <View style={[cm.menuCard, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={cm.modalHandle} />
+            <Text style={cm.menuAuthor}>{menuPost?.author}</Text>
+            <TouchableOpacity style={cm.menuItem} onPress={() => { const p = menuPost; setMenuPost(null); setReportPost(p); }}>
+              <Ionicons name="flag-outline" size={20} color="#C62828" />
+              <Text style={[cm.menuItemText, { color: '#C62828' }]}>Signaler ce post</Text>
+            </TouchableOpacity>
+            {menuPost && menuPost.authorId !== user.email && (
+              <TouchableOpacity style={cm.menuItem} onPress={() => menuPost && void handleBlock(menuPost)}>
+                <Ionicons name="ban-outline" size={20} color="#C62828" />
+                <Text style={[cm.menuItemText, { color: '#C62828' }]}>Bloquer {menuPost?.author}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={cm.menuItem} onPress={() => setMenuPost(null)}>
+              <Ionicons name="close" size={20} color={palette.textSoft} />
+              <Text style={[cm.menuItemText, { color: palette.textSoft }]}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Report Modal */}
+      <Modal visible={!!reportPost} animationType="slide" transparent statusBarTranslucent>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <TouchableOpacity style={cm.modalOverlay} activeOpacity={1} onPress={() => setReportPost(null)}>
+            <TouchableOpacity activeOpacity={1} style={cm.modalCard}>
+              <View style={cm.modalHandle} />
+              <View style={cm.modalHeader}>
+                <Text style={cm.modalTitle}>Signaler ce post</Text>
+                <TouchableOpacity onPress={() => setReportPost(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="close" size={22} color={palette.text} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[cm.fieldLabel, { marginBottom: 12 }]}>Raison du signalement</Text>
+              {REPORT_REASONS.map((r) => (
+                <TouchableOpacity
+                  key={r.value}
+                  style={[cm.reasonRow, selectedReason === r.value && { backgroundColor: '#FFF1F0', borderColor: '#FECACA' }]}
+                  onPress={() => setSelectedReason(r.value)}
+                >
+                  <View style={[cm.reasonIcon, selectedReason === r.value && { backgroundColor: '#FEE2E2' }]}>
+                    <Ionicons name={r.icon} size={18} color={selectedReason === r.value ? '#C62828' : palette.textSoft} />
+                  </View>
+                  <Text style={[cm.reasonText, { color: selectedReason === r.value ? '#C62828' : palette.text }]}>{r.label}</Text>
+                  {selectedReason === r.value && <Ionicons name="checkmark-circle" size={18} color="#C62828" />}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={[cm.submitBtn, { backgroundColor: '#C62828', marginTop: 16 }]}
+                onPress={() => void handleReport()}
+                disabled={reporting}
+              >
+                {reporting
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <><Ionicons name="flag" size={18} color="#fff" /><Text style={cm.submitBtnText}>Envoyer le signalement</Text></>
+                }
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* New Post Modal */}
       <Modal visible={showNewPost} animationType="slide" transparent statusBarTranslucent>
@@ -406,4 +530,14 @@ const cm = StyleSheet.create({
   textArea: { backgroundColor: palette.card, borderRadius: 12, padding: 14, fontSize: 14, color: palette.text, borderWidth: 1, borderColor: palette.border, minHeight: 100, textAlignVertical: 'top', marginBottom: 14 },
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.primaryDark, borderRadius: 12, paddingVertical: 14 },
   submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  moreBtn: { marginLeft: 'auto', padding: 4 },
+  toast: { position: 'absolute', top: 60, left: 20, right: 20, backgroundColor: '#1B3A2D', borderRadius: 12, padding: 14, zIndex: 999, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, elevation: 8 },
+  toastText: { color: '#fff', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  menuCard: { backgroundColor: palette.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 12 },
+  menuAuthor: { fontSize: 13, fontWeight: '700', color: palette.textSoft, textAlign: 'center', marginBottom: 12 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, borderTopWidth: 1, borderTopColor: palette.border },
+  menuItemText: { fontSize: 15, fontWeight: '600' },
+  reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: palette.border, marginBottom: 8 },
+  reasonIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' },
+  reasonText: { flex: 1, fontSize: 14, fontWeight: '600' },
 });

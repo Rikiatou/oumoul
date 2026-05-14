@@ -39,6 +39,9 @@ model User {
   communityPosts     CommunityPost[]
   communityLikes     CommunityLike[]
   challengeParticipations ChallengeParticipant[]
+  postReports        PostReport[]
+  blockedUsers       UserBlock[] @relation("BlockerBlocks")
+  blockedByUsers     UserBlock[] @relation("BlockedByBlocks")
 }
 
 model RefreshToken {
@@ -282,19 +285,23 @@ enum PostType {
 }
 
 model CommunityPost {
-  id        String    @id @default(cuid())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  type      PostType  @default(motivation)
-  content   String    @db.Text
-  tags      String?   @db.Text
-  likeCount Int       @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  likes     CommunityLike[]
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  type        PostType  @default(motivation)
+  content     String    @db.Text
+  tags        String?   @db.Text
+  likeCount   Int       @default(0)
+  reportCount Int       @default(0)
+  isHidden    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  likes       CommunityLike[]
+  reports     PostReport[]
 
   @@index([userId])
   @@index([createdAt])
+  @@index([isHidden])
 }
 
 model CommunityLike {
@@ -336,6 +343,42 @@ model ChallengeParticipant {
   @@unique([challengeId, userId], map: "ChallengeParticipant_challenge_user_key")
   @@index([challengeId])
   @@index([userId])
+}
+
+enum ReportReason {
+  INAPPROPRIATE
+  SPAM
+  HATE_SPEECH
+  MISINFORMATION
+  OTHER
+}
+
+model PostReport {
+  id        String       @id @default(cuid())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  reporter  User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId String
+  reason    ReportReason @default(OTHER)
+  details   String?      @db.Text
+  createdAt DateTime     @default(now())
+
+  @@unique([postId, reporterId], map: "PostReport_post_reporter_key")
+  @@index([postId])
+  @@index([reporterId])
+}
+
+model UserBlock {
+  id          String   @id @default(cuid())
+  blocker     User     @relation("BlockerBlocks", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockerId   String
+  blocked     User     @relation("BlockedByBlocks", fields: [blockedId], references: [id], onDelete: Cascade)
+  blockedId   String
+  createdAt   DateTime @default(now())
+
+  @@unique([blockerId, blockedId], map: "UserBlock_blocker_blocked_key")
+  @@index([blockerId])
+  @@index([blockedId])
 }
 
 enum TafsirLanguage {

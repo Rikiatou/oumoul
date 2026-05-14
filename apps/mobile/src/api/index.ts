@@ -65,9 +65,17 @@ async function communityFetch(path: string, options: RequestInit = {}) {
   return res.json();
 }
 
+export type CommunityPost = {
+  id: string; authorId: string; author: string; initials: string;
+  type: string; content: string; tags: string[];
+  likes: number; likedByMe: boolean; createdAt: string;
+};
+
+export type ReportReason = 'INAPPROPRIATE' | 'SPAM' | 'HATE_SPEECH' | 'MISINFORMATION' | 'OTHER';
+
 export const communityApi = {
   getPosts: (page = 1) => communityFetch(`/posts?page=${page}&limit=20`) as Promise<{
-    posts: Array<{ id: string; author: string; initials: string; type: string; content: string; tags: string[]; likes: number; likedByMe: boolean; createdAt: string }>;
+    posts: CommunityPost[];
     total: number; page: number; hasMore: boolean;
   }>,
   createPost: (body: { type: string; content: string; tags?: string }) =>
@@ -76,4 +84,11 @@ export const communityApi = {
   toggleLike: (id: string) => communityFetch(`/posts/${id}/like`, { method: 'POST' }) as Promise<{ liked: boolean; likes: number }>,
   getChallenges: () => communityFetch('/challenges') as Promise<Array<{ id: string; title: string; description: string; icon: string; color: string; durationDays: number; participants: number; joined: boolean }>>,
   toggleChallenge: (id: string) => communityFetch(`/challenges/${id}/join`, { method: 'POST' }) as Promise<{ joined: boolean; participants: number }>,
+  reportPost: (id: string, reason: ReportReason, details?: string) =>
+    communityFetch(`/posts/${id}/report`, { method: 'POST', body: JSON.stringify({ reason, details }) }) as Promise<{ success: boolean; autoHidden: boolean }>,
+  blockUser: (userId: string) =>
+    communityFetch(`/users/${userId}/block`, { method: 'POST' }) as Promise<{ success: boolean; blocked: boolean }>,
+  unblockUser: (userId: string) =>
+    communityFetch(`/users/${userId}/block`, { method: 'DELETE' }) as Promise<{ success: boolean; blocked: boolean }>,
+  getBlockedUsers: () => communityFetch('/blocked-users') as Promise<Array<{ id: string; name: string }>>,
 };

@@ -1,15 +1,25 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  Vibration,
   View,
-  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/theme-context';
+
+function speak(text: string, lang = 'ar-SA') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
+    const S = require('expo-speech') as { stop: () => void; speak: (t: string, o: object) => void };
+    S.stop();
+    S.speak(text, { language: lang, rate: 0.75, pitch: 1.0 });
+  } catch { /* expo-speech not installed */ }
+}
 
 // ── Arabic Alphabet Data ──────────────────────────────────────────────────────
 const ARABIC_LETTERS = [
@@ -87,6 +97,23 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
   const [quizScore, setQuizScore] = useState(0);
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [quizChosen, setQuizChosen] = useState<string | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const starAnim = useRef(new Animated.Value(0)).current;
+
+  const playWithFeedback = useCallback((id: string, text: string, lang = 'ar-SA') => {
+    setPlayingId(id);
+    speak(text, lang);
+    setTimeout(() => setPlayingId(null), 2000);
+  }, []);
+
+  const showStarReward = useCallback(() => {
+    starAnim.setValue(0);
+    Animated.sequence([
+      Animated.spring(starAnim, { toValue: 1, useNativeDriver: true }),
+      Animated.delay(800),
+      Animated.timing(starAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, [starAnim]);
 
   const tabs: Array<{ key: Tab; label: string; emoji: string }> = [
     { key: 'alphabet', label: 'Alphabet', emoji: 'ا' },
@@ -111,7 +138,14 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
     if (quizAnswered) return;
     setQuizChosen(answer);
     setQuizAnswered(true);
-    if (answer === quizLetter.name) setQuizScore((s) => s + 1);
+    if (answer === quizLetter.name) {
+      setQuizScore((s) => s + 1);
+      Vibration.vibrate(80);
+      showStarReward();
+      speak(quizLetter.letter);
+    } else {
+      Vibration.vibrate([0, 60, 60, 60]);
+    }
   };
 
   const nextQuizQuestion = () => {
@@ -165,16 +199,21 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
             {ARABIC_LETTERS.map((item) => (
               <TouchableOpacity
                 key={item.letter}
-                style={[k.letterCard, { backgroundColor: p.card, borderColor: p.border }]}
+                style={[k.letterCard, { backgroundColor: p.card, borderColor: playingId === item.letter ? p.primaryDark : p.border }]}
                 onPress={() => setSelectedLetter(item)}
+                onLongPress={() => playWithFeedback(item.letter, item.letter)}
                 activeOpacity={0.75}
               >
                 <Text style={k.letterEmoji}>{item.emoji}</Text>
                 <Text style={[k.letterBig, { color: p.primaryDark }]}>{item.letter}</Text>
                 <Text style={[k.letterName, { color: p.text }]}>{item.name}</Text>
+                {playingId === item.letter && (
+                  <Ionicons name="volume-high" size={12} color={p.primaryDark} style={{ marginTop: 2 }} />
+                )}
               </TouchableOpacity>
             ))}
           </View>
+          <Text style={[k.hintText, { color: p.textSoft }]}>💡 Appuie long sur une lettre pour l'entendre</Text>
         </ScrollView>
       )}
 
@@ -189,9 +228,29 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
             <Text style={[k.detailLetter, { color: p.primaryDark }]}>{selectedLetter.letter}</Text>
             <Text style={[k.detailName, { color: p.text }]}>{selectedLetter.name}</Text>
             <Text style={[k.detailTranslit, { color: p.textSoft }]}>/{selectedLetter.transliteration}/</Text>
+
+            {/* Audio button */}
+            <TouchableOpacity
+              style={[k.audioBtn, { backgroundColor: playingId === selectedLetter.letter ? '#D1FAE5' : p.primaryDark + '18', borderColor: p.primaryDark }]}
+              onPress={() => playWithFeedback(selectedLetter.letter, selectedLetter.letter)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name={playingId === selectedLetter.letter ? 'volume-high' : 'play-circle'} size={22} color={p.primaryDark} />
+              <Text style={[k.audioBtnText, { color: p.primaryDark }]}>
+                {playingId === selectedLetter.letter ? 'Écoute...' : 'Écouter la lettre'}
+              </Text>
+            </TouchableOpacity>
+
             <View style={[k.exampleBox, { backgroundColor: p.bgAlt ?? p.bg, borderColor: p.border }]}>
               <Text style={[k.exampleArabic, { color: p.text }]}>{selectedLetter.example}</Text>
               <Text style={k.exampleEmoji}>{selectedLetter.emoji}</Text>
+              <TouchableOpacity
+                style={[k.audioBtn, { backgroundColor: p.primaryDark + '18', borderColor: p.primaryDark, marginTop: 8 }]}
+                onPress={() => playWithFeedback(`ex-${selectedLetter.letter}`, selectedLetter.example)}
+              >
+                <Ionicons name="volume-medium" size={18} color={p.primaryDark} />
+                <Text style={[k.audioBtnText, { color: p.primaryDark }]}>Écouter l'exemple</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -227,6 +286,12 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
               );
             })}
           </View>
+          {/* Star reward animation */}
+          <Animated.Text style={[
+            k.starReward,
+            { opacity: starAnim, transform: [{ scale: starAnim }, { translateY: starAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -30] }) }] },
+          ]}>⭐ Bravo !</Animated.Text>
+
           {quizAnswered && (
             <TouchableOpacity style={[k.nextBtn, { backgroundColor: p.primaryDark }]} onPress={nextQuizQuestion}>
               <Text style={k.nextBtnText}>Question suivante →</Text>
@@ -286,6 +351,16 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
               <View style={k.duaHeader}>
                 <Text style={k.duaEmoji}>{dua.emoji}</Text>
                 <Text style={[k.duaTitle, { color: p.text }]}>{dua.title}</Text>
+                <TouchableOpacity
+                  style={[k.duaPlayBtn, { backgroundColor: playingId === dua.title ? '#D1FAE5' : p.primaryDark + '15' }]}
+                  onPress={() => playWithFeedback(dua.title, dua.arabic)}
+                >
+                  <Ionicons
+                    name={playingId === dua.title ? 'volume-high' : 'play'}
+                    size={16}
+                    color={p.primaryDark}
+                  />
+                </TouchableOpacity>
               </View>
               <Text style={[k.duaArabic, { color: p.primaryDark }]}>{dua.arabic}</Text>
               <Text style={[k.duaTranslit, { color: p.textSoft }]}>{dua.transliteration}</Text>
@@ -368,8 +443,15 @@ const k = StyleSheet.create({
   duaCard: { padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 12 },
   duaHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   duaEmoji: { fontSize: 22 },
-  duaTitle: { fontSize: 15, fontWeight: '700' },
+  duaTitle: { flex: 1, fontSize: 15, fontWeight: '700' },
   duaArabic: { fontSize: 22, fontFamily: 'Amiri-Regular', textAlign: 'right', marginBottom: 6 },
   duaTranslit: { fontSize: 13, fontStyle: 'italic', marginBottom: 4 },
   duaFrench: { fontSize: 13 },
+  duaPlayBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+
+  // Audio & hints
+  audioBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, marginTop: 16 },
+  audioBtnText: { fontSize: 14, fontWeight: '600' },
+  hintText: { fontSize: 12, textAlign: 'center', marginTop: 12, marginBottom: 4, fontStyle: 'italic' },
+  starReward: { fontSize: 28, position: 'absolute', top: '30%' },
 });

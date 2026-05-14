@@ -12,6 +12,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { CommunityService } from './community.service';
 import { CreatePostDto } from './dto/create-post.dto';
+import { ReportPostDto } from './dto/report-post.dto';
 
 @Controller('community')
 @UseGuards(AuthGuard('jwt'))
@@ -48,6 +49,28 @@ export class CommunityController {
   @Post('posts/:id/like')
   toggleLike(@Req() req: any, @Param('id') id: string) {
     return this.communityService.toggleLike(req.user.userId, id);
+  }
+
+  // ── Moderation ───────────────────────────────────────────────────────────────
+
+  @Post('posts/:id/report')
+  reportPost(@Req() req: any, @Param('id') id: string, @Body() dto: ReportPostDto) {
+    return this.communityService.reportPost(req.user.userId, id, dto);
+  }
+
+  @Post('users/:id/block')
+  blockUser(@Req() req: any, @Param('id') id: string) {
+    return this.communityService.blockUser(req.user.userId, id);
+  }
+
+  @Delete('users/:id/block')
+  unblockUser(@Req() req: any, @Param('id') id: string) {
+    return this.communityService.unblockUser(req.user.userId, id);
+  }
+
+  @Get('blocked-users')
+  getBlockedUsers(@Req() req: any) {
+    return this.communityService.getBlockedUsers(req.user.userId);
   }
 
   // ── Challenges ───────────────────────────────────────────────────────────────

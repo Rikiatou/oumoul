@@ -1,6 +1,20 @@
-import { Injectable, NotFoundException, ConflictException, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';
+import { ReportPostDto } from './dto/report-post.dto';
+
+// ── Profanity filter (basic Islamic-safe wordlist) ────────────────────────────
+const BANNED_WORDS = [
+  'merde', 'putain', 'connard', 'salope', 'fuck', 'shit', 'bastard',
+  'idiot', 'imbecile', 'con', 'bitch', 'ass', 'damn', 'cunt',
+];
+
+function containsProfanity(text: string): boolean {
+  const lower = text.toLowerCase();
+  return BANNED_WORDS.some((w) => lower.includes(w));
+}
+
+const AUTO_HIDE_THRESHOLD = 3; // auto-hide after 3 reports
 
 const SEED_CHALLENGES = [
   { id: 'c1', title: '7 jours de Fajr', description: "Prier Fajr à l'heure pendant 7 jours consécutifs.", icon: 'sunny', color: '#F57F17', durationDays: 7 },
@@ -27,8 +41,24 @@ export class CommunityService implements OnModuleInit {
 
   async getPosts(userId: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
+
+    // Get IDs of users this user has blocked or been blocked by
+    const blocks = await this.prisma.userBlock.findMany({
+      where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+      select: { blockerId: true, blockedId: true },
+    });
+    const hiddenUserIds = new Set(
+      blocks.flatMap((b) => [b.blockerId, b.blockedId]).filter((id) => id !== userId),
+    );
+
+    const where = {
+      isHidden: false,
+      userId: hiddenUserIds.size > 0 ? { notIn: [...hiddenUserIds] } : undefined,
+    };
+
     const [posts, total] = await this.prisma.$transaction([
       this.prisma.communityPost.findMany({
+        where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -37,12 +67,13 @@ export class CommunityService implements OnModuleInit {
           likes: { where: { userId }, select: { id: true } },
         },
       }),
-      this.prisma.communityPost.count(),
+      this.prisma.communityPost.count({ where }),
     ]);
 
     return {
       posts: posts.map((p) => ({
         id: p.id,
+        authorId: p.user.id,
         author: `${p.user.firstName} ${p.user.lastName}`.trim(),
         initials: ((p.user.firstName?.[0] ?? '') + (p.user.lastName?.[0] ?? '')).toUpperCase(),
         type: p.type,
@@ -59,6 +90,9 @@ export class CommunityService implements OnModuleInit {
   }
 
   async createPost(userId: string, dto: CreatePostDto) {
+    if (containsProfanity(dto.content)) {
+      throw new ForbiddenException('Contenu inapproprié détecté. Merci de respecter les règles de la communauté.');
+    }
     const post = await this.prisma.communityPost.create({
       data: {
         userId,
@@ -112,6 +146,58 @@ export class CommunityService implements OnModuleInit {
       ]);
       return { liked: true, likes: post.likeCount + 1 };
     }
+  }
+
+  // ── Moderation ─────────────────────────────────────────────────────────────
+
+  async reportPost(reporterId: string, postId: string, dto: ReportPostDto) {
+    const post = await this.prisma.communityPost.findUnique({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Post introuvable');
+    if (post.userId === reporterId) throw new ForbiddenException('Tu ne peux pas signaler ton propre post');
+
+    // Upsert: one report per user per post
+    await this.prisma.postReport.upsert({
+      where: { postId_reporterId: { postId, reporterId } },
+      update: { reason: dto.reason as any, details: dto.details ?? null },
+      create: { postId, reporterId, reason: dto.reason as any, details: dto.details ?? null },
+    });
+
+    // Increment report count + auto-hide if threshold reached
+    const updated = await this.prisma.communityPost.update({
+      where: { id: postId },
+      data: {
+        reportCount: { increment: 1 },
+        isHidden: post.reportCount + 1 >= AUTO_HIDE_THRESHOLD ? true : undefined,
+      },
+    });
+
+    return { success: true, autoHidden: updated.isHidden };
+  }
+
+  async blockUser(blockerId: string, blockedId: string) {
+    if (blockerId === blockedId) throw new ForbiddenException('Tu ne peux pas te bloquer toi-même');
+    await this.prisma.userBlock.upsert({
+      where: { blockerId_blockedId: { blockerId, blockedId } },
+      update: {},
+      create: { blockerId, blockedId },
+    });
+    return { success: true, blocked: true };
+  }
+
+  async unblockUser(blockerId: string, blockedId: string) {
+    await this.prisma.userBlock.deleteMany({ where: { blockerId, blockedId } });
+    return { success: true, blocked: false };
+  }
+
+  async getBlockedUsers(userId: string) {
+    const blocks = await this.prisma.userBlock.findMany({
+      where: { blockerId: userId },
+      include: { blocked: { select: { id: true, firstName: true, lastName: true } } },
+    });
+    return blocks.map((b) => ({
+      id: b.blocked.id,
+      name: `${b.blocked.firstName} ${b.blocked.lastName}`.trim(),
+    }));
   }
 
   // ── Challenges ───────────────────────────────────────────────────────────────
