@@ -86,7 +86,7 @@ export function GamificationScreen({ onBack }: { onBack: () => void }) {
             <Text style={[styles.statLabel, { color: p.muted }]}>{state.totalXp} / {nextLvlXp} XP</Text>
           </View>
           <View style={[styles.progressBar, { backgroundColor: p.border }]}>
-            <View style={[styles.progressFill, { width: `${xpPct * 100}%` as any, backgroundColor: p.primary }]} />
+            <View style={[styles.progressFill, { width: (`${xpPct * 100}%`) as `${number}%`, backgroundColor: p.primary }]} />
           </View>
         </View>
 
@@ -106,7 +106,7 @@ export function GamificationScreen({ onBack }: { onBack: () => void }) {
               </View>
               <View style={styles.questProgress}>
                 <View style={[styles.progressBar, { backgroundColor: p.border }]}>
-                  <View style={[styles.progressFill, { width: `${(q.progress / q.total) * 100}%` as any, backgroundColor: q.done ? p.primary : p.secondary }]} />
+                  <View style={[styles.progressFill, { width: (`${(q.progress / q.total) * 100}%`) as `${number}%`, backgroundColor: q.done ? p.primary : p.secondary }]} />
                 </View>
                 <Text style={[styles.progressText, { color: p.muted }]}>{q.progress}/{q.total}</Text>
               </View>

@@ -91,7 +91,7 @@ function openMaps(lat: number, lng: number, name: string) {
   if (url) Linking.openURL(url).catch(() => {});
 }
 
-export function MosqueFinderScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const { location: detectedLoc, loading: locLoading } = useLocationContext();
   const [search, setSearch] = useState('');

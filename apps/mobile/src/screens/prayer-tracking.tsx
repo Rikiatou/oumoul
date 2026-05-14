@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -46,11 +45,6 @@ const STATUS_ORDER: PrayerStatus[] = [
   PrayerStatus.EXEMPTED,
 ];
 
-interface DayLog {
-  date: string;
-  prayers: Record<string, PrayerStatus>;
-}
-
 function getWeekDates(): string[] {
   const dates: string[] = [];
   const today = new Date();
@@ -78,7 +72,7 @@ function formatShortDate(iso: string): string {
   return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
 }
 
-export function PrayerTrackingScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function PrayerTrackingScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
 

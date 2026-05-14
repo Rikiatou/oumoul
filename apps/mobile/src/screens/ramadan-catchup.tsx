@@ -37,7 +37,7 @@ function getDayOfWeekLabel(dateStr: string): string {
   return dow === 1 ? 'Lundi' : dow === 4 ? 'Jeudi' : d.toLocaleDateString('fr-FR', { weekday: 'long' });
 }
 
-export function RamadanCatchupScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function RamadanCatchupScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const year = new Date().getFullYear();
 

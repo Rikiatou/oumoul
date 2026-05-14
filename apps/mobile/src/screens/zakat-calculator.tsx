@@ -52,7 +52,7 @@ const GOLD_PRICE_PER_GRAM: Record<string, number> = {
   MAD: 720,
 };
 
-export function ZakatCalculatorScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function ZakatCalculatorScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const [currency, setCurrency] = useState(CURRENCIES[0]);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);

@@ -57,7 +57,7 @@ interface SessionLog {
   completedAt: string;
 }
 
-export function TasbihScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function TasbihScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const [selectedPreset, setSelectedPreset] = useState<DhikrPreset | null>(null);
   const [count, setCount] = useState(0);
@@ -76,8 +76,8 @@ export function TasbihScreen({ user, onBack }: { user: AuthUser; onBack: () => v
       SecureStore.getItemAsync(TASBIH_CUSTOM_KEY),
       SecureStore.getItemAsync(TASBIH_LIVE_KEY),
     ]).then(([sessRaw, custRaw, liveRaw]: [string | null, string | null, string | null]) => {
-      if (sessRaw) try { setSessions(JSON.parse(sessRaw)); } catch {}
-      if (custRaw) try { setCustomDhikrs(JSON.parse(custRaw)); } catch {}
+      if (sessRaw) try { setSessions(JSON.parse(sessRaw)); } catch { /* ignore */ }
+      if (custRaw) try { setCustomDhikrs(JSON.parse(custRaw)); } catch { /* ignore */ }
       if (liveRaw) {
         try {
           const live = JSON.parse(liveRaw);
@@ -86,7 +86,7 @@ export function TasbihScreen({ user, onBack }: { user: AuthUser; onBack: () => v
             setCount(live.count);
             setTarget(live.target);
           }
-        } catch {}
+        } catch { /* ignore */ }
       }
       setLoaded(true);
     }).catch(() => setLoaded(true));

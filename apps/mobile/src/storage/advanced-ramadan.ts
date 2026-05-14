@@ -182,7 +182,7 @@ export function generateMakeupPlan(plan: RamadanPlan): string[] {
   const plannedDates: string[] = [];
   
   // Schedule makeup days: Mondays and Thursdays (Sunnah)
-  let currentDate = new Date(today);
+  const currentDate = new Date(today);
   let daysAdded = 0;
   
   while (daysAdded < missedDays) {

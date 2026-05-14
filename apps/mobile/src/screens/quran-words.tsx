@@ -18,7 +18,7 @@ import { BackButton } from '../components/BackButton';
 
 const LEARNED_KEY = 'oumoul_quran_words_learned';
 
-export function QuranWordsScreen({ user, onBack, initialWordId }: { user: AuthUser; onBack: () => void; initialWordId?: number }) {
+export function QuranWordsScreen({ user: _user, onBack, initialWordId }: { user: AuthUser; onBack: () => void; initialWordId?: number }) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export function QuranWordsScreen({ user, onBack, initialWordId }: { user: AuthUs
   useEffect(() => {
     SecureStore.getItemAsync(LEARNED_KEY).then((raw: string | null) => {
       if (raw) {
-        try { setLearned(new Set(JSON.parse(raw) as number[])); } catch {}
+        try { setLearned(new Set(JSON.parse(raw) as number[])); } catch { /* ignore */ }
       }
       setLoaded(true);
     }).catch(() => setLoaded(true));

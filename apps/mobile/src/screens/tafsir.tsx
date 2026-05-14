@@ -37,7 +37,7 @@ const LANG_OPTIONS: Array<{ value: Locale; label: string; icon: string }> = [
 ];
 
 export function TafsirScreen({
-  user,
+  user: _user,
   onBackToDashboard,
   initialSelection,
 }: {

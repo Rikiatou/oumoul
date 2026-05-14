@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { AuthUser } from '@oumoul/api';
-import type { AIAnalysisResult, AIRecommendationRemote, SpiritualContext } from '@oumoul/api';
+import type { AIAnalysisResult } from '@oumoul/api';
 import { BackButton } from '../components/BackButton';
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/theme-context";

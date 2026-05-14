@@ -74,7 +74,7 @@ const PRAYER_NAMES = [
   { key: 'ishaAdjustment' as const, label: 'Isha', icon: 'moon-outline' },
 ];
 
-function parseAdjustment(value: string): number {
+function _parseAdjustment(value: string): number {
   const n = Number.parseInt(value, 10);
   return Number.isNaN(n) ? 0 : n;
 }
@@ -119,7 +119,7 @@ function ProChoiceRow<T extends string>({
   );
 }
 
-function ProField({
+function _ProField({
   label,
   icon,
   value,
@@ -168,7 +168,7 @@ const ADHAN_ICONS: Record<AdhanPrayer, string> = {
   Isha: 'moon-outline',
 };
 
-export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function PrayerSettingsScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const { palette } = useTheme();
   const ps_c = {
     bg: palette.bgAlt,
@@ -254,7 +254,7 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
             Maghrib: parsed.AdhanMaghrib ?? prev.Maghrib,
             Isha: parsed.AdhanIsha ?? prev.Isha,
           }));
-        } catch {}
+        } catch { /* ignore */ }
       }
     }).catch(() => {});
   }, []);

@@ -75,7 +75,7 @@ type RecordingState = 'idle' | 'recording' | 'processing' | 'done';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export function RecitationCheckerScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function RecitationCheckerScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const [selectedSurah, setSelectedSurah] = useState<PracticeSurah>(PRACTICE_SURAHS[0]);
   const [currentVerse, setCurrentVerse] = useState(0);
@@ -150,7 +150,7 @@ export function RecitationCheckerScreen({ user, onBack }: { user: AuthUser; onBa
       const result = await res.json() as { score: number; feedback: string[]; transcription: string };
 
       setScore(result.score);
-      setFeedback(result.feedback.length ? result.feedback : generateFeedback(result.score, verse.transliteration));
+      setFeedback(result.feedback.length ? result.feedback : generateFeedback(result.score));
       setSessionScores((prev) => [...prev, result.score]);
       setRecordingState('done');
 
@@ -162,7 +162,7 @@ export function RecitationCheckerScreen({ user, onBack }: { user: AuthUser; onBa
     }
   }, [selectedSurah, currentVerse]);
 
-  function generateFeedback(sc: number, _translit: string): string[] {
+  function generateFeedback(sc: number): string[] {
     const fb: string[] = [];
     if (sc >= 90) {
       fb.push('✅ Excellent ! Ta prononciation est très bonne.');
@@ -173,7 +173,7 @@ export function RecitationCheckerScreen({ user, onBack }: { user: AuthUser; onBa
       fb.push('📌 Fais attention aux voyelles longues (مد).');
     } else {
       fb.push('💪 Continue tes efforts, la pratique fait le maître !');
-      fb.push('📌 Écoute d\'abord un récitateur et essaie de l\'imiter.');
+      fb.push("📌 Écoute d'abord un récitateur et essaie de l'imiter.");
       fb.push('📌 Entraîne-toi verset par verset lentement.');
     }
     return fb;

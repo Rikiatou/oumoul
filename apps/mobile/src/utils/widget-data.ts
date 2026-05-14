@@ -24,7 +24,7 @@ export interface WidgetPrayerData {
 export async function updateWidgetData(data: WidgetPrayerData): Promise<void> {
   try {
     await SecureStore.setItemAsync(WIDGET_DATA_KEY, JSON.stringify(data));
-  } catch {}
+  } catch { /* ignore */ }
 }
 
 export async function getWidgetData(): Promise<WidgetPrayerData | null> {

@@ -28,7 +28,7 @@ async function updateIndex(key: string): Promise<void> {
       await AsyncStorage.multiRemove(evict.map((k) => CACHE_PREFIX + k));
     }
     await AsyncStorage.setItem(CACHE_INDEX_KEY, JSON.stringify(index));
-  } catch {}
+  } catch { /* ignore */ }
 }
 
 /**
@@ -41,7 +41,7 @@ export const offlineCache = {
       const entry: CacheEntry<T> = { data, timestamp: Date.now(), ttlMs, hits: 0 };
       await AsyncStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
       await updateIndex(key);
-    } catch {}
+    } catch { /* ignore */ }
   },
 
   async get<T>(key: string): Promise<{ data: T; stale: boolean } | null> {
@@ -61,7 +61,7 @@ export const offlineCache = {
       await AsyncStorage.removeItem(CACHE_PREFIX + key);
       const index = (await getIndex()).filter((k) => k !== key);
       await AsyncStorage.setItem(CACHE_INDEX_KEY, JSON.stringify(index));
-    } catch {}
+    } catch { /* ignore */ }
   },
 
   /**
@@ -120,7 +120,7 @@ export const offlineCache = {
         const newIndex = index.filter((k) => !toRemove.includes(k));
         await AsyncStorage.setItem(CACHE_INDEX_KEY, JSON.stringify(newIndex));
       }
-    } catch {}
+    } catch { /* ignore */ }
   },
 
   /** Clear entire cache */
@@ -128,7 +128,7 @@ export const offlineCache = {
     try {
       const index = await getIndex();
       await AsyncStorage.multiRemove([CACHE_INDEX_KEY, ...index.map((k) => CACHE_PREFIX + k)]);
-    } catch {}
+    } catch { /* ignore */ }
   },
 };
 

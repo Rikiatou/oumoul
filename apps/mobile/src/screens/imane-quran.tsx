@@ -216,12 +216,10 @@ export function ImaneQuranScreen({
     soundRef.current = null;
     try {
       await existing.stopAsync();
-    } catch {
-    }
+    } catch { /* ignore */ }
     try {
       await existing.unloadAsync();
-    } catch {
-    }
+    } catch { /* ignore */ }
     setIsPlaying(false);
   }, []);
 
@@ -305,8 +303,7 @@ export function ImaneQuranScreen({
           setLastRead({ surahId: parsed.surahId, ayah: parsed.ayah, language: parsed.language });
           setLanguage(parsed.language);
         }
-      } catch {
-      } finally {
+      } catch { /* ignore */ } finally {
         if (isMounted) setHydrated(true);
       }
     };
@@ -339,8 +336,7 @@ export function ImaneQuranScreen({
           })
           .filter((x): x is QuranBookmark => Boolean(x));
         if (isMounted) setBookmarks(cleaned);
-      } catch {
-      } finally {
+      } catch { /* ignore */ } finally {
         if (isMounted) setBookmarksHydrated(true);
       }
     };
@@ -382,8 +378,7 @@ export function ImaneQuranScreen({
     async (next: LastReadState) => {
       try {
         await SecureStore.setItemAsync(lastReadKey, JSON.stringify(next));
-      } catch {
-      }
+      } catch { /* ignore */ }
     },
     [lastReadKey],
   );
@@ -392,8 +387,7 @@ export function ImaneQuranScreen({
     async (next: QuranBookmark[]) => {
       try {
         await SecureStore.setItemAsync(bookmarksKey, JSON.stringify(next));
-      } catch {
-      }
+      } catch { /* ignore */ }
     },
     [bookmarksKey],
   );
@@ -1136,3 +1130,4 @@ const q = StyleSheet.create({
   bookmarkItemTitle: { fontSize: 14, fontWeight: '600', color: q_c.text },
   bookmarkItemSub: { fontSize: 12, color: q_c.muted, marginTop: 2 },
 });
+

@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -158,7 +157,7 @@ const QARIS: QariOption[] = [
 
 type PlaybackState = 'idle' | 'loading' | 'playing' | 'paused';
 
-export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function QuranAudioScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const [selectedQari, setSelectedQari] = useState<QariOption>(QARIS[0]);
   const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
@@ -169,7 +168,7 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
   const repeatModeRef = useRef<'none' | 'one' | 'all'>('none');
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [search, setSearch] = useState('');
+  const [search, _setSearch] = useState('');
   const soundRef = useRef<Audio.Sound | null>(null);
   const isCleaningUpRef = useRef(false);
 
@@ -193,10 +192,14 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
     if (sound) {
       try {
         await sound.stopAsync();
-      } catch {}
+      } catch (error) {
+        console.error('Error stopping sound:', error);
+      }
       try {
         await sound.unloadAsync();
-      } catch {}
+      } catch (error) {
+        console.error('Error unloading sound:', error);
+      }
     }
     setPlayback('idle');
     setProgress(0);
@@ -240,13 +243,13 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
         }
       );
       if (isCleaningUpRef.current) {
-        try { await sound.unloadAsync(); } catch {}
+        try { await sound.unloadAsync(); } catch { /* ignore */ }
         return;
       }
       soundRef.current = sound;
       setPlayback('playing');
       void awardEvent('quran_read');
-    } catch (err) {
+    } catch {
       setPlayback('idle');
     }
   }, [cleanup, selectedQari]);

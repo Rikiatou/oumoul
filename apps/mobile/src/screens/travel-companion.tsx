@@ -41,7 +41,7 @@ const MUSAFIR_THRESHOLD_KM = 80;
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export function TravelCompanionScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function TravelCompanionScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const { location } = useLocationContext();
   const [home, setHome] = useState<HomeLocation | null>(null);

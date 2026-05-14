@@ -99,7 +99,7 @@ const TEMPLATES: CardTemplate[] = [
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export function ShareCardScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function ShareCardScreen({ user: _user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const [selectedId, setSelectedId] = useState<string>(TEMPLATES[0].id);
   const [customText, setCustomText] = useState('');

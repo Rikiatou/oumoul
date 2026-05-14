@@ -13,7 +13,7 @@ export interface RecitationResult {
 const ARABIC_SUBS: [RegExp, string][] = [
   [/ā/g, 'a'], [/ī/g, 'i'], [/ū/g, 'u'],
   [/ḥ/g, 'h'], [/ẖ/g, 'kh'], [/ḍ/g, 'd'], [/ṭ/g, 't'], [/ẓ/g, 'z'],
-  [/ṣ/g, 's'], [/ḡ/g, 'gh'], [/\'|ʾ|ʿ/g, ''],
+  [/ṣ/g, 's'], [/ḡ/g, 'gh'], [/[''ʾʿ]/g, ''],
   [/[^a-z ]/g, ''],
 ];
 
@@ -48,7 +48,7 @@ function phoneticScore(expected: string, got: string): number {
 function buildFeedback(score: number, wordMatches: RecitationResult['wordMatches']): string[] {
   const fb: string[] = [];
   if (score >= 90) {
-    fb.push('✅ Excellente récitation — Masha\'Allah !');
+    fb.push("✅ Excellente récitation — Masha'Allah !");
     fb.push('💡 Travaille les règles du tajwid avancées pour encore plus de précision.');
   } else if (score >= 70) {
     fb.push('👍 Bonne récitation, quelques points à améliorer.');
@@ -57,7 +57,7 @@ function buildFeedback(score: number, wordMatches: RecitationResult['wordMatches
     fb.push('📌 Écoute un récitateur et compare mot par mot.');
   } else {
     fb.push('💪 Continue ! La régularité fait le maître.');
-    fb.push('📌 Écoute d\'abord lentement, puis imite.');
+    fb.push("📌 Écoute d'abord lentement, puis imite.");
     fb.push('📌 Pratique verset par verset.');
   }
   return fb;

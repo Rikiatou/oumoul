@@ -147,7 +147,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
   // Load makeup plan & reminder preference
   useEffect(() => {
     SecureStore.getItemAsync(MAKEUP_PLAN_KEY).then((raw: string | null) => {
-      if (raw) { try { setMakeupPlan(JSON.parse(raw) as string[]); } catch {} }
+      if (raw) { try { setMakeupPlan(JSON.parse(raw) as string[]); } catch { /* ignore */ } }
       setMakeupPlanLoaded(true);
     }).catch(() => setMakeupPlanLoaded(true));
     SecureStore.getItemAsync(FASTING_REMINDER_KEY).then((raw: string | null) => {
@@ -431,7 +431,7 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
         await cancelReminder('ramadan-fasting');
       }
       await SecureStore.setItemAsync(FASTING_REMINDER_KEY, String(next));
-    } catch {}
+    } catch { /* ignore */ }
   }, [fastingReminderOn, FASTING_REMINDER_KEY]);
 
   // ── Generate makeup plan ──

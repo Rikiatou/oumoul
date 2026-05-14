@@ -1,1 +1,1 @@
-pnpm lint:staged
+npm run lint:staged --if-present || npx lint-staged --allow-empty

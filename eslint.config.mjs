@@ -21,6 +21,15 @@ export default tseslint.config(
     files: ["**/*.{ts,tsx}"],
     rules: {
       "prettier/prettier": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_",
+          "caughtErrorsIgnorePattern": "^_",
+          "destructuredArrayIgnorePattern": "^_",
+        },
+      ],
     },
   },
   prettier
