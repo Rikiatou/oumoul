@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,11 +11,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
-import type { AuthUser } from '@oumoul/api';
+import type { AuthUser, QuranVerse } from '@oumoul/api';
 import { useTheme } from '../context/theme-context';
+import { quranApi } from '../api';
 
-// ── Spaced-repetition difficulty constants ────────────────────────────────────
-const SM2_INTERVALS: Record<0 | 1 | 2, number> = { 0: 1, 1: 3, 2: 7 }; // days
 
 type HifzEntry = {
   surahId: number;
@@ -45,25 +45,7 @@ const SURAHS_SHORT = [
   { id: 56, name: 'Al-Waqi\'a', ayahs: 96 },
 ];
 
-// ── Arabic texts for short surahs ─────────────────────────────────────────────
-const SHORT_SURAH_TEXTS: Record<number, { arabic: string; french: string }[]> = {
-  112: [
-    { arabic: 'قُلْ هُوَ اللَّهُ أَحَدٌ', french: 'Dis : "Il est Allah, l\'Unique"' },
-    { arabic: 'اللَّهُ الصَّمَدُ', french: 'Allah, le Seul à être imploré' },
-    { arabic: 'لَمْ يَلِدْ وَلَمْ يُولَدْ', french: 'Il n\'a pas engendré et n\'a pas été engendré' },
-    { arabic: 'وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ', french: 'Et nul n\'est égal à Lui' },
-  ],
-  103: [
-    { arabic: 'وَالْعَصْرِ', french: 'Par le Temps !' },
-    { arabic: 'إِنَّ الْإِنسَانَ لَفِي خُسْرٍ', french: 'Certes l\'être humain est en perdition' },
-    { arabic: 'إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ', french: 'Sauf ceux qui ont cru, accompli de bonnes oeuvres, s\'enjoignent mutuellement la vérité et la patience' },
-  ],
-  110: [
-    { arabic: 'إِذَا جَاءَ نَصْرُ اللَّهِ وَالْفَتْحُ', french: 'Quand vient l\'aide d\'Allah et la conquête' },
-    { arabic: 'وَرَأَيْتَ النَّاسَ يَدْخُلُونَ فِي دِينِ اللَّهِ أَفْوَاجًا', french: 'Et que tu vois les gens entrer en foule dans la religion d\'Allah' },
-    { arabic: 'فَسَبِّحْ بِحَمْدِ رَبِّكَ وَاسْتَغْفِرْهُ إِنَّهُ كَانَ تَوَّابًا', french: 'Alors célèbre les louanges de ton Seigneur et implore Son pardon. Il est le Grand Accueillant au repentir' },
-  ],
-};
+type VerseCache = Record<number, QuranVerse[]>;
 
 function nextReviewDate(interval: number): number {
   return Date.now() + interval * 24 * 60 * 60 * 1000;
@@ -103,6 +85,9 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
   const [addFrom, setAddFrom] = useState('1');
   const [addTo, setAddTo] = useState('1');
   const [sessionDone, setSessionDone] = useState(0);
+  const [verseCache, setVerseCache] = useState<VerseCache>({});
+  const [versesLoading, setVersesLoading] = useState(false);
+  const fetchingRef = useRef<Set<number>>(new Set());
 
   // Load from storage
   useEffect(() => {
@@ -116,9 +101,43 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
     await SecureStore.setItemAsync(storeKey, JSON.stringify(updated));
   }, [storeKey]);
 
+  // Fetch verses for a surah from the real API and cache them
+  const fetchVerses = useCallback(async (surahId: number) => {
+    if (verseCache[surahId] || fetchingRef.current.has(surahId)) return;
+    fetchingRef.current.add(surahId);
+    setVersesLoading(true);
+    try {
+      const res = await quranApi.getSurah(surahId, 'fr');
+      setVerseCache((prev) => ({ ...prev, [surahId]: res.verses }));
+    } catch {
+      // silently fail — will show surah name only
+    } finally {
+      fetchingRef.current.delete(surahId);
+      setVersesLoading(false);
+    }
+  }, [verseCache]);
+
   const dueEntries = getDueEntries(entries);
   const currentEntry = dueEntries[reviewIndex] ?? null;
-  const surahText = currentEntry ? SHORT_SURAH_TEXTS[currentEntry.surahId] ?? null : null;
+
+  // Prefetch verses for current and next due entry
+  useEffect(() => {
+    if (currentEntry) void fetchVerses(currentEntry.surahId);
+    const next = dueEntries[reviewIndex + 1];
+    if (next) void fetchVerses(next.surahId);
+  }, [currentEntry, reviewIndex, dueEntries, fetchVerses]);
+
+  // Also prefetch when Add tab selects a surah
+  useEffect(() => {
+    if (addSurahId) void fetchVerses(addSurahId);
+  }, [addSurahId, fetchVerses]);
+
+  const surahVerses = currentEntry ? (verseCache[currentEntry.surahId] ?? null) : null;
+  const surahText = surahVerses
+    ? surahVerses
+        .slice((currentEntry?.ayahFrom ?? 1) - 1, currentEntry?.ayahTo)
+        .map((v) => ({ arabic: v.textArabic, french: v.textTranslated ?? '' }))
+    : null;
 
   const handleGrade = useCallback(async (score: 0 | 1 | 2) => {
     if (!currentEntry) return;
@@ -223,8 +242,10 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
               {/* Card */}
               <View style={[h.reviewCard, { backgroundColor: p.card, borderColor: p.border }]}>
                 {/* Arabic text - always show */}
-                {surahText ? (
-                  surahText.slice(currentEntry.ayahFrom - 1, currentEntry.ayahTo).map((verse, i) => (
+                {versesLoading && !surahText ? (
+                  <ActivityIndicator size="large" color={p.primaryDark} style={{ marginVertical: 30 }} />
+                ) : surahText ? (
+                  surahText.map((verse, i) => (
                     <View key={i} style={{ marginBottom: 16 }}>
                       <Text style={[h.arabicVerse, { color: p.primaryDark }]}>{verse.arabic}</Text>
                       {reviewStep !== 'hide' && (
@@ -237,6 +258,7 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
                     <Text style={[h.arabicVerse, { color: p.primaryDark }]}>
                       {currentEntry.surahName} · {currentEntry.ayahFrom}–{currentEntry.ayahTo}
                     </Text>
+                    <Text style={[h.frenchVerse, { color: p.textSoft, marginTop: 8 }]}>Chargement des versets...</Text>
                   </View>
                 )}
 
@@ -347,6 +369,19 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
             ))}
           </View>
 
+          {/* Preview versets du début de la sourate sélectionnée */}
+          {addSurahId && verseCache[addSurahId] && (
+            <View style={[h.previewBox, { backgroundColor: p.card, borderColor: p.border }]}>
+              <Text style={[h.fieldLabel, { color: p.textSoft }]}>Aperçu (3 premiers versets)</Text>
+              {verseCache[addSurahId]!.slice(0, 3).map((v) => (
+                <View key={v.verseNumber} style={{ marginBottom: 10 }}>
+                  <Text style={[h.arabicVerse, { color: p.primaryDark, fontSize: 20 }]}>{v.textArabic}</Text>
+                  {v.textTranslated ? <Text style={[h.frenchVerse, { color: p.textSoft }]}>{v.textTranslated}</Text> : null}
+                </View>
+              ))}
+            </View>
+          )}
+
           {addSurahId && (
             <>
               <View style={h.rangeRow}>
@@ -441,4 +476,5 @@ const h = StyleSheet.create({
   input: { borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 16, fontWeight: '600' },
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, borderRadius: 16 },
   addBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  previewBox: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 16 },
 });

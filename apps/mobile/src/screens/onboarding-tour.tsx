@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   StyleSheet,
@@ -10,7 +11,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import { palette } from '../theme';
+import { setupDailyReminders } from '../notifications/daily-reminders';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -93,6 +97,9 @@ const STEPS: OnboardingStep[] = [
 export function OnboardingTourScreen({ onFinish }: { onFinish: () => void }) {
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showSetup, setShowSetup] = useState(false);
+  const [setupDone, setSetupDone] = useState({ location: false, notifications: false });
+  const [setupLoading, setSetupLoading] = useState({ location: false, notifications: false });
   const flatListRef = useRef<FlatList>(null);
 
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -103,13 +110,36 @@ export function OnboardingTourScreen({ onFinish }: { onFinish: () => void }) {
 
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
+  const requestLocation = useCallback(async () => {
+    setSetupLoading((s) => ({ ...s, location: true }));
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setSetupDone((s) => ({ ...s, location: status === 'granted' }));
+    } catch { /* silent */ } finally {
+      setSetupLoading((s) => ({ ...s, location: false }));
+    }
+  }, []);
+
+  const requestNotifications = useCallback(async () => {
+    setSetupLoading((s) => ({ ...s, notifications: true }));
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status === 'granted') {
+        await setupDailyReminders();
+        setSetupDone((s) => ({ ...s, notifications: true }));
+      }
+    } catch { /* silent */ } finally {
+      setSetupLoading((s) => ({ ...s, notifications: false }));
+    }
+  }, []);
+
   const goNext = useCallback(() => {
     if (currentIndex < STEPS.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
     } else {
-      onFinish();
+      setShowSetup(true);
     }
-  }, [currentIndex, onFinish]);
+  }, [currentIndex]);
 
   const goBack = useCallback(() => {
     if (currentIndex > 0) {
@@ -118,6 +148,81 @@ export function OnboardingTourScreen({ onFinish }: { onFinish: () => void }) {
   }, [currentIndex]);
 
   const isLast = currentIndex === STEPS.length - 1;
+
+  if (showSetup) {
+    return (
+      <View style={[st.screen, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, paddingHorizontal: 24 }]}>
+        <View style={[st.iconCircle, { backgroundColor: 'rgba(26,127,100,0.12)', alignSelf: 'center', marginBottom: 24 }]}>
+          <Ionicons name="settings" size={44} color={palette.primaryDark} />
+        </View>
+        <Text style={[st.slideTitle, { marginBottom: 8 }]}>Configuration rapide</Text>
+        <Text style={[st.slideDesc, { marginBottom: 32 }]}>
+          Active ces permissions pour profiter pleinement de l'app (horaires de prière précis, rappels Adhan, etc.)
+        </Text>
+
+        {/* Location */}
+        <View style={[st.permRow, { borderColor: palette.border }]}>
+          <View style={[st.permIcon, { backgroundColor: setupDone.location ? '#E8F5E9' : 'rgba(0,0,0,0.06)' }]}>
+            <Ionicons name="location" size={24} color={setupDone.location ? '#2E7D32' : palette.textSoft} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.permTitle, { color: palette.text }]}>Localisation GPS</Text>
+            <Text style={[st.permSub, { color: palette.textSoft }]}>
+              {setupDone.location ? 'Activée ✓' : 'Pour les horaires de prière et la Qibla'}
+            </Text>
+          </View>
+          {!setupDone.location && (
+            <TouchableOpacity
+              style={[st.permBtn, { backgroundColor: palette.primaryDark }]}
+              onPress={() => void requestLocation()}
+              disabled={setupLoading.location}
+            >
+              {setupLoading.location
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={st.permBtnText}>Activer</Text>
+              }
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Notifications */}
+        <View style={[st.permRow, { borderColor: palette.border }]}>
+          <View style={[st.permIcon, { backgroundColor: setupDone.notifications ? '#E8F5E9' : 'rgba(0,0,0,0.06)' }]}>
+            <Ionicons name="notifications" size={24} color={setupDone.notifications ? '#2E7D32' : palette.textSoft} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.permTitle, { color: palette.text }]}>Notifications</Text>
+            <Text style={[st.permSub, { color: palette.textSoft }]}>
+              {setupDone.notifications ? 'Activées ✓' : 'Rappels Adhan, Dhikr, Hadith du jour'}
+            </Text>
+          </View>
+          {!setupDone.notifications && (
+            <TouchableOpacity
+              style={[st.permBtn, { backgroundColor: palette.primaryDark }]}
+              onPress={() => void requestNotifications()}
+              disabled={setupLoading.notifications}
+            >
+              {setupLoading.notifications
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={st.permBtnText}>Activer</Text>
+              }
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={{ flex: 1 }} />
+
+        <TouchableOpacity style={st.nextBtn} onPress={onFinish} activeOpacity={0.8}>
+          <Text style={st.nextBtnText}>Commencer — Bismillah</Text>
+          <Ionicons name="checkmark" size={18} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={onFinish} style={{ alignSelf: 'center', marginTop: 16 }}>
+          <Text style={[st.skipText, { textDecorationLine: 'underline' }]}>Passer cette étape</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[st.screen, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -190,4 +295,10 @@ const st = StyleSheet.create({
   dotActive: { width: 24, backgroundColor: palette.primaryDark },
   nextBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.primaryDark, borderRadius: 14, paddingVertical: 16 },
   nextBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  permRow: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 14 },
+  permIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  permTitle: { fontSize: 15, fontWeight: '700' },
+  permSub: { fontSize: 12, marginTop: 3 },
+  permBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  permBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });
