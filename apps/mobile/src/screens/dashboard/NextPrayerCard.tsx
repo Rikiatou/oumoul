@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "../../theme";
@@ -15,7 +15,7 @@ interface NextPrayerCardProps {
   countdown: string | null;
 }
 
-export function NextPrayerCard({ isLoading, nextPrayerInfo, countdown }: NextPrayerCardProps) {
+function NextPrayerCardBase({ isLoading, nextPrayerInfo, countdown }: NextPrayerCardProps) {
   if (isLoading && !nextPrayerInfo) {
     return (
       <View style={styles.card}>
@@ -53,6 +53,8 @@ export function NextPrayerCard({ isLoading, nextPrayerInfo, countdown }: NextPra
     </View>
   );
 }
+
+export const NextPrayerCard = memo(NextPrayerCardBase);
 
 const styles = StyleSheet.create({
   card: {

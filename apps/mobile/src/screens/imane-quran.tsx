@@ -157,13 +157,30 @@ export function ImaneQuranScreen({
   const [searchQuery, setSearchQuery] = useState('');
   const [fontSizeIndex, setFontSizeIndex] = useState(2);
   const [showSurahList, setShowSurahList] = useState(true);
+  const [showBookmarksPanel, setShowBookmarksPanel] = useState(false);
 
   const lastReadKey = useRef(`oumoul.quran.lastRead.${user.email}`).current;
   const bookmarksKey = useRef(`oumoul.quran.bookmarks.${user.email}`).current;
+  const fontSizeKey = useRef(`oumoul.quran.fontSize.${user.email}`).current;
   const [lastRead, setLastRead] = useState<LastReadState | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [bookmarks, setBookmarks] = useState<QuranBookmark[]>([]);
   const [bookmarksHydrated, setBookmarksHydrated] = useState(false);
+
+  // Persist font size
+  useEffect(() => {
+    SecureStore.getItemAsync(fontSizeKey).then((v) => {
+      if (v !== null) {
+        const n = parseInt(v, 10);
+        if (Number.isFinite(n) && n >= 0 && n < FONT_SIZES.length) setFontSizeIndex(n);
+      }
+    }).catch(() => {});
+  }, [fontSizeKey]);
+
+  const setFontSizeIndexPersisted = useCallback((idx: number) => {
+    setFontSizeIndex(idx);
+    SecureStore.setItemAsync(fontSizeKey, String(idx)).catch(() => {});
+  }, [fontSizeKey]);
 
   const {
     surahs,
@@ -677,7 +694,7 @@ export function ImaneQuranScreen({
       <View style={q.fontBar}>
         <TouchableOpacity
           style={[q.fontBtn, fontSizeIndex === 0 && { opacity: 0.3 }]}
-          onPress={() => setFontSizeIndex((i) => Math.max(0, i - 1))}
+          onPress={() => setFontSizeIndexPersisted(Math.max(0, fontSizeIndex - 1))}
           disabled={fontSizeIndex === 0}
         >
           <Text style={q.fontBtnText}>A-</Text>
@@ -685,7 +702,7 @@ export function ImaneQuranScreen({
         <Text style={q.fontLabel}>{currentFont.label}</Text>
         <TouchableOpacity
           style={[q.fontBtn, fontSizeIndex === FONT_SIZES.length - 1 && { opacity: 0.3 }]}
-          onPress={() => setFontSizeIndex((i) => Math.min(FONT_SIZES.length - 1, i + 1))}
+          onPress={() => setFontSizeIndexPersisted(Math.min(FONT_SIZES.length - 1, fontSizeIndex + 1))}
           disabled={fontSizeIndex === FONT_SIZES.length - 1}
         >
           <Text style={q.fontBtnText}>A+</Text>
@@ -802,20 +819,54 @@ export function ImaneQuranScreen({
         </ScrollView>
       )}
 
-      {/* Bookmarks floating button */}
+      {/* Bookmarks FAB */}
       {sortedBookmarks.length > 0 && (
         <View style={q.bookmarkFab}>
-          <TouchableOpacity
-            style={q.fabBtn}
-            onPress={() => {
-              if (sortedBookmarks.length > 0) {
-                jumpToBookmark(sortedBookmarks[0]);
-              }
-            }}
-          >
+          <TouchableOpacity style={q.fabBtn} onPress={() => setShowBookmarksPanel(true)}>
             <Ionicons name="bookmarks" size={20} color="#fff" />
             <Text style={q.fabText}>{sortedBookmarks.length}</Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Bookmarks Panel */}
+      {showBookmarksPanel && (
+        <View style={q.bookmarksPanel}>
+          <View style={q.bookmarksPanelHeader}>
+            <Text style={q.bookmarksPanelTitle}>Mes signets ({sortedBookmarks.length})</Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {sortedBookmarks.length > 0 && (
+                <TouchableOpacity onPress={() => { clearBookmarks(); setShowBookmarksPanel(false); }}>
+                  <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 13 }}>Tout effacer</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => setShowBookmarksPanel(false)}>
+                <Ionicons name="close" size={22} color={q_c.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+            {sortedBookmarks.map((bm) => (
+              <TouchableOpacity
+                key={`${bm.surahId}:${bm.ayah}`}
+                style={q.bookmarkItem}
+                onPress={() => { jumpToBookmark(bm); setShowBookmarksPanel(false); }}
+              >
+                <View style={q.bookmarkItemLeft}>
+                  <Ionicons name="bookmark" size={16} color={q_c.accent} />
+                  <View>
+                    <Text style={q.bookmarkItemTitle}>
+                      {surahNameById.get(bm.surahId) ?? `Sourate ${bm.surahId}`}
+                    </Text>
+                    <Text style={q.bookmarkItemSub}>Verset {bm.ayah}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => removeBookmark(bm)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="trash-outline" size={16} color={q_c.muted} />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
     </View>
@@ -1064,4 +1115,24 @@ const q = StyleSheet.create({
     elevation: 6,
   },
   fabText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+
+  // Bookmarks panel
+  bookmarksPanel: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: q_c.bg, zIndex: 50,
+  },
+  bookmarksPanelHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: q_c.border,
+  },
+  bookmarksPanelTitle: { fontSize: 17, fontWeight: '700', color: q_c.text },
+  bookmarkItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: q_c.border,
+  },
+  bookmarkItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  bookmarkItemTitle: { fontSize: 14, fontWeight: '600', color: q_c.text },
+  bookmarkItemSub: { fontSize: 12, color: q_c.muted, marginTop: 2 },
 });

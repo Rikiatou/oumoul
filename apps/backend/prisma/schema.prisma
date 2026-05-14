@@ -42,6 +42,8 @@ model User {
   postReports        PostReport[]
   blockedUsers       UserBlock[] @relation("BlockerBlocks")
   blockedByUsers     UserBlock[] @relation("BlockedByBlocks")
+  hifzEntries        HifzEntry[]
+  prayerLogs         PrayerLog[]
 }
 
 model RefreshToken {
@@ -411,4 +413,55 @@ model TafsirEntry {
   updatedAt DateTime       @updatedAt
 
   @@index([sourceId, surah, ayahFrom], map: "TafsirEntry_source_surah_ayah_idx")
+}
+
+// ─── Hifz (Memorization — SM-2 cloud sync) ───────────────────────────────────
+
+model HifzEntry {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  surahId     Int
+  surahName   String
+  ayahFrom    Int
+  ayahTo      Int
+  interval    Int      @default(1)
+  ease        Float    @default(2.5)
+  repetitions Int      @default(0)
+  lastScore   Int?
+  nextReview  DateTime
+  addedAt     DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, surahId, ayahFrom, ayahTo], map: "HifzEntry_user_surah_range_key")
+  @@index([userId, nextReview], map: "HifzEntry_user_nextReview_idx")
+}
+
+enum PrayerName {
+  Fajr
+  Dhuhr
+  Asr
+  Maghrib
+  Isha
+}
+
+enum PrayerLogStatus {
+  PRAYED_ON_TIME
+  PRAYED_LATE
+  MISSED
+  EXEMPTED
+}
+
+model PrayerLog {
+  id        String          @id @default(cuid())
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  date      DateTime
+  prayer    PrayerName
+  status    PrayerLogStatus
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([userId, date, prayer], map: "PrayerLog_user_date_prayer_key")
+  @@index([userId, date], map: "PrayerLog_user_date_idx")
 }

@@ -1,48 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { AuthUser } from '@oumoul/api';
 import { BackButton } from '../components/BackButton';
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/theme-context";
-import * as SecureStore from "expo-secure-store";
-import { loadGamificationState, xpToLevel, LEVEL_XP, ACHIEVEMENTS, type GamificationState as RealGamState } from '../gamification/gamification-events';
-
-function safeIoniconName(name: string): keyof typeof Ionicons.glyphMap {
-  return (Ionicons.glyphMap as any)[name] ? (name as any) : 'trophy';
-}
-
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  points: number;
-  unlocked: boolean;
-  unlockedAt?: string;
-}
-
-interface Quest {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-  progress: number;
-  total: number;
-  completed: boolean;
-  daily: boolean;
-}
-
-interface GamificationState {
-  totalPoints: number;
-  level: number;
-  streak: number;
-  achievements: Achievement[];
-  quests: Quest[];
-  lastActive: string;
-}
-
-const GAMIFICATION_KEY = "oumoul_gamification";
+import { loadGamificationState, xpToLevel, LEVEL_XP, ACHIEVEMENTS, type GamificationState } from '../gamification/gamification-events';
 
 export function GamificationScreen({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
@@ -50,234 +12,119 @@ export function GamificationScreen({ onBack }: { onBack: () => void }) {
   const [state, setState] = useState<GamificationState | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [realState, setRealState] = useState<RealGamState | null>(null);
-
   useEffect(() => {
-    loadState();
-    loadGamificationState().then(setRealState);
+    loadGamificationState().then((s) => { setState(s); setLoading(false); });
   }, []);
 
-  const loadState = async () => {
-    try {
-      const [stored, prayerRaw, dhikrRaw, bookmarksRaw] = await Promise.all([
-        SecureStore.getItemAsync(GAMIFICATION_KEY),
-        SecureStore.getItemAsync('oumoul_prayer_logs'),
-        SecureStore.getItemAsync('oumoul_tasbih_sessions'),
-        SecureStore.getItemAsync('oumoul_quran_bookmarks'),
-      ]);
 
-      const base: GamificationState = stored ? JSON.parse(stored) : await initializeState();
-
-      // Sync real data into quests
-      const todayIso = new Date().toISOString().slice(0, 10);
-
-      // Prayers today
-      let todayPrayers = 0;
-      if (prayerRaw) {
-        try { const logs = JSON.parse(prayerRaw); todayPrayers = Object.keys(logs[todayIso] ?? {}).length; } catch {}
-      }
-
-      // Dhikr streak
-      let dhikrStreak = 0;
-      let totalDhikrToday = 0;
-      if (dhikrRaw) {
-        try {
-          const sessions: Array<{ completedAt: string; count: number }> = JSON.parse(dhikrRaw);
-          totalDhikrToday = sessions.filter(s => s.completedAt.startsWith(todayIso)).reduce((sum, s) => sum + s.count, 0);
-          const dates = new Set(sessions.map(s => s.completedAt.slice(0, 10)));
-          const d = new Date();
-          while (dates.has(d.toISOString().slice(0, 10))) { dhikrStreak++; d.setDate(d.getDate() - 1); }
-        } catch {}
-      }
-
-      // Quran bookmarks
-      let quranBookmarks = 0;
-      if (bookmarksRaw) { try { quranBookmarks = JSON.parse(bookmarksRaw).length ?? 0; } catch {} }
-
-      // Prayer streak
-      let prayerStreak = 0;
-      if (prayerRaw) {
-        try {
-          const logs = JSON.parse(prayerRaw);
-          const d = new Date();
-          while (true) {
-            const iso = d.toISOString().slice(0, 10);
-            if (logs[iso] && Object.keys(logs[iso]).length === 5) { prayerStreak++; d.setDate(d.getDate() - 1); } else break;
-          }
-        } catch {}
-      }
-
-      // Update quests with real progress
-      const updatedQuests = base.quests.map(q => {
-        if (q.id === 'daily-prayers') return { ...q, progress: todayPrayers, completed: todayPrayers >= 5 };
-        if (q.id === 'morning-dhikr') return { ...q, progress: Math.min(totalDhikrToday, q.total), completed: totalDhikrToday >= q.total };
-        if (q.id === 'quran-reading') return { ...q, progress: Math.min(quranBookmarks, q.total), completed: quranBookmarks >= q.total };
-        return q;
-      });
-
-      // Update achievements with real data
-      const updatedAchievements = base.achievements.map(a => {
-        if (a.id === 'first-prayer' && todayPrayers > 0) return { ...a, unlocked: true, unlockedAt: a.unlockedAt ?? new Date().toISOString() };
-        if (a.id === 'week-streak' && prayerStreak >= 7) return { ...a, unlocked: true, unlockedAt: a.unlockedAt ?? new Date().toISOString() };
-        if (a.id === 'quran-reader' && quranBookmarks >= 10) return { ...a, unlocked: true, unlockedAt: a.unlockedAt ?? new Date().toISOString() };
-        if (a.id === 'dhikr-master' && totalDhikrToday >= 1000) return { ...a, unlocked: true, unlockedAt: a.unlockedAt ?? new Date().toISOString() };
-        return a;
-      });
-
-      // Recalculate points from completed quests + unlocked achievements
-      const questPoints = updatedQuests.filter(q => q.completed).reduce((sum, q) => sum + q.points, 0);
-      const achievementPoints = updatedAchievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.points, 0);
-      const totalPoints = questPoints + achievementPoints;
-      const level = Math.floor(totalPoints / 100) + 1;
-
-      const synced: GamificationState = {
-        ...base,
-        quests: updatedQuests,
-        achievements: updatedAchievements,
-        totalPoints,
-        level,
-        streak: Math.max(prayerStreak, dhikrStreak),
-        lastActive: new Date().toISOString(),
-      };
-
-      setState(synced);
-      await SecureStore.setItemAsync(GAMIFICATION_KEY, JSON.stringify(synced));
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const initializeState = async (): Promise<GamificationState> => {
-    const achievements: Achievement[] = [
-      { id: "first-prayer", title: "Première Prière", description: "Enregistre ta première prière", icon: "checkmark-circle", points: 10, unlocked: false },
-      { id: "week-streak", title: "Semaine Consécutive", description: "7 jours d'affilée", icon: "flame", points: 50, unlocked: false },
-      { id: "quran-reader", title: "Lecteur du Coran", description: "Lis 10 versets", icon: "book", points: 25, unlocked: false },
-      { id: "dhikr-master", title: "Maître du Dhikr", description: "1000 dhikrs complétés", icon: "radio", points: 100, unlocked: false },
-    ];
-
-    const quests: Quest[] = [
-      { id: "daily-prayers", title: "Prières Quotidiennes", description: "Complète les 5 prières", points: 25, progress: 0, total: 5, completed: false, daily: true },
-      { id: "quran-reading", title: "Lecture Coranique", description: "Lis 5 versets", points: 15, progress: 0, total: 5, completed: false, daily: true },
-      { id: "morning-dhikr", title: "Dhikr du Matin", description: "50 dhikrs du matin", points: 10, progress: 0, total: 50, completed: false, daily: true },
-    ];
-
-    const initialState: GamificationState = {
-      totalPoints: 0,
-      level: 1,
-      streak: 0,
-      achievements,
-      quests,
-      lastActive: new Date().toISOString(),
-    };
-
-    await SecureStore.setItemAsync(GAMIFICATION_KEY, JSON.stringify(initialState));
-    return initialState;
-  };
-
-  const completeQuest = async (questId: string) => {
-    if (!state) return;
-    
-    const updatedState = { ...state };
-    const quest = updatedState.quests.find(q => q.id === questId);
-    
-    if (quest && !quest.completed) {
-      quest.completed = true;
-      quest.progress = quest.total;
-      updatedState.totalPoints += quest.points;
-      
-      // Check level up
-      const newLevel = Math.floor(updatedState.totalPoints / 100) + 1;
-      if (newLevel > updatedState.level) {
-        updatedState.level = newLevel;
-      }
-      
-      setState(updatedState);
-      await SecureStore.setItemAsync(GAMIFICATION_KEY, JSON.stringify(updatedState));
-    }
-  };
-
-  if (loading) {
+  if (loading || !state) {
     return (
       <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', backgroundColor: p.bg }]}>
         <ActivityIndicator size="large" color={p.primary} />
-        <Text style={[styles.loadingText, { marginTop: 8, color: p.text }]}>Chargement...</Text>
       </View>
     );
   }
 
-  if (!state) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', backgroundColor: p.bg }]}>
-        <Text style={[styles.errorText, { color: p.text }]}>Erreur de chargement</Text>
-      </View>
-    );
-  }
+  const level = xpToLevel(state.totalXp);
+  const currentLvlXp = LEVEL_XP[Math.min(level - 1, LEVEL_XP.length - 1)] ?? 0;
+  const nextLvlXp = LEVEL_XP[Math.min(level, LEVEL_XP.length - 1)] ?? currentLvlXp + 500;
+  const xpPct = Math.min((state.totalXp - currentLvlXp) / Math.max(nextLvlXp - currentLvlXp, 1), 1);
+
+  // Daily quests derived from real event counters (today)
+  const todayPrayers = (state.totalEvents.prayer_on_time ?? 0) + (state.totalEvents.prayer_late ?? 0);
+  const todayDhikr = (state.totalEvents.dhikr_33 ?? 0) + (state.totalEvents.dhikr_99 ?? 0) + (state.totalEvents.dhikr_200 ?? 0);
+  const todayQuran = state.totalEvents.quran_read ?? 0;
+
+  const DAILY_QUESTS = [
+    { id: 'prayers', title: 'Prières du jour', desc: '5 prières enregistrées', progress: Math.min(todayPrayers, 5), total: 5, xp: 40, done: todayPrayers >= 5 },
+    { id: 'dhikr', title: 'Dhikr quotidien', desc: '3 sessions de dhikr', progress: Math.min(todayDhikr, 3), total: 3, xp: 15, done: todayDhikr >= 3 },
+    { id: 'quran', title: 'Lecture du Coran', desc: '1 session de lecture', progress: Math.min(todayQuran, 1), total: 1, xp: 10, done: todayQuran >= 1 },
+  ];
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: p.bg }]}>
-      {/* Header */}
       <View style={[styles.header, { borderBottomColor: p.border }]}>
         <BackButton onPress={onBack} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: p.text }]}>Gamification ULTIME</Text>
-          <Text style={[styles.headerSub, { color: p.muted }]}>Niveau {state.level} • {state.totalPoints} points</Text>
+          <Text style={[styles.headerTitle, { color: p.text }]}>Progression Spirituelle</Text>
+          <Text style={[styles.headerSub, { color: p.muted }]}>Niveau {level} • {state.totalXp} XP</Text>
         </View>
         <View style={[styles.levelBadge, { backgroundColor: p.primary }]}>
-          <Text style={styles.levelText}>{state.level}</Text>
+          <Text style={styles.levelText}>{level}</Text>
         </View>
       </View>
 
-      {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Stats Card */}
+        {/* Stats */}
         <View style={[styles.statsCard, { backgroundColor: p.card }]}>
           <View style={styles.statItem}>
             <Ionicons name="trophy" size={24} color={p.primary} />
-            <Text style={[styles.statValue, { color: p.text }]}>{(realState?.totalPoints ?? 0) + state.totalPoints}</Text>
+            <Text style={[styles.statValue, { color: p.text }]}>{state.totalPoints}</Text>
             <Text style={[styles.statLabel, { color: p.muted }]}>Points</Text>
           </View>
           <View style={styles.statItem}>
             <Ionicons name="flash" size={24} color="#F57F17" />
-            <Text style={[styles.statValue, { color: p.text }]}>{realState?.totalXp ?? 0}</Text>
+            <Text style={[styles.statValue, { color: p.text }]}>{state.totalXp}</Text>
             <Text style={[styles.statLabel, { color: p.muted }]}>XP</Text>
           </View>
           <View style={styles.statItem}>
             <Ionicons name="flame" size={24} color={p.secondary} />
-            <Text style={[styles.statValue, { color: p.text }]}>{realState?.currentStreak ?? state.streak}</Text>
+            <Text style={[styles.statValue, { color: p.text }]}>{state.currentStreak}</Text>
             <Text style={[styles.statLabel, { color: p.muted }]}>Série</Text>
           </View>
           <View style={styles.statItem}>
             <Ionicons name="star" size={24} color={p.accent} />
-            <Text style={[styles.statValue, { color: p.text }]}>{realState ? ACHIEVEMENTS.filter(a => realState.achievements.some(u => u.id === a.id)).length : state.achievements.filter(a => a.unlocked).length}</Text>
+            <Text style={[styles.statValue, { color: p.text }]}>{state.achievements.length}</Text>
             <Text style={[styles.statLabel, { color: p.muted }]}>Succès</Text>
           </View>
         </View>
 
-        {/* XP Progress bar */}
-        {realState && (() => {
-          const lvl = xpToLevel(realState.totalXp);
-          const currentLvlXp = LEVEL_XP[Math.min(lvl - 1, LEVEL_XP.length - 1)] ?? 0;
-          const nextLvlXp = LEVEL_XP[Math.min(lvl, LEVEL_XP.length - 1)] ?? currentLvlXp + 500;
-          const pct = Math.min((realState.totalXp - currentLvlXp) / Math.max(nextLvlXp - currentLvlXp, 1), 1);
-          return (
-            <View style={[styles.xpCard, { backgroundColor: p.card }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={[styles.statLabel, { color: p.text, fontWeight: '700' }]}>Niveau {lvl}</Text>
-                <Text style={[styles.statLabel, { color: p.muted }]}>{realState.totalXp} XP → {nextLvlXp} XP</Text>
+        {/* XP Bar */}
+        <View style={[styles.xpCard, { backgroundColor: p.card }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+            <Text style={[styles.statLabel, { color: p.text, fontWeight: '700' }]}>Niveau {level}</Text>
+            <Text style={[styles.statLabel, { color: p.muted }]}>{state.totalXp} / {nextLvlXp} XP</Text>
+          </View>
+          <View style={[styles.progressBar, { backgroundColor: p.border }]}>
+            <View style={[styles.progressFill, { width: `${xpPct * 100}%` as any, backgroundColor: p.primary }]} />
+          </View>
+        </View>
+
+        {/* Daily Quests — auto from real events */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: p.text }]}>🎯 Quêtes du jour</Text>
+          {DAILY_QUESTS.map((q) => (
+            <View key={q.id} style={[styles.questCard, { backgroundColor: p.card, borderColor: q.done ? p.primary : p.border, borderWidth: q.done ? 2 : 1 }]}>
+              <View style={styles.questHeader}>
+                <View style={styles.questInfo}>
+                  <Text style={[styles.questTitle, { color: p.text }]}>{q.title}</Text>
+                  <Text style={[styles.questDesc, { color: p.muted }]}>{q.desc}</Text>
+                </View>
+                <View style={[styles.questPoints, { backgroundColor: p.accentLight }]}>
+                  <Text style={[styles.pointsText, { color: p.primary }]}>+{q.xp} XP</Text>
+                </View>
               </View>
-              <View style={[styles.progressBar, { backgroundColor: p.border }]}>
-                <View style={[styles.progressFill, { width: `${pct * 100}%`, backgroundColor: p.primary }]} />
+              <View style={styles.questProgress}>
+                <View style={[styles.progressBar, { backgroundColor: p.border }]}>
+                  <View style={[styles.progressFill, { width: `${(q.progress / q.total) * 100}%` as any, backgroundColor: q.done ? p.primary : p.secondary }]} />
+                </View>
+                <Text style={[styles.progressText, { color: p.muted }]}>{q.progress}/{q.total}</Text>
               </View>
+              {q.done && (
+                <View style={[styles.completedBadge, { backgroundColor: p.primary }]}>
+                  <Ionicons name="checkmark" size={14} color="#fff" />
+                  <Text style={styles.completedText}>Accompli</Text>
+                </View>
+              )}
             </View>
-          );
-        })()}
+          ))}
+        </View>
 
         {/* Recent activity */}
-        {realState && realState.recentActivity.length > 0 && (
+        {state.recentActivity.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: p.text }]}>⚡ Activité récente</Text>
-            {realState.recentActivity.slice(0, 5).map((a, i) => (
+            {state.recentActivity.slice(0, 8).map((a, i) => (
               <View key={i} style={[styles.activityRow, { borderBottomColor: p.border }]}>
                 <Text style={[styles.activityLabel, { color: p.text }]}>{a.label}</Text>
                 <Text style={[styles.activityPoints, { color: p.primary }]}>+{a.points} pts · +{a.xp} XP</Text>
@@ -286,103 +133,28 @@ export function GamificationScreen({ onBack }: { onBack: () => void }) {
           </View>
         )}
 
-        {/* Achievements from real system */}
-        {realState && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: p.text }]}>🏆 Succès (système réel)</Text>
-            {ACHIEVEMENTS.map((ach) => {
-              const unlocked = realState.achievements.some((u) => u.id === ach.id);
-              return (
-                <View key={ach.id} style={[styles.achievementCard, { backgroundColor: p.card, borderColor: unlocked ? p.primary : p.border, borderWidth: unlocked ? 2 : 1 }]}>
-                  <View style={styles.achievementIcon}>
-                    <Text style={{ fontSize: 24 }}>{ach.icon}</Text>
-                  </View>
-                  <View style={styles.achievementInfo}>
-                    <Text style={[styles.achievementTitle, { color: unlocked ? p.text : p.muted }]}>{ach.title}</Text>
-                    <Text style={[styles.achievementDesc, { color: p.muted }]}>{ach.description}</Text>
-                    <Text style={[styles.achievementPoints, { color: p.primary }]}>+{ach.points} pts</Text>
-                  </View>
-                  {unlocked && <Ionicons name="checkmark-circle" size={20} color={p.primary} />}
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Daily Quests */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: p.text }]}>🎯 Quêtes Quotidiennes</Text>
-          {state.quests.filter(q => q.daily).map((quest) => (
-            <View key={quest.id} style={[styles.questCard, { backgroundColor: p.card, borderColor: p.border }]}>
-              <View style={styles.questHeader}>
-                <View style={styles.questInfo}>
-                  <Text style={[styles.questTitle, { color: p.text }]}>{quest.title}</Text>
-                  <Text style={[styles.questDesc, { color: p.muted }]}>{quest.description}</Text>
-                </View>
-                <View style={[styles.questPoints, { backgroundColor: p.accentLight }]}>
-                  <Text style={[styles.pointsText, { color: p.primary }]}>+{quest.points}</Text>
-                </View>
-              </View>
-              <View style={styles.questProgress}>
-                <View style={[styles.progressBar, { backgroundColor: p.border }]}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { width: `${(quest.progress / quest.total) * 100}%`, backgroundColor: p.primary }
-                    ]} 
-                  />
-                </View>
-                <Text style={[styles.progressText, { color: p.muted }]}>{quest.progress}/{quest.total}</Text>
-              </View>
-              {!quest.completed && (
-                <TouchableOpacity 
-                  style={[styles.completeBtn, { backgroundColor: p.primary }]}
-                  onPress={() => completeQuest(quest.id)}
-                >
-                  <Text style={styles.completeBtnText}>Compléter</Text>
-                </TouchableOpacity>
-              )}
-              {quest.completed && (
-                <View style={[styles.completedBadge, { backgroundColor: p.secondary }]}>
-                  <Ionicons name="checkmark" size={16} color="#fff" />
-                  <Text style={styles.completedText}>Terminé</Text>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
-
         {/* Achievements */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: p.text }]}>🏆 Achievements</Text>
-          {state.achievements.map((achievement) => (
-            <View key={achievement.id} style={[
-              styles.achievementCard,
-              { backgroundColor: p.card, borderColor: achievement.unlocked ? p.primary : p.border, borderWidth: achievement.unlocked ? 2 : 1 }
-            ]}>
-              <View style={styles.achievementIcon}>
-                <Ionicons 
-                  name={safeIoniconName(achievement.icon)} 
-                  size={24} 
-                  color={achievement.unlocked ? p.primary : p.muted} 
-                />
+          <Text style={[styles.sectionTitle, { color: p.text }]}>🏆 Succès</Text>
+          {ACHIEVEMENTS.map((ach) => {
+            const unlocked = state.achievements.some((u) => u.id === ach.id);
+            return (
+              <View key={ach.id} style={[styles.achievementCard, { backgroundColor: p.card, borderColor: unlocked ? p.primary : p.border, borderWidth: unlocked ? 2 : 1 }]}>
+                <View style={styles.achievementIcon}>
+                  <Text style={{ fontSize: 24 }}>{ach.icon}</Text>
+                </View>
+                <View style={styles.achievementInfo}>
+                  <Text style={[styles.achievementTitle, { color: unlocked ? p.text : p.muted }]}>{ach.title}</Text>
+                  <Text style={[styles.achievementDesc, { color: p.muted }]}>{ach.description}</Text>
+                  <Text style={[styles.achievementPoints, { color: p.primary }]}>+{ach.points} pts</Text>
+                </View>
+                {unlocked && <Ionicons name="checkmark-circle" size={22} color={p.primary} />}
               </View>
-              <View style={styles.achievementInfo}>
-                <Text style={[
-                  styles.achievementTitle,
-                  { color: achievement.unlocked ? p.text : p.muted }
-                ]}>
-                  {achievement.title}
-                </Text>
-                <Text style={[styles.achievementDesc, { color: p.muted }]}>{achievement.description}</Text>
-                <Text style={[styles.achievementPoints, { color: p.primary }]}>+{achievement.points} points</Text>
-              </View>
-              {achievement.unlocked && (
-                <Ionicons name="checkmark-circle" size={20} color={p.primary} />
-              )}
-            </View>
-          ))}
+            );
+          })}
         </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );

@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/theme-context';
@@ -198,12 +199,62 @@ const MOODS: Mood[] = [
   },
 ];
 
-export function MoodGuidanceScreen({ onBack }: { onBack: () => void }) {
+type JournalEntry = {
+  id: string;
+  date: string; // ISO
+  moodKey: string;
+  moodEmoji: string;
+  moodLabel: string;
+  note: string;
+};
+
+const JOURNAL_KEY = 'oumoul.mood.journal';
+
+export function MoodGuidanceScreen({ onBack, user }: { onBack: () => void; user?: { email: string } }) {
   const insets = useSafeAreaInsets();
   const { palette: p } = useTheme();
   const [selected, setSelected] = useState<Mood | null>(null);
+  const [tab, setTab] = useState<'guidance' | 'journal'>('guidance');
+  const [journal, setJournal] = useState<JournalEntry[]>([]);
+  const [journalLoaded, setJournalLoaded] = useState(false);
+  const [noteInput, setNoteInput] = useState('');
+  const [savedMood, setSavedMood] = useState<Mood | null>(null);
+  const journalKey = `${JOURNAL_KEY}.${user?.email ?? 'guest'}`;
 
-  if (selected) {
+  useEffect(() => {
+    SecureStore.getItemAsync(journalKey).then((raw) => {
+      if (raw) setJournal(JSON.parse(raw) as JournalEntry[]);
+    }).catch(() => {}).finally(() => setJournalLoaded(true));
+  }, [journalKey]);
+
+  const saveEntry = useCallback((mood: Mood, note: string) => {
+    const entry: JournalEntry = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      moodKey: mood.key,
+      moodEmoji: mood.emoji,
+      moodLabel: mood.label,
+      note: note.trim(),
+    };
+    setJournal((prev) => {
+      const updated = [entry, ...prev].slice(0, 200);
+      void SecureStore.setItemAsync(journalKey, JSON.stringify(updated));
+      return updated;
+    });
+    setSavedMood(mood);
+    setNoteInput('');
+    setTab('journal');
+  }, [journalKey]);
+
+  const deleteEntry = useCallback((id: string) => {
+    setJournal((prev) => {
+      const updated = prev.filter((e) => e.id !== id);
+      void SecureStore.setItemAsync(journalKey, JSON.stringify(updated));
+      return updated;
+    });
+  }, [journalKey]);
+
+  if (selected && tab === 'guidance') {
     return (
       <View style={[m.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
         <View style={m.header}>
@@ -248,6 +299,26 @@ export function MoodGuidanceScreen({ onBack }: { onBack: () => void }) {
             </View>
           ))}
 
+          {/* Journal quick-save from guidance */}
+          <View style={[m.journalSaveBox, { backgroundColor: p.card, borderColor: p.border }]}>
+            <Text style={[m.journalSaveTitle, { color: p.text }]}>📝 Note dans ton journal</Text>
+            <TextInput
+              style={[m.journalInput, { backgroundColor: p.bg, color: p.text, borderColor: p.border }]}
+              placeholder="Une réflexion, une gratitude, une dua reçue..."
+              placeholderTextColor={p.textSoft}
+              multiline
+              numberOfLines={3}
+              value={noteInput}
+              onChangeText={setNoteInput}
+            />
+            <TouchableOpacity
+              style={[m.journalSaveBtn, { backgroundColor: p.primaryDark }]}
+              onPress={() => saveEntry(selected!, noteInput)}
+            >
+              <Text style={m.journalSaveBtnText}>Sauvegarder dans le journal</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={[m.backBtn, { backgroundColor: p.primaryDark }]}
             onPress={() => setSelected(null)}
@@ -271,30 +342,77 @@ export function MoodGuidanceScreen({ onBack }: { onBack: () => void }) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <Text style={[m.question, { color: p.text }]}>Comment tu te sens en ce moment ?</Text>
-        <Text style={[m.questionSub, { color: p.textSoft }]}>
-          Choisis ce qui se rapproche le plus de ton état et reçois des versets, hadiths et du'as adaptés.
-        </Text>
+      {/* Tabs */}
+      <View style={m.tabRow}>
+        <TouchableOpacity style={[m.tabBtn, tab === 'guidance' && { backgroundColor: p.primaryDark }]} onPress={() => setTab('guidance')}>
+          <Text style={[m.tabBtnText, tab === 'guidance' && { color: '#fff' }]}>Guidance</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[m.tabBtn, tab === 'journal' && { backgroundColor: p.primaryDark }]} onPress={() => setTab('journal')}>
+          <Text style={[m.tabBtnText, tab === 'journal' && { color: '#fff' }]}>Journal ({journal.length})</Text>
+        </TouchableOpacity>
+      </View>
 
-        {MOODS.map((mood) => (
-          <TouchableOpacity
-            key={mood.key}
-            style={[m.moodCard, { backgroundColor: p.card, borderColor: p.border }]}
-            onPress={() => setSelected(mood)}
-            activeOpacity={0.75}
-          >
-            <View style={[m.moodIcon, { backgroundColor: mood.color + '15' }]}>
-              <Text style={m.moodEmoji}>{mood.emoji}</Text>
+      {tab === 'guidance' && (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          <Text style={[m.question, { color: p.text }]}>Comment tu te sens en ce moment ?</Text>
+          <Text style={[m.questionSub, { color: p.textSoft }]}>
+            Choisis ce qui se rapproche le plus de ton état et reçois des versets, hadiths et du'as adaptés.
+          </Text>
+
+          {MOODS.map((mood) => (
+            <TouchableOpacity
+              key={mood.key}
+              style={[m.moodCard, { backgroundColor: p.card, borderColor: p.border }]}
+              onPress={() => setSelected(mood)}
+              activeOpacity={0.75}
+            >
+              <View style={[m.moodIcon, { backgroundColor: mood.color + '15' }]}>
+                <Text style={m.moodEmoji}>{mood.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[m.moodLabel, { color: p.text }]}>{mood.label}</Text>
+                <Text style={[m.moodSub, { color: p.textSoft }]}>{mood.sub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={p.tabInactive} />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      {tab === 'journal' && (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+          {savedMood && (
+            <View style={[m.savedBanner, { backgroundColor: p.primaryDark + '15', borderColor: p.primaryDark + '30' }]}>
+              <Text style={[m.savedBannerText, { color: p.primaryDark }]}>✓ Entrée enregistrée — {savedMood.emoji} {savedMood.label}</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[m.moodLabel, { color: p.text }]}>{mood.label}</Text>
-              <Text style={[m.moodSub, { color: p.textSoft }]}>{mood.sub}</Text>
+          )}
+          {journal.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingTop: 60 }}>
+              <Text style={{ fontSize: 48 }}>📖</Text>
+              <Text style={[m.question, { color: p.text, fontSize: 16, textAlign: 'center' }]}>Aucune entrée</Text>
+              <Text style={[m.questionSub, { color: p.textSoft, textAlign: 'center' }]}>Choisis un état et note ta réflexion</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={p.tabInactive} />
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+          ) : journal.map((entry) => (
+            <View key={entry.id} style={[m.journalCard, { backgroundColor: p.card, borderColor: p.border }]}>
+              <View style={m.journalCardHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Text style={{ fontSize: 20 }}>{entry.moodEmoji}</Text>
+                  <View>
+                    <Text style={[m.journalCardMood, { color: p.text }]}>{entry.moodLabel}</Text>
+                    <Text style={[m.journalCardDate, { color: p.textSoft }]}>
+                      {new Date(entry.date).toLocaleDateString('fr', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => deleteEntry(entry.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="trash-outline" size={16} color={p.muted} />
+                </TouchableOpacity>
+              </View>
+              {entry.note ? <Text style={[m.journalCardNote, { color: p.textSoft }]}>{entry.note}</Text> : null}
+            </View>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -341,4 +459,32 @@ const m = StyleSheet.create({
 
   backBtn: { padding: 14, borderRadius: 16, alignItems: 'center', marginTop: 8 },
   backBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  // ── Tabs ──
+  tabRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 8 },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 12, alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.06)' },
+  tabBtnText: { fontSize: 13, fontWeight: '700', color: '#555' },
+
+  // ── Journal ──
+  journalSaveBox: { borderRadius: 16, borderWidth: 1, padding: 16, marginTop: 8, gap: 10 },
+  journalSaveTitle: { fontSize: 14, fontWeight: '700' },
+  journalInput: {
+    borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14,
+    minHeight: 80, textAlignVertical: 'top',
+  },
+  journalSaveBtn: { padding: 12, borderRadius: 12, alignItems: 'center' },
+  journalSaveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+
+  savedBanner: {
+    borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 16, alignItems: 'center',
+  },
+  savedBannerText: { fontSize: 13, fontWeight: '700' },
+
+  journalCard: {
+    borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 10, gap: 8,
+  },
+  journalCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  journalCardMood: { fontSize: 14, fontWeight: '700' },
+  journalCardDate: { fontSize: 11, marginTop: 2 },
+  journalCardNote: { fontSize: 13, lineHeight: 20 },
 });

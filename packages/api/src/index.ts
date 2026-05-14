@@ -19,3 +19,6 @@ export * from './endpoints/prayer-tracking';
 export * from './endpoints/quran-audio';
 export * from './endpoints/allah-names';
 export * from './endpoints/mosque-finder';
+export * from './endpoints/hifz';
+export * from './endpoints/prayer-log';
+export * from './endpoints/ai';

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,7 +15,7 @@ interface HeaderProps {
   onSearch?: () => void;
 }
 
-export function Header({ user, todayLabel, hijriLabel, locationLabel, isLocationLoading, onSearch }: HeaderProps) {
+function HeaderBase({ user, todayLabel, hijriLabel, locationLabel, isLocationLoading, onSearch }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
 
@@ -57,6 +57,8 @@ export function Header({ user, todayLabel, hijriLabel, locationLabel, isLocation
     </View>
   );
 }
+
+export const Header = memo(HeaderBase);
 
 const styles = StyleSheet.create({
   container: {

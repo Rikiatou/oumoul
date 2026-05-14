@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { palette } from '../../theme';
@@ -7,7 +8,7 @@ interface Props {
   onPress?: () => void;
 }
 
-export function AllahNameOfDayCard({ onPress }: Props) {
+function AllahNameOfDayCardBase({ onPress }: Props) {
   const name = getTodayAllahName();
   const progress = getNamesProgress();
 
@@ -53,6 +54,8 @@ export function AllahNameOfDayCard({ onPress }: Props) {
     </TouchableOpacity>
   );
 }
+
+export const AllahNameOfDayCard = memo(AllahNameOfDayCardBase);
 
 const s = StyleSheet.create({
   card: {

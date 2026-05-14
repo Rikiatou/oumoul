@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
@@ -55,7 +55,7 @@ function calcDhikrStreak(sessions: Array<{ completedAt: string; count: number }>
   return { streak, today: todayTotal };
 }
 
-export function StreakCard() {
+function StreakCardBase() {
   const [data, setData] = useState<StreakData>({ prayerStreak: 0, dhikrStreak: 0, todayPrayers: 0, todayDhikr: 0 });
 
   useEffect(() => {
@@ -112,6 +112,8 @@ export function StreakCard() {
     </View>
   );
 }
+
+export const StreakCard = memo(StreakCardBase);
 
 const st = StyleSheet.create({
   card: { backgroundColor: palette.card, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: palette.border },

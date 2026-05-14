@@ -14,6 +14,8 @@ import { Audio } from 'expo-av';
 import type { AuthUser } from '@oumoul/api';
 import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
+import { API_URL, tokenStore } from '../api';
+import { awardEvent } from '../gamification/gamification-events';
 
 // ─── Short surahs for beginner practice ──────────────────────────────────────
 
@@ -116,21 +118,47 @@ export function RecitationCheckerScreen({ user, onBack }: { user: AuthUser; onBa
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
 
-      // Simulate AI analysis (real implementation would call Whisper API)
-      // In production: send audio to backend → Whisper transcription → phonetic comparison
-      await new Promise((r) => setTimeout(r, 1500));
-
       const verse = selectedSurah.verses[currentVerse];
-      const simulatedScore = Math.floor(Math.random() * 30) + 70; // 70–100 for demo
-      const feedbackItems = generateFeedback(simulatedScore, verse.transliteration);
 
-      setScore(simulatedScore);
-      setFeedback(feedbackItems);
-      setSessionScores((prev) => [...prev, simulatedScore]);
+      if (!uri) throw new Error('No audio URI');
+
+      // Build multipart form
+      const formData = new FormData();
+      formData.append('audio', {
+        uri,
+        type: 'audio/m4a',
+        name: 'recitation.m4a',
+      } as unknown as Blob);
+      formData.append('referenceTranslit', verse.transliteration);
+
+      // Get auth token
+      const session = await tokenStore.getTokens();
+      const token = session?.accessToken;
+
+      const res = await fetch(`${API_URL}/recitation/check`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      const result = await res.json() as { score: number; feedback: string[]; transcription: string };
+
+      setScore(result.score);
+      setFeedback(result.feedback.length ? result.feedback : generateFeedback(result.score, verse.transliteration));
+      setSessionScores((prev) => [...prev, result.score]);
       setRecordingState('done');
+
+      // Award gamification
+      void awardEvent('recitation_practiced');
     } catch {
       setRecordingState('idle');
-      Alert.alert('Erreur', 'Impossible de traiter l\'enregistrement.');
+      Alert.alert('Erreur', 'Impossible de traiter l\'enregistrement. Vérifiez votre connexion.');
     }
   }, [selectedSurah, currentVerse]);
 
@@ -179,9 +207,9 @@ export function RecitationCheckerScreen({ user, onBack }: { user: AuthUser; onBa
 
       {/* Note */}
       <View style={rc.noteCard}>
-        <Ionicons name="information-circle" size={18} color={palette.primaryDark} />
+        <Ionicons name="sparkles" size={18} color={palette.primaryDark} />
         <Text style={rc.noteText}>
-          Cette fonctionnalité analyse ta récitation localement. Pour une analyse IA précise, une clé API Whisper est requise.
+          Ta récitation est analysée par l'IA Whisper d'OpenAI. Lis le verset clairement, appuie sur le bouton puis arrête.
         </Text>
       </View>
 

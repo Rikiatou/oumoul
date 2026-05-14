@@ -1,191 +1,48 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { AuthUser } from '@oumoul/api';
+import type { AIAnalysisResult, AIRecommendationRemote, SpiritualContext } from '@oumoul/api';
 import { BackButton } from '../components/BackButton';
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/theme-context";
-import * as SecureStore from "expo-secure-store";
+import { aiApi } from '../api';
 
-function safeIoniconName(name: string): keyof typeof Ionicons.glyphMap {
-  return (Ionicons.glyphMap as any)[name] ? (name as any) : 'sparkles';
-}
-
-interface LearningPattern {
-  timeOfDay: string;
-  activity: string;
-  duration: number;
-  performance: number;
-  date: string;
-}
-
-interface AIRecommendation {
-  id: string;
-  type: "prayer" | "quran" | "dhikr" | "learning";
-  title: string;
-  description: string;
-  priority: "high" | "medium" | "low";
-  timeSuggestion: string;
-}
-
-interface AIState {
-  patterns: LearningPattern[];
-  recommendations: AIRecommendation[];
-  currentMood: "focused" | "relaxed" | "tired" | "energetic";
-  lastAnalysis: string;
-  adaptationLevel: number;
-}
-
-const AI_KEY = "oumoul_ai_system";
+type Mood = "focused" | "relaxed" | "tired" | "energetic";
 
 export function AISystemScreen({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const { palette: p } = useTheme();
-  const [state, setState] = useState<AIState | null>(null);
+  const [result, setResult] = useState<AIAnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [mood, setMoodState] = useState<Mood>("focused");
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadState();
+  const runAnalysis = useCallback(async (selectedMood: Mood) => {
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const data = await aiApi.analyze(selectedMood);
+      setResult(data);
+    } catch {
+      setError('Impossible de contacter le serveur. Vérifiez votre connexion.');
+    } finally {
+      setAnalyzing(false);
+    }
   }, []);
 
-  const loadState = async () => {
-    try {
-      const stored = await SecureStore.getItemAsync(AI_KEY);
-      if (stored) {
-        setState(JSON.parse(stored));
-      } else {
-        const initialState = await initializeState();
-        setState(initialState);
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    setLoading(true);
+    aiApi.getRecommendations()
+      .then((data) => setResult(data))
+      .catch(() => setError('Analyse indisponible hors connexion.'))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const initializeState = async (): Promise<AIState> => {
-    const recommendations: AIRecommendation[] = [
-      {
-        id: "morning-dhikr",
-        type: "dhikr",
-        title: "Dhikr du Matin",
-        description: "Commence ta journée avec 33 SubhanAllah",
-        priority: "high",
-        timeSuggestion: "06:00"
-      },
-      {
-        id: "quran-morning",
-        type: "quran",
-        title: "Lecture Coranique",
-        description: "3 versets du Coran pour bien commencer",
-        priority: "medium",
-        timeSuggestion: "07:30"
-      },
-      {
-        id: "prayer-focus",
-        type: "prayer",
-        title: "Concentration Prière",
-        description: "Focus accru pour la prière du Fajr",
-        priority: "high",
-        timeSuggestion: "05:30"
-      }
-    ];
-
-    const initialState: AIState = {
-      patterns: [],
-      recommendations,
-      currentMood: "focused",
-      lastAnalysis: new Date().toISOString(),
-      adaptationLevel: 1,
-    };
-
-    await SecureStore.setItemAsync(AI_KEY, JSON.stringify(initialState));
-    return initialState;
-  };
-
-  const analyzePatterns = async () => {
-    if (!state) return;
-    
-    setAnalyzing(true);
-    
-    // Simulate AI analysis
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const newPattern: LearningPattern = {
-      timeOfDay: new Date().getHours() < 12 ? "morning" : "evening",
-      activity: "app_usage",
-      duration: Math.floor(Math.random() * 60) + 10,
-      performance: Math.floor(Math.random() * 40) + 60,
-      date: new Date().toISOString(),
-    };
-
-    const updatedState = {
-      ...state,
-      patterns: [...state.patterns, newPattern],
-      adaptationLevel: state.adaptationLevel + 1,
-      lastAnalysis: new Date().toISOString(),
-    };
-
-    // Generate new recommendations based on patterns
-    const newRecommendations = generateRecommendations(updatedState.patterns);
-    updatedState.recommendations = newRecommendations;
-
-    setState(updatedState);
-    await SecureStore.setItemAsync(AI_KEY, JSON.stringify(updatedState));
-    setAnalyzing(false);
-  };
-
-  const generateRecommendations = (patterns: LearningPattern[]): AIRecommendation[] => {
-    const avgPerformance = patterns.reduce((sum, p) => sum + p.performance, 0) / patterns.length;
-    
-    if (avgPerformance > 80) {
-      return [
-        {
-          id: "advanced-quran",
-          type: "quran",
-          title: "Étude Approfondie",
-          description: "5 versets avec mémorisation",
-          priority: "high",
-          timeSuggestion: "20:00"
-        },
-        {
-          id: "extended-dhikr",
-          type: "dhikr",
-          title: "Dhikr Étendu",
-          description: "100 dhikrs avec concentration",
-          priority: "medium",
-          timeSuggestion: "21:00"
-        }
-      ];
-    } else {
-      return [
-        {
-          id: "basic-prayer",
-          type: "prayer",
-          title: "Prière Simple",
-          description: "Focus sur une prière à la fois",
-          priority: "high",
-          timeSuggestion: "18:00"
-        },
-        {
-          id: "light-quran",
-          type: "quran",
-          title: "Lecture Légère",
-          description: "1 verset du Coran",
-          priority: "low",
-          timeSuggestion: "19:00"
-        }
-      ];
-    }
-  };
-
-  const setMood = async (mood: AIState["currentMood"]) => {
-    if (!state) return;
-    
-    const updatedState = { ...state, currentMood: mood };
-    setState(updatedState);
-    await SecureStore.setItemAsync(AI_KEY, JSON.stringify(updatedState));
+  const handleMoodChange = async (newMood: Mood) => {
+    setMoodState(newMood);
+    await runAnalysis(newMood);
   };
 
   if (loading) {
@@ -197,352 +54,187 @@ export function AISystemScreen({ onBack }: { onBack: () => void }) {
     );
   }
 
-  if (!state) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', backgroundColor: p.bg }]}>
-        <Text style={[styles.errorText, { color: p.text }]}>Erreur IA</Text>
-      </View>
-    );
-  }
+  const MOOD_OPTIONS: { key: Mood; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { key: 'focused', label: 'Concentré', icon: 'radio-button-on' },
+    { key: 'relaxed', label: 'Détendu', icon: 'leaf' },
+    { key: 'tired', label: 'Fatigué', icon: 'bed-outline' },
+    { key: 'energetic', label: 'Énergique', icon: 'flash' },
+  ];
+
+  const REC_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+    prayer: 'compass',
+    quran: 'book',
+    dhikr: 'heart',
+    fasting: 'moon',
+    hifz: 'layers',
+    general: 'sparkles',
+  };
+
+  const ctx = result?.context;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: p.bg }]}>
-      {/* Header */}
       <View style={[styles.header, { borderBottomColor: p.border }]}>
         <BackButton onPress={onBack} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: p.text }]}>Système IA ULTRA-Intelligent</Text>
-          <Text style={[styles.headerSub, { color: p.muted }]}>Niveau {state.adaptationLevel} • {state.patterns.length} patterns</Text>
+          <Text style={[styles.headerTitle, { color: p.text }]}>Conseiller IA Spirituel</Text>
+          <Text style={[styles.headerSub, { color: p.muted }]}>
+            {result ? `Score réel : ${result.overallScore}/100 • Mis à jour maintenant` : 'Analyse en cours…'}
+          </Text>
         </View>
         <View style={[styles.aiBadge, { backgroundColor: p.primary }]}>
           <Ionicons name="sparkles" size={20} color="#fff" />
         </View>
       </View>
 
-      {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* AI Status */}
-        <View style={[styles.statusCard, { backgroundColor: p.card, borderColor: p.border }]}>
-          <View style={styles.statusHeader}>
-            <Text style={[styles.statusTitle, { color: p.text }]}>🧠 Analyse en Cours</Text>
-            <TouchableOpacity 
-              style={[styles.analyzeBtn, { backgroundColor: analyzing ? p.muted : p.primary }]}
-              onPress={analyzePatterns}
-              disabled={analyzing}
-            >
-              {analyzing ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.analyzeBtnText}>Analyser</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-          <Text style={[styles.statusDesc, { color: p.muted }]}>
-            L'IA analyse vos patterns d'apprentissage pour optimiser votre progression spirituelle.
-          </Text>
-        </View>
 
-        {/* Mood Selector */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: p.text }]}>😊 État Actuel</Text>
-          <View style={styles.moodGrid}>
-            {(["focused", "relaxed", "tired", "energetic"] as const).map((mood) => (
+        {/* Error */}
+        {error && !result && (
+          <View style={[styles.errorCard, { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' }]}>
+            <Ionicons name="warning-outline" size={20} color="#C62828" />
+            <Text style={[styles.errorText, { color: '#C62828', marginLeft: 8, flex: 1 }]}>{error}</Text>
+          </View>
+        )}
+
+        {/* Score réel */}
+        {result && (
+          <View style={[styles.statusCard, { backgroundColor: p.card, borderColor: p.border }]}>
+            <View style={styles.scoreRow}>
+              <View>
+                <Text style={[styles.scoreLabel, { color: p.muted }]}>Score spirituel réel</Text>
+                <Text style={[styles.scoreValue, { color: p.primary }]}>{result.overallScore}<Text style={{ fontSize: 18 }}>/100</Text></Text>
+              </View>
               <TouchableOpacity
-                key={mood}
-                style={[
-                  styles.moodCard,
-                  { backgroundColor: p.card, borderColor: state.currentMood === mood ? p.primary : p.border, borderWidth: state.currentMood === mood ? 2 : 1 }
-                ]}
-                onPress={() => setMood(mood)}
+                style={[styles.analyzeBtn, { backgroundColor: analyzing ? p.muted : p.primary }]}
+                onPress={() => runAnalysis(mood)}
+                disabled={analyzing}
               >
-                <Ionicons 
-                  name={safeIoniconName(
-                    mood === "focused" ? "radio-button-on" :
-                    mood === "relaxed" ? "leaf" :
-                    mood === "tired" ? "bed-outline" : "flash"
-                  )} 
-                  size={24} 
-                  color={state.currentMood === mood ? p.primary : p.muted} 
-                />
-                <Text style={[styles.moodText, { color: state.currentMood === mood ? p.primary : p.muted, fontWeight: state.currentMood === mood ? '600' : '400' }]}>
-                  {mood === "focused" ? "Concentré" :
-                   mood === "relaxed" ? "Détendu" :
-                   mood === "tired" ? "Fatigué" : "Énergique"}
-                </Text>
+                {analyzing ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.analyzeBtnText}>Actualiser</Text>}
+              </TouchableOpacity>
+            </View>
+            {ctx && (
+              <View style={styles.metricsGrid}>
+                <View style={styles.metric}>
+                  <Text style={[styles.metricVal, { color: p.text }]}>{ctx.prayerOnTimePercent}%</Text>
+                  <Text style={[styles.metricLbl, { color: p.muted }]}>Prières heure</Text>
+                </View>
+                <View style={styles.metric}>
+                  <Text style={[styles.metricVal, { color: p.text }]}>{ctx.prayerStreakDays}j</Text>
+                  <Text style={[styles.metricLbl, { color: p.muted }]}>Série</Text>
+                </View>
+                <View style={styles.metric}>
+                  <Text style={[styles.metricVal, { color: p.text }]}>{ctx.hifzTotal}</Text>
+                  <Text style={[styles.metricLbl, { color: p.muted }]}>Hifz</Text>
+                </View>
+                <View style={styles.metric}>
+                  <Text style={[styles.metricVal, { color: p.text }]}>{ctx.dhikrSessionsLast7Days}</Text>
+                  <Text style={[styles.metricLbl, { color: p.muted }]}>Dhikrs/sem</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Mood selector */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: p.text }]}>😊 Comment tu te sens ?</Text>
+          <View style={styles.moodGrid}>
+            {MOOD_OPTIONS.map((m) => (
+              <TouchableOpacity
+                key={m.key}
+                style={[styles.moodCard, { backgroundColor: p.card, borderColor: mood === m.key ? p.primary : p.border, borderWidth: mood === m.key ? 2 : 1 }]}
+                onPress={() => handleMoodChange(m.key)}
+              >
+                <Ionicons name={m.icon} size={24} color={mood === m.key ? p.primary : p.muted} />
+                <Text style={[styles.moodText, { color: mood === m.key ? p.primary : p.muted, fontWeight: mood === m.key ? '600' : '400' }]}>{m.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Recommendations */}
+        {/* Recommandations réelles */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: p.text }]}>🎯 Recommandations IA</Text>
-          {state.recommendations.map((rec) => (
+          <Text style={[styles.sectionTitle, { color: p.text }]}>🎯 Recommandations Personnalisées</Text>
+          {analyzing && <ActivityIndicator style={{ marginVertical: 16 }} color={p.primary} />}
+          {!analyzing && result?.recommendations.map((rec) => (
             <View key={rec.id} style={[styles.recommendationCard, { backgroundColor: p.card, borderColor: p.border }]}>
               <View style={styles.recommendationHeader}>
-                <View style={styles.recommendationInfo}>
+                <View style={[styles.recIconBox, { backgroundColor: rec.priority === 'high' ? '#FFEBEE' : rec.priority === 'medium' ? '#FFF8E1' : '#E8F5E9' }]}>
+                  <Ionicons name={REC_ICONS[rec.type] ?? 'sparkles'} size={20} color={rec.priority === 'high' ? '#C62828' : rec.priority === 'medium' ? '#F57C00' : '#388E3C'} />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={[styles.recommendationTitle, { color: p.text }]}>{rec.title}</Text>
                   <Text style={[styles.recommendationDesc, { color: p.muted }]}>{rec.description}</Text>
-                </View>
-                <View style={[
-                  styles.priorityBadge,
-                  rec.priority === "high" && styles.priorityHigh,
-                  rec.priority === "medium" && styles.priorityMedium,
-                  rec.priority === "low" && styles.priorityLow
-                ]}>
-                  <Text style={styles.priorityText}>
-                    {rec.priority === "high" ? "Haute" :
-                     rec.priority === "medium" ? "Moyenne" : "Basse"}
-                  </Text>
+                  {rec.basedOn ? <Text style={[styles.basedOn, { color: p.muted }]}>📊 {rec.basedOn}</Text> : null}
                 </View>
               </View>
               <View style={styles.recommendationFooter}>
                 <View style={styles.timeSuggestion}>
-                  <Ionicons name="time" size={16} color={p.muted} />
+                  <Ionicons name="time" size={14} color={p.muted} />
                   <Text style={[styles.timeText, { color: p.muted }]}>{rec.timeSuggestion}</Text>
                 </View>
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: p.primary }]}>
-                  <Text style={styles.actionBtnText}>Commencer</Text>
-                </TouchableOpacity>
+                <View style={[styles.priorityBadge, rec.priority === 'high' ? styles.priorityHigh : rec.priority === 'medium' ? styles.priorityMedium : styles.priorityLow]}>
+                  <Text style={styles.priorityText}>{rec.priority === 'high' ? 'Priorité haute' : rec.priority === 'medium' ? 'Moyenne' : 'Basse'}</Text>
+                </View>
               </View>
             </View>
           ))}
-        </View>
-
-        {/* Patterns */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: p.text }]}>📊 Patterns Détectés</Text>
-          {state.patterns.length === 0 ? (
+          {!analyzing && result?.recommendations.length === 0 && (
             <View style={styles.emptyState}>
-              <Ionicons name="analytics" size={48} color={p.muted} />
-              <Text style={[styles.emptyText, { color: p.muted }]}>Aucun pattern détecté</Text>
-              <Text style={[styles.emptyDesc, { color: p.muted }]}>Utilisez l'app pour générer des patterns</Text>
+              <Ionicons name="checkmark-circle" size={48} color={p.primary} />
+              <Text style={[styles.emptyText, { color: p.text }]}>Tout est parfait !</Text>
+              <Text style={[styles.emptyDesc, { color: p.muted }]}>Continue ainsi — ton niveau spirituel est excellent.</Text>
             </View>
-          ) : (
-            state.patterns.slice(-3).map((pattern, index) => (
-              <View key={index} style={[styles.patternCard, { backgroundColor: p.card, borderColor: p.border }]}>
-                <Text style={[styles.patternDate, { color: p.muted }]}>
-                  {new Date(pattern.date).toLocaleDateString('fr-FR')}
-                </Text>
-                <View style={styles.patternStats}>
-                  <View style={styles.patternStat}>
-                    <Text style={[styles.patternLabel, { color: p.muted }]}>Performance</Text>
-                    <Text style={[styles.patternValue, { color: p.text }]}>{pattern.performance}%</Text>
-                  </View>
-                  <View style={styles.patternStat}>
-                    <Text style={[styles.patternLabel, { color: p.muted }]}>Durée</Text>
-                    <Text style={[styles.patternValue, { color: p.text }]}>{pattern.duration}min</Text>
-                  </View>
-                </View>
-              </View>
-            ))
           )}
         </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingText: {
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  headerSub: {
-    fontSize: 12,
-  },
-  aiBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    flex: 1,
-  },
-  statusCard: {
-    margin: 16,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-  },
-  statusHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  analyzeBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  analyzingBtn: {},
-  analyzeBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  statusDesc: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  section: {
-    marginHorizontal: 16,
-    marginTop: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  moodGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  moodCard: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  moodText: {
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  recommendationCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  recommendationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  recommendationInfo: {
-    flex: 1,
-  },
-  recommendationTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  recommendationDesc: {
-    fontSize: 14,
-    marginTop: 2,
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  priorityHigh: {
-    backgroundColor: '#FEE2E2',
-  },
-  priorityMedium: {
-    backgroundColor: '#FEF3C7',
-  },
-  priorityLow: {
-    backgroundColor: '#F0FDF4',
-  },
-  priorityText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  recommendationFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  timeSuggestion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  timeText: {
-    fontSize: 12,
-  },
-  actionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  actionBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    marginTop: 12,
-  },
-  emptyDesc: {
-    fontSize: 14,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  patternCard: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-  },
-  patternDate: {
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  patternStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  patternStat: {
-    alignItems: 'center',
-  },
-  patternLabel: {
-    fontSize: 10,
-    textTransform: 'uppercase',
-  },
-  patternValue: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  container: { flex: 1 },
+  loadingText: { fontSize: 16 },
+  errorText: { fontSize: 13, flex: 1 },
+  errorCard: { flexDirection: 'row', alignItems: 'center', margin: 16, borderRadius: 12, padding: 14, borderWidth: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerSub: { fontSize: 12 },
+  aiBadge: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  content: { flex: 1 },
+  statusCard: { margin: 16, borderRadius: 16, padding: 20, borderWidth: 1 },
+  scoreRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  scoreLabel: { fontSize: 12 },
+  scoreValue: { fontSize: 40, fontWeight: '800' },
+  metricsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+  metric: { alignItems: 'center' },
+  metricVal: { fontSize: 20, fontWeight: '700' },
+  metricLbl: { fontSize: 10, marginTop: 2, textAlign: 'center' },
+  analyzeBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  analyzeBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  section: { marginHorizontal: 16, marginTop: 24 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
+  moodGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  moodCard: { flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1 },
+  moodText: { fontSize: 11, marginTop: 6, textAlign: 'center' },
+  recommendationCard: { borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1 },
+  recommendationHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  recIconBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  recommendationTitle: { fontSize: 15, fontWeight: '600' },
+  recommendationDesc: { fontSize: 13, marginTop: 2, lineHeight: 18 },
+  basedOn: { fontSize: 11, marginTop: 6, fontStyle: 'italic' },
+  priorityBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  priorityHigh: { backgroundColor: '#FEE2E2' },
+  priorityMedium: { backgroundColor: '#FEF3C7' },
+  priorityLow: { backgroundColor: '#F0FDF4' },
+  priorityText: { fontSize: 10, fontWeight: '600' },
+  recommendationFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  timeSuggestion: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  timeText: { fontSize: 12 },
+  emptyState: { alignItems: 'center', padding: 40 },
+  emptyText: { fontSize: 16, marginTop: 12, fontWeight: '600' },
+  emptyDesc: { fontSize: 14, marginTop: 4, textAlign: 'center' },
 });

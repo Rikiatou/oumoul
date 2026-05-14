@@ -15,6 +15,9 @@ import {
   createQuranAudioApi,
   createAllahNamesApi,
   createMosqueFinderApi,
+  createHifzApi,
+  createPrayerLogApi,
+  createAiApi,
 } from '@oumoul/api';
 import { SecureTokenStore } from '../storage/secure-token-store';
 
@@ -43,6 +46,9 @@ export const prayerTrackingApi = createPrayerTrackingApi(httpClient);
 export const quranAudioApi = createQuranAudioApi(httpClient);
 export const allahNamesApi = createAllahNamesApi(httpClient);
 export const mosqueFinderApi = createMosqueFinderApi(httpClient);
+export const hifzApi = createHifzApi(httpClient);
+export const prayerLogApi = createPrayerLogApi(httpClient);
+export const aiApi = createAiApi(httpClient);
 
 export { httpClient, tokenStore };
 

@@ -13,9 +13,11 @@ import * as SecureStore from 'expo-secure-store';
 import type { AuthUser } from '@oumoul/api';
 import { BackButton } from '../components/BackButton';
 import { PrayerStatus } from '@oumoul/api';
+import type { PrayerNameCloud, PrayerLogStatusCloud } from '@oumoul/api';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
 import { awardEvent } from '../gamification/gamification-events';
+import { prayerLogApi } from '../api';
 
 const PRAYER_LOGS_KEY = 'oumoul_prayer_logs';
 
@@ -85,15 +87,56 @@ export function PrayerTrackingScreen({ user, onBack }: { user: AuthUser; onBack:
   const [viewMode, setViewMode] = useState<'today' | 'week' | 'month'>('today');
   const [loaded, setLoaded] = useState(false);
 
-  // Load persisted logs on mount
+  // Map cloud status → local PrayerStatus
+  const cloudStatusToLocal = (s: PrayerLogStatusCloud): PrayerStatus => {
+    switch (s) {
+      case 'PRAYED_ON_TIME': return PrayerStatus.PRAYED_ON_TIME;
+      case 'PRAYED_LATE': return PrayerStatus.PRAYED_LATE;
+      case 'MISSED': return PrayerStatus.MISSED;
+      case 'EXEMPTED': return PrayerStatus.EXEMPTED;
+    }
+  };
+
+  // Map local PrayerStatus → cloud status
+  const localStatusToCloud = (s: PrayerStatus): PrayerLogStatusCloud => {
+    switch (s) {
+      case PrayerStatus.PRAYED_ON_TIME: return 'PRAYED_ON_TIME';
+      case PrayerStatus.PRAYED_LATE: return 'PRAYED_LATE';
+      case PrayerStatus.MISSED: return 'MISSED';
+      case PrayerStatus.EXEMPTED: return 'EXEMPTED';
+    }
+  };
+
+  // Load persisted logs on mount + merge with cloud
   useEffect(() => {
-    SecureStore.getItemAsync(PRAYER_LOGS_KEY).then((raw: string | null) => {
-      if (raw) {
-        try { setLogs(JSON.parse(raw)); } catch {}
+    async function loadAndMerge() {
+      let local: Record<string, Record<string, PrayerStatus>> = {};
+      try {
+        const raw = await SecureStore.getItemAsync(PRAYER_LOGS_KEY);
+        if (raw) local = JSON.parse(raw);
+      } catch { /* ignore */ }
+
+      try {
+        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const to = new Date().toISOString().slice(0, 10);
+        const remote = await prayerLogApi.getLogs(from, to);
+        // Merge remote into local — remote wins (it's cloud truth)
+        const merged = { ...local };
+        for (const entry of remote) {
+          const dateKey = entry.date.slice(0, 10);
+          if (!merged[dateKey]) merged[dateKey] = {};
+          merged[dateKey][entry.prayer] = cloudStatusToLocal(entry.status);
+        }
+        setLogs(merged);
+        await SecureStore.setItemAsync(PRAYER_LOGS_KEY, JSON.stringify(merged));
+      } catch {
+        // Offline — use local only
+        setLogs(local);
       }
       setLoaded(true);
-    }).catch(() => setLoaded(true));
-  }, []);
+    }
+    void loadAndMerge();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize today if not present
   useEffect(() => {
@@ -130,12 +173,24 @@ export function PrayerTrackingScreen({ user, onBack }: { user: AuthUser; onBack:
           (s) => s === PrayerStatus.PRAYED_ON_TIME || s === PrayerStatus.PRAYED_LATE
         ).length;
         if (prayedCount === 5) void awardEvent('all_prayers_day');
+        // Sync to cloud — fire and forget
+        prayerLogApi.upsert({
+          date,
+          prayer: prayer as PrayerNameCloud,
+          status: localStatusToCloud(nextStatus),
+        }).catch(() => { /* offline — local persists */ });
       } else {
         delete updated[prayer];
+        // When status is cleared, sync MISSED as default to cloud
+        prayerLogApi.upsert({
+          date,
+          prayer: prayer as PrayerNameCloud,
+          status: 'MISSED',
+        }).catch(() => {});
       }
       return { ...prev, [date]: updated };
     });
-  }, []);
+  }, [localStatusToCloud]);
 
   // Stats calculations
   const stats = useMemo(() => {

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "../../theme";
@@ -11,7 +11,7 @@ interface DailyInspirationCardProps {
   locale: Locale;
 }
 
-export function DailyInspirationCard({ locale }: DailyInspirationCardProps) {
+function DailyInspirationCardBase({ locale }: DailyInspirationCardProps) {
   const daily = getTodayInspiration();
 
   // If it's a hadith, use the new HadithCard with sharing
@@ -52,6 +52,8 @@ export function DailyInspirationCard({ locale }: DailyInspirationCardProps) {
     </View>
   );
 }
+
+export const DailyInspirationCard = memo(DailyInspirationCardBase);
 
 const styles = StyleSheet.create({
   card: {

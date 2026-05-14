@@ -22,6 +22,7 @@ import type { PrayerTimesResponse } from "@oumoul/api";
 import * as SecureStore from "expo-secure-store";
 import { getWordOfDay } from '../../utils/word-of-day';
 import { getTodayAllahName } from '../../utils/allah-name-of-day';
+import { offlineCache } from '../../utils/offline-cache';
 import {
   cancelReminder,
   cancelRemindersByPrefix,
@@ -180,6 +181,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   // This handles: day rollover (new day = different times), DST changes, and
   // ensures stale notifications from a previous city are replaced.
   const appStateRef = useRef(AppState.currentState);
+  const didPurgeRef = useRef(false);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
       if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
@@ -187,6 +189,10 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
         const lng = detectedLoc.longitude;
         if (lat && lng) {
           void fetchPrayerTimes(lat, lng, detectedLoc.timeZone);
+        }
+        if (!didPurgeRef.current) {
+          didPurgeRef.current = true;
+          void offlineCache.purgeExpired();
         }
       }
       appStateRef.current = nextState;

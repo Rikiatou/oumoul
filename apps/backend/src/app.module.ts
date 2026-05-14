@@ -18,6 +18,10 @@ import { RamadanModule } from './ramadan/ramadan.module';
 import { EmailModule } from './email/email.module';
 import { PlacesModule } from './places/places.module';
 import { CommunityModule } from './community/community.module';
+import { HifzModule } from './hifz/hifz.module';
+import { PrayerLogModule } from './prayer-log/prayer-log.module';
+import { AiModule } from './ai/ai.module';
+import { RecitationModule } from './recitation/recitation.module';
 
 @Module({
   imports: [
@@ -41,6 +45,10 @@ import { CommunityModule } from './community/community.module';
     RamadanModule,
     PlacesModule,
     CommunityModule,
+    HifzModule,
+    PrayerLogModule,
+    AiModule,
+    RecitationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -13,7 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import type { AuthUser, QuranVerse } from '@oumoul/api';
 import { useTheme } from '../context/theme-context';
-import { quranApi } from '../api';
+import { quranApi, hifzApi } from '../api';
+import type { HifzEntryRemote } from '@oumoul/api';
 
 
 type HifzEntry = {
@@ -70,7 +71,30 @@ function updateEntry(entry: HifzEntry, score: 0 | 1 | 2): HifzEntry {
   };
 }
 
+type Tab = 'review' | 'my' | 'add' | 'stats';
 type ReviewStep = 'show' | 'hide' | 'grade';
+
+type SessionLog = { date: string; reviewed: number; correct: number }; // date = YYYY-MM-DD
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function computeStreak(logs: SessionLog[]): number {
+  if (logs.length === 0) return 0;
+  const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
+  let streak = 0;
+  const now = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const found = sorted.find((l) => l.date === key && l.reviewed > 0);
+    if (found) streak++;
+    else if (i > 0) break;
+  }
+  return streak;
+}
 
 export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const insets = useSafeAreaInsets();
@@ -78,7 +102,7 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
   const storeKey = `oumoul.hifz.${user.email}`;
 
   const [entries, setEntries] = useState<HifzEntry[]>([]);
-  const [tab, setTab] = useState<'review' | 'my' | 'add'>('review');
+  const [tab, setTab] = useState<Tab>('review');
   const [reviewStep, setReviewStep] = useState<ReviewStep>('show');
   const [reviewIndex, setReviewIndex] = useState(0);
   const [addSurahId, setAddSurahId] = useState<number | null>(null);
@@ -88,17 +112,88 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
   const [verseCache, setVerseCache] = useState<VerseCache>({});
   const [versesLoading, setVersesLoading] = useState(false);
   const fetchingRef = useRef<Set<number>>(new Set());
+  const logsKey = `oumoul.hifz.logs.${user.email}`;
+  const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
 
-  // Load from storage
   useEffect(() => {
-    void SecureStore.getItemAsync(storeKey).then((raw) => {
-      if (raw) setEntries(JSON.parse(raw) as HifzEntry[]);
+    void SecureStore.getItemAsync(logsKey).then((raw) => {
+      if (raw) setSessionLogs(JSON.parse(raw) as SessionLog[]);
     });
-  }, [storeKey]);
+  }, [logsKey]);
+
+  const recordGradeInLog = useCallback((correct: boolean) => {
+    setSessionLogs((prev) => {
+      const today = todayKey();
+      const existing = prev.find((l) => l.date === today);
+      const updated = existing
+        ? prev.map((l) => l.date === today ? { ...l, reviewed: l.reviewed + 1, correct: l.correct + (correct ? 1 : 0) } : l)
+        : [...prev, { date: today, reviewed: 1, correct: correct ? 1 : 0 }];
+      void SecureStore.setItemAsync(logsKey, JSON.stringify(updated.slice(-365)));
+      return updated;
+    });
+  }, [logsKey]);
+
+  // Convert remote HifzEntry to local format
+  const remoteToLocal = useCallback((r: HifzEntryRemote): HifzEntry => ({
+    surahId: r.surahId,
+    surahName: r.surahName,
+    ayahFrom: r.ayahFrom,
+    ayahTo: r.ayahTo,
+    addedAt: new Date(r.addedAt).getTime(),
+    nextReview: new Date(r.nextReview).getTime(),
+    interval: r.interval,
+    ease: r.ease,
+    repetitions: r.repetitions,
+    lastScore: (r.lastScore ?? null) as 0 | 1 | 2 | null,
+  }), []);
+
+  // Load from SecureStore + merge with cloud
+  useEffect(() => {
+    async function loadAndMerge() {
+      let local: HifzEntry[] = [];
+      try {
+        const raw = await SecureStore.getItemAsync(storeKey);
+        if (raw) local = JSON.parse(raw) as HifzEntry[];
+      } catch { /* ignore */ }
+
+      try {
+        const remote = await hifzApi.getAll();
+        const remoteLocal = remote.map(remoteToLocal);
+        // Merge: for each surah+range pair, keep the one with the latest addedAt
+        const map = new Map<string, HifzEntry>();
+        for (const e of [...remoteLocal, ...local]) {
+          const key = `${e.surahId}:${e.ayahFrom}:${e.ayahTo}`;
+          const existing = map.get(key);
+          if (!existing || e.addedAt > existing.addedAt) map.set(key, e);
+        }
+        const merged = Array.from(map.values());
+        setEntries(merged);
+        await SecureStore.setItemAsync(storeKey, JSON.stringify(merged));
+      } catch {
+        // Offline — use local only
+        setEntries(local);
+      }
+    }
+    void loadAndMerge();
+  }, [storeKey, remoteToLocal]);
 
   const save = useCallback(async (updated: HifzEntry[]) => {
     setEntries(updated);
     await SecureStore.setItemAsync(storeKey, JSON.stringify(updated));
+    // Sync to cloud in background
+    hifzApi.bulkSync({
+      entries: updated.map((e) => ({
+        surahId: e.surahId,
+        surahName: e.surahName,
+        ayahFrom: e.ayahFrom,
+        ayahTo: e.ayahTo,
+        interval: e.interval,
+        ease: e.ease,
+        repetitions: e.repetitions,
+        lastScore: e.lastScore ?? undefined,
+        nextReview: new Date(e.nextReview).toISOString(),
+      })),
+    }).catch(() => { /* sync fails silently — local is source of truth */ });
   }, [storeKey]);
 
   // Fetch verses for a surah from the real API and cache them
@@ -147,6 +242,7 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
         : e
     );
     await save(updated);
+    recordGradeInLog(score >= 1);
     setSessionDone((n) => n + 1);
     if (reviewIndex + 1 >= dueEntries.length) {
       setReviewIndex(0);
@@ -154,7 +250,7 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
       setReviewIndex((i) => i + 1);
     }
     setReviewStep('show');
-  }, [currentEntry, entries, save, reviewIndex, dueEntries.length]);
+  }, [currentEntry, entries, save, reviewIndex, dueEntries.length, recordGradeInLog]);
 
   const handleAddEntry = useCallback(async () => {
     if (!addSurahId) return;
@@ -207,8 +303,8 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
 
       {/* Tab bar */}
       <View style={h.tabBar}>
-        {(['review', 'my', 'add'] as const).map((t) => {
-          const labels = { review: `Réviser (${dueEntries.length})`, my: `Mes versets (${entries.length})`, add: '+ Ajouter' };
+        {(['review', 'my', 'add', 'stats'] as const).map((t) => {
+          const labels = { review: `Réviser (${dueEntries.length})`, my: `Mes (${entries.length})`, add: '+ Ajouter', stats: '📊 Stats' };
           return (
             <TouchableOpacity
               key={t}
@@ -348,6 +444,70 @@ export function HifzScreen({ user, onBack }: { user: AuthUser; onBack: () => voi
         </ScrollView>
       )}
 
+      {/* ── STATS TAB ── */}
+      {tab === 'stats' && (() => {
+        const streak = computeStreak(sessionLogs);
+        const mastered = entries.filter((e) => e.interval >= 21).length;
+        const totalReviewed = sessionLogs.reduce((s, l) => s + l.reviewed, 0);
+        const totalCorrect = sessionLogs.reduce((s, l) => s + l.correct, 0);
+        const accuracy = totalReviewed > 0 ? Math.round((totalCorrect / totalReviewed) * 100) : 0;
+        const last7 = Array.from({ length: 7 }).map((_, i) => {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i));
+          const key = d.toISOString().slice(0, 10);
+          const log = sessionLogs.find((l) => l.date === key);
+          return { day: ['D', 'L', 'M', 'Me', 'J', 'V', 'S'][d.getDay()], reviewed: log?.reviewed ?? 0 };
+        });
+        const maxDay = Math.max(1, ...last7.map((d) => d.reviewed));
+        return (
+          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+            {/* KPI row */}
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+              {[
+                { label: 'Streak', value: `${streak}j`, icon: '🔥', color: '#F59E0B' },
+                { label: 'Précision', value: `${accuracy}%`, icon: '🎯', color: p.primaryDark },
+                { label: 'Maîtrisés', value: String(mastered), icon: '⭐', color: '#7C3AED' },
+              ].map((kpi) => (
+                <View key={kpi.label} style={[h.kpiCard, { backgroundColor: p.card, borderColor: p.border, flex: 1 }]}>
+                  <Text style={{ fontSize: 22 }}>{kpi.icon}</Text>
+                  <Text style={[h.kpiValue, { color: kpi.color }]}>{kpi.value}</Text>
+                  <Text style={[h.kpiLabel, { color: p.textSoft }]}>{kpi.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Weekly bar chart */}
+            <View style={[h.chartCard, { backgroundColor: p.card, borderColor: p.border }]}>
+              <Text style={[h.chartTitle, { color: p.text }]}>Activité 7 derniers jours</Text>
+              <View style={h.chartRow}>
+                {last7.map((d, i) => (
+                  <View key={i} style={h.chartBar}>
+                    <View style={[h.bar, { height: Math.max(4, (d.reviewed / maxDay) * 80), backgroundColor: d.reviewed > 0 ? p.primaryDark : p.border }]} />
+                    <Text style={[h.barLabel, { color: p.textSoft }]}>{d.day}</Text>
+                    {d.reviewed > 0 && <Text style={[h.barCount, { color: p.primaryDark }]}>{d.reviewed}</Text>}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Totals */}
+            <View style={[h.chartCard, { backgroundColor: p.card, borderColor: p.border, marginTop: 12 }]}>
+              <Text style={[h.chartTitle, { color: p.text }]}>Totaux</Text>
+              {[
+                { label: 'Versets révisés', value: totalReviewed },
+                { label: 'Révisions réussies', value: totalCorrect },
+                { label: 'Sections en cours', value: entries.length },
+                { label: 'Sessions enregistrées', value: sessionLogs.length },
+              ].map((row) => (
+                <View key={row.label} style={h.statRow}>
+                  <Text style={[h.statLabel, { color: p.textSoft }]}>{row.label}</Text>
+                  <Text style={[h.statValue, { color: p.text }]}>{row.value}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        );
+      })()}
+
       {/* ── ADD TAB ── */}
       {tab === 'add' && (
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
@@ -477,4 +637,19 @@ const h = StyleSheet.create({
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, borderRadius: 16 },
   addBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   previewBox: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 16 },
+
+  // Stats
+  kpiCard: { borderRadius: 16, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
+  kpiValue: { fontSize: 22, fontWeight: '800' },
+  kpiLabel: { fontSize: 11, fontWeight: '600' },
+  chartCard: { borderRadius: 16, borderWidth: 1, padding: 16 },
+  chartTitle: { fontSize: 14, fontWeight: '700', marginBottom: 14 },
+  chartRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 100 },
+  chartBar: { flex: 1, alignItems: 'center', gap: 4, justifyContent: 'flex-end' },
+  bar: { width: 22, borderRadius: 6 },
+  barLabel: { fontSize: 11, fontWeight: '600' },
+  barCount: { fontSize: 9, fontWeight: '700' },
+  statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' },
+  statLabel: { fontSize: 13 },
+  statValue: { fontSize: 13, fontWeight: '700' },
 });

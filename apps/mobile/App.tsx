@@ -74,6 +74,7 @@ import { MoodGuidanceScreen } from "./src/screens/mood-guidance";
 import { FeminineHubScreen } from "./src/screens/feminine-hub";
 import { setupDailyReminders } from "./src/notifications/daily-reminders";
 import * as Notifications from "expo-notifications";
+import { useRTL } from "./src/hooks/use-rtl";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -188,6 +189,7 @@ const NOTIF_SETUP_KEY = "oumoul_notif_setup_done";
 
 function RootSwitch() {
   const { user, loading, pendingVerificationEmail, authToast, clearAuthToast } = useAuth();
+  useRTL(user?.locale);
   const [welcomeStep, setWelcomeStep] = useState<"slides" | "landing" | "done">("slides");
   const [showOnboarding, setShowOnboarding] = useState(false);
   // Whether user has ever logged in before (skip welcome/auth on return)
@@ -483,7 +485,7 @@ function LearnStack({ user }: { user: AuthUser }) {
         {(props) => <HifzScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="MoodGuidance" options={{ animation: "slide_from_right" }}>
-        {(props) => <MoodGuidanceScreen onBack={() => props.navigation.goBack()} />}
+        {(props) => <MoodGuidanceScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="FeminineHub" options={{ animation: "slide_from_right" }}>
         {(props) => (

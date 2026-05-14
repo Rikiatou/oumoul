@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
   ActivityIndicator,
@@ -19,9 +19,10 @@ import type {
   RamadanDaySummary,
   RamadanSummaryResponse,
 } from '@oumoul/api';
-import { cycleApi, ramadanApi } from '../api';
+import { cycleApi, ramadanApi, prayerApi } from '../api';
 import { palette } from '../theme';
 import { getRamadanInfo } from '../utils/hijri-calendar';
+import { useLocationContext } from '../context/location-context';
 import * as SecureStore from 'expo-secure-store';
 import { offlineCache, CACHE_TTL } from '../utils/offline-cache';
 import { HelpTip } from '../components/HelpTip';
@@ -92,6 +93,8 @@ const CYCLE_STATUSES: CycleStatus[] = ['PURE', 'MENSES', 'SPOTTING', 'POSTPARTUM
 
 export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const navigation = useNavigation<any>();
+  const { location: detectedLoc } = useLocationContext();
+  const [maghribTime, setMaghribTime] = useState<{ hour: number; minute: number } | null>(null);
   const [year, setYear] = useState(new Date().getUTCFullYear());
   const [data, setData] = useState<RamadanSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,13 +109,37 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
   const [cycleStatusDraft, setCycleStatusDraft] = useState<CycleStatus | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
 
-  // Makeup planner & reminders
+  // ── Makeup planner & reminders ──
   const [makeupPlan, setMakeupPlan] = useState<string[]>([]);
   const [makeupPlanLoaded, setMakeupPlanLoaded] = useState(false);
   const [fastingReminderOn, setFastingReminderOn] = useState(false);
   const [reminderLoaded, setReminderLoaded] = useState(false);
   const [showMakeupPlanner, setShowMakeupPlanner] = useState(false);
   const [makeupPreference, setMakeupPreference] = useState<'mon_thu' | 'mon_only' | 'thu_only' | 'custom'>('mon_thu');
+  const [showYearStats, setShowYearStats] = useState(false);
+  const [yearStats, setYearStats] = useState<Array<{ year: number; fasted: number; missed: number; exemption: number; total: number }>>([]);
+  const [yearStatsLoading, setYearStatsLoading] = useState(false);
+
+  const loadYearStats = useCallback(async () => {
+    setYearStatsLoading(true);
+    const currentYear = new Date().getFullYear();
+    const results: typeof yearStats = [];
+    for (let y = currentYear; y >= currentYear - 4; y--) {
+      try {
+        const resp = await offlineCache.getWithFallback<RamadanSummaryResponse>(
+          `ramadan_summary_${y}`,
+          () => ramadanApi.summary(y),
+          CACHE_TTL.LONG,
+        );
+        const fasted = resp.days.filter((d) => d.fastStatus === FastingLogStatus.FASTED).length;
+        const missed = resp.days.filter((d) => d.fastStatus === FastingLogStatus.MISSED).length;
+        const exemption = resp.days.filter((d) => d.fastStatus === FastingLogStatus.EXEMPTION).length;
+        results.push({ year: y, fasted, missed, exemption, total: resp.days.length });
+      } catch { results.push({ year: y, fasted: 0, missed: 0, exemption: 0, total: 0 }); }
+    }
+    setYearStats(results);
+    setYearStatsLoading(false);
+  }, []);
 
   const MAKEUP_PLAN_KEY = `oumoul_makeup_plan_${year}`;
   const FASTING_REMINDER_KEY = 'oumoul_ramadan_fasting_reminder';
@@ -158,6 +185,54 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
     const currentYear = new Date().getFullYear();
     return getRamadanInfo(currentYear);
   }, []);
+
+  // ── Fetch real Maghrib time from GPS ──
+  useEffect(() => {
+    if (!detectedLoc.latitude || !detectedLoc.longitude) return;
+    prayerApi
+      .getPrayerTimes({ latitude: detectedLoc.latitude, longitude: detectedLoc.longitude })
+      .then((res) => {
+        // res.times.maghrib is an ISO-like string e.g. "2025-03-15T18:47:00"
+        const raw: string = (res as any).times?.maghrib ?? '';
+        if (raw) {
+          const timePart = raw.includes('T') ? raw.split('T')[1] : raw;
+          const [hStr, mStr] = timePart.split(':');
+          const hour = parseInt(hStr, 10);
+          const minute = parseInt(mStr, 10);
+          if (!isNaN(hour) && !isNaN(minute)) {
+            setMaghribTime({ hour, minute });
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback already handled in tick() below
+      });
+  }, [detectedLoc.latitude, detectedLoc.longitude]);
+
+  // ── Live iftar countdown using real Maghrib time ──
+  const [iftarCountdown, setIftarCountdown] = useState<string | null>(null);
+  const iftarTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (ramadanDayInfo.status !== 'during') return;
+    function tick() {
+      const now = new Date();
+      const target = new Date();
+      // Use real GPS-based Maghrib; fallback to 18:30 if not yet loaded
+      const mHour = maghribTime?.hour ?? 18;
+      const mMin = maghribTime?.minute ?? 30;
+      target.setHours(mHour, mMin, 0, 0);
+      const diff = target.getTime() - now.getTime();
+      if (diff <= 0) { setIftarCountdown('🌙 Iftar !'); return; }
+      const h = Math.floor(diff / 3600000);
+      const mn = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setIftarCountdown(`${String(h).padStart(2, '0')}:${String(mn).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+    }
+    tick();
+    iftarTimerRef.current = setInterval(tick, 1000);
+    return () => { if (iftarTimerRef.current) clearInterval(iftarTimerRef.current); };
+  }, [ramadanDayInfo.status, maghribTime]);
 
   const todayDay = useMemo(() => days.find((d) => d.date === todayIso) ?? null, [days, todayIso]);
 
@@ -479,6 +554,46 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
             </View>
           )}
         </View>
+
+        {/* Live iftar countdown */}
+        {ramadanDayInfo.status === 'during' && iftarCountdown && (
+          <View style={r.iftarCard}>
+            <Ionicons name="time" size={18} color="#FFC107" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={r.iftarLabel}>Temps restant avant l'iftar</Text>
+              <Text style={r.iftarTime}>{iftarCountdown}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Multi-year stats toggle */}
+        <TouchableOpacity
+          style={r.yearStatsToggle}
+          onPress={() => { if (!showYearStats) void loadYearStats(); setShowYearStats((v) => !v); }}
+        >
+          <Ionicons name="bar-chart" size={16} color={r_c.accent} />
+          <Text style={r.yearStatsToggleText}>Comparatif multi-années</Text>
+          <Ionicons name={showYearStats ? 'chevron-up' : 'chevron-down'} size={16} color={r_c.muted} />
+        </TouchableOpacity>
+        {showYearStats && (
+          <View style={r.yearStatsBox}>
+            {yearStatsLoading ? (
+              <ActivityIndicator size="small" color={r_c.accent} style={{ margin: 12 }} />
+            ) : yearStats.map((ys) => (
+              <View key={ys.year} style={r.yearStatsRow}>
+                <Text style={r.yearStatsYear}>{ys.year}</Text>
+                <View style={{ flex: 1 }}>
+                  <View style={r.miniBar}>
+                    {ys.total > 0 && (
+                      <View style={[r.miniFill, { width: `${Math.round((ys.fasted / ys.total) * 100)}%` as any, backgroundColor: '#2E7D32' }]} />
+                    )}
+                  </View>
+                </View>
+                <Text style={r.yearStatsCounts}>{ys.fasted}✓ {ys.missed}✗ {ys.exemption}♥</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Progress bar */}
         {days.length > 0 && (
@@ -1237,4 +1352,49 @@ const r = StyleSheet.create({
     gap: 4,
   },
   catchupBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+
+  // ── Live iftar countdown ──
+  iftarCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1C1C1E',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  iftarLabel: { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
+  iftarTime: { fontSize: 28, fontWeight: '800', color: '#FFC107', letterSpacing: 2, fontFamily: 'Amiri-Bold' },
+
+  // ── Multi-year stats ──
+  yearStatsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: r_c.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: r_c.border,
+  },
+  yearStatsToggleText: { flex: 1, fontSize: 13, fontWeight: '600', color: r_c.accent },
+  yearStatsBox: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: r_c.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: r_c.border,
+    padding: 14,
+    gap: 10,
+  },
+  yearStatsRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  yearStatsYear: { fontSize: 13, fontWeight: '700', color: r_c.text, width: 38 },
+  miniBar: { height: 8, backgroundColor: r_c.border, borderRadius: 4, overflow: 'hidden' },
+  miniFill: { height: '100%', borderRadius: 4 },
+  yearStatsCounts: { fontSize: 11, color: r_c.muted, fontWeight: '600', width: 80, textAlign: 'right' },
 });

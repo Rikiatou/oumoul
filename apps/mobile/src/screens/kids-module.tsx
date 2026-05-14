@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import * as Speech from 'expo-speech';
 import {
   Animated,
   ScrollView,
@@ -13,12 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/theme-context';
 
 function speak(text: string, lang = 'ar-SA') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
-    const S = require('expo-speech') as { stop: () => void; speak: (t: string, o: object) => void };
-    S.stop();
-    S.speak(text, { language: lang, rate: 0.75, pitch: 1.0 });
-  } catch { /* expo-speech not installed */ }
+  Speech.stop();
+  Speech.speak(text, { language: lang, rate: 0.75, pitch: 1.0 });
 }
 
 // ── Arabic Alphabet Data ──────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "../../theme";
@@ -16,7 +16,7 @@ interface RamadanBannerProps {
   ramadanProgressText?: string;
 }
 
-export function RamadanBanner({ ramadanDayInfo, ramadanTodayText, ramadanProgressText }: RamadanBannerProps) {
+function RamadanBannerBase({ ramadanDayInfo, ramadanTodayText, ramadanProgressText }: RamadanBannerProps) {
   return (
     <View style={styles.banner}>
       <Ionicons name="moon" size={20} color="#FFC107" />
@@ -48,6 +48,8 @@ export function RamadanBanner({ ramadanDayInfo, ramadanTodayText, ramadanProgres
     </View>
   );
 }
+
+export const RamadanBanner = memo(RamadanBannerBase);
 
 const styles = StyleSheet.create({
   banner: {
