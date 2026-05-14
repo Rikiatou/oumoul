@@ -177,7 +177,9 @@ export function QuranWordsScreen({ user, onBack, initialWordId }: { user: AuthUs
               style={[st.chip, isActive && st.chipActive]}
               onPress={() => setSelectedCategory(item)}
             >
-              <Text style={[st.chipText, isActive && st.chipTextActive]}>{label} ({count})</Text>
+              <Text style={[st.chipText, isActive && st.chipTextActive]} numberOfLines={2}>
+                {label} ({count})
+              </Text>
             </TouchableOpacity>
           );
         }}
@@ -216,10 +218,10 @@ const st = StyleSheet.create({
   progressFill: { height: 4, backgroundColor: palette.primaryDark, borderRadius: 2 },
   searchRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 12, backgroundColor: palette.card, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, gap: 8, borderWidth: 1, borderColor: palette.border },
   searchInput: { flex: 1, fontSize: 14, color: palette.text, padding: 0 },
-  chipList: { maxHeight: 44, marginTop: 12 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: palette.card, borderWidth: 1, borderColor: palette.border },
+  chipList: { maxHeight: 64, marginTop: 12 },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: palette.card, borderWidth: 1, borderColor: palette.border, minHeight: 34, justifyContent: 'center' },
   chipActive: { backgroundColor: palette.primaryDark, borderColor: palette.primaryDark },
-  chipText: { fontSize: 12, color: palette.text, fontWeight: '500' },
+  chipText: { fontSize: 12, color: palette.text, fontWeight: '500', lineHeight: 14 },
   chipTextActive: { color: '#fff' },
   row: { gap: 10, marginTop: 10 },
   wordCard: { flex: 1, backgroundColor: palette.card, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: palette.border },

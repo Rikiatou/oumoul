@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AppState, Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LocalRemindersSection } from "./LocalRemindersSection";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Locale } from "@oumoul/api";
 import { useTheme } from "../../context/theme-context";
 import { useForceUpdate } from "../../hooks/use-force-update";
@@ -23,15 +24,19 @@ import { getWordOfDay } from '../../utils/word-of-day';
 import { getTodayAllahName } from '../../utils/allah-name-of-day';
 import {
   cancelReminder,
-  scheduleAdhanReminder,
-  scheduleDhikrMorningReminder,
-  scheduleDhikrEveningReminder,
-  scheduleIftarReminder,
-  scheduleSuhoorReminder,
+  cancelRemindersByPrefix,
+  scheduleAdhanDateReminder,
+  scheduleDhikrMorningDateReminder,
+  scheduleDhikrEveningDateReminder,
+  scheduleIftarDateReminder,
+  scheduleSuhoorDateReminder,
   scheduleJumuahReminder,
 } from '../../push-notifications';
 
 const { width } = Dimensions.get("window");
+
+const TASBIH_SESSIONS_KEY = 'oumoul_tasbih_sessions';
+const TASBIH_LIVE_KEY = 'oumoul_tasbih_live';
 
 type LocalReminderType =
   | "AdhanFajr" | "AdhanDhuhr" | "AdhanAsr" | "AdhanMaghrib" | "AdhanIsha"
@@ -63,6 +68,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   const [prayerResult, setPrayerResult] = useState<PrayerTimesResponse | null>(null);
   const [prayerLoading, setPrayerLoading] = useState(false);
   const [quranLastSurah, setQuranLastSurah] = useState<string | null>(null);
+  const [tasbihLive, setTasbihLive] = useState<{ count: number; target: number } | null>(null);
   const [localEnabled, setLocalEnabled] = useState<Record<LocalReminderType, boolean>>(createRecord(false));
   const [localLoading, setLocalLoading] = useState(true);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -71,11 +77,67 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   const navigation = useNavigation<any>();
   const { palette } = useTheme();
   const { forceUpdate } = useForceUpdate();
+  const insets = useSafeAreaInsets();
+
+  const LOCAL_SCHEDULE_DAYS_AHEAD = 30;
+
+  const parseApiLocalDateTime = useCallback((raw?: string): Date | null => {
+    if (!raw) return null;
+    try {
+      // API returns "YYYY-MM-DDTHH:mm:ss" WITHOUT timezone.
+      // Interpret as device-local time for scheduling.
+      const [datePart, timePart] = raw.split('T');
+      if (!datePart || !timePart) return null;
+      const [y, m, d] = datePart.split('-').map(Number);
+      const [hh, mm, ss] = timePart.split(':').map(Number);
+      if (![y, m, d, hh, mm].every((v) => Number.isFinite(v))) return null;
+      return new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, ss ?? 0, 0);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const addMinutesToDate = useCallback((date: Date, minutes: number) => {
+    return new Date(date.getTime() + minutes * 60 * 1000);
+  }, []);
+
+  const formatYmd = useCallback((d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const loadTasbihLive = useCallback(async () => {
+    try {
+      const raw = await SecureStore.getItemAsync(TASBIH_LIVE_KEY);
+      if (!raw) {
+        setTasbihLive(null);
+        return;
+      }
+      const live = JSON.parse(raw);
+      if (live?.count != null && live?.target != null) {
+        setTasbihLive({ count: live.count, target: live.target });
+      } else {
+        setTasbihLive(null);
+      }
+    } catch {
+      setTasbihLive(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadTasbihLive();
+    const unsub = navigation.addListener('focus', () => {
+      void loadTasbihLive();
+    });
+    return unsub;
+  }, [loadTasbihLive, navigation]);
 
   useEffect(() => {
     const LAST_READ_KEY = 'oumoul_quran_last_read';
@@ -90,27 +152,156 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   }, []);
 
 
-  // Load prayer times — use GPS if available, fallback to default coords
+  // Load prayer times — use GPS if available. Refetch on location change or app foreground.
+  const prayerFetchingRef = useRef(false);
+  const fetchPrayerTimes = useCallback(async (lat: number, lng: number, timeZone?: string | null) => {
+    if (prayerFetchingRef.current) return;
+    prayerFetchingRef.current = true;
+    try {
+      setPrayerLoading(true);
+      const result = await prayerApi.getPrayerTimes({ latitude: lat, longitude: lng, timeZone: timeZone ?? undefined });
+      setPrayerResult(result);
+    } catch {
+      // silent — keep stale data displayed
+    } finally {
+      setPrayerLoading(false);
+      prayerFetchingRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
-    if (prayerLoading) return;
-    const lat = detectedLoc.latitude ?? 4.0511;
-    const lng = detectedLoc.longitude ?? 9.7679;
+    const lat = detectedLoc.latitude;
+    const lng = detectedLoc.longitude;
+    if (!lat || !lng) return;
+    void fetchPrayerTimes(lat, lng, detectedLoc.timeZone);
+  }, [detectedLoc.latitude, detectedLoc.longitude, detectedLoc.timeZone, fetchPrayerTimes]);
 
-    const fetchPrayerTimes = async () => {
-      try {
-        setPrayerLoading(true);
-        const result = await prayerApi.getPrayerTimes({ latitude: lat, longitude: lng });
-        console.log('[Prayer] result times:', JSON.stringify(result?.times));
-        setPrayerResult(result);
-      } catch (e) {
-        console.log('[Prayer] fetch error:', e);
-      } finally {
-        setPrayerLoading(false);
+  // Re-fetch prayer times every time the app comes back to the foreground.
+  // This handles: day rollover (new day = different times), DST changes, and
+  // ensures stale notifications from a previous city are replaced.
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
+        const lat = detectedLoc.latitude;
+        const lng = detectedLoc.longitude;
+        if (lat && lng) {
+          void fetchPrayerTimes(lat, lng, detectedLoc.timeZone);
+        }
       }
-    };
+      appStateRef.current = nextState;
+    });
+    return () => sub.remove();
+  }, [detectedLoc.latitude, detectedLoc.longitude, detectedLoc.timeZone, fetchPrayerTimes]);
 
-    fetchPrayerTimes();
-  }, [detectedLoc.latitude, detectedLoc.longitude]);
+  const scheduleEnabledLocalsForNextDays = useCallback(async (opts: {
+    latitude: number;
+    longitude: number;
+    timeZone?: string;
+    enabled: Record<LocalReminderType, boolean>;
+  }) => {
+    const now = new Date();
+
+    // Cancel legacy DAILY schedules to avoid duplicates with the new DATE-based strategy
+    await Promise.all([
+      cancelReminder('adhan-Fajr'),
+      cancelReminder('adhan-Dhuhr'),
+      cancelReminder('adhan-Asr'),
+      cancelReminder('adhan-Maghrib'),
+      cancelReminder('adhan-Isha'),
+      cancelReminder('suhoor'),
+      cancelReminder('iftar'),
+      cancelReminder('dhikr-morning'),
+      cancelReminder('dhikr-evening'),
+    ]);
+
+    // Cancel existing date-based schedules first (best-effort)
+    const prefixes: Array<{ key: LocalReminderType; prefix: string }> = [
+      { key: 'AdhanFajr', prefix: 'adhan-Fajr-' },
+      { key: 'AdhanDhuhr', prefix: 'adhan-Dhuhr-' },
+      { key: 'AdhanAsr', prefix: 'adhan-Asr-' },
+      { key: 'AdhanMaghrib', prefix: 'adhan-Maghrib-' },
+      { key: 'AdhanIsha', prefix: 'adhan-Isha-' },
+      { key: 'SuhoorLocal', prefix: 'suhoor-' },
+      { key: 'IftarLocal', prefix: 'iftar-' },
+      { key: 'DhikrMorning', prefix: 'dhikr-morning-' },
+      { key: 'DhikrEvening', prefix: 'dhikr-evening-' },
+    ];
+
+    await Promise.all(
+      prefixes
+        .filter((p) => opts.enabled[p.key])
+        .map((p) => cancelRemindersByPrefix(p.prefix)),
+    );
+
+    for (let i = 0; i < LOCAL_SCHEDULE_DAYS_AHEAD; i++) {
+      const day = new Date(now);
+      day.setDate(now.getDate() + i);
+      day.setHours(12, 0, 0, 0); // stable day selection
+      const ymd = formatYmd(day);
+
+      let result: PrayerTimesResponse | null = null;
+      try {
+        result = await prayerApi.getPrayerTimes({
+          latitude: opts.latitude,
+          longitude: opts.longitude,
+          timeZone: opts.timeZone,
+          date: ymd,
+        } as any);
+      } catch {
+        continue;
+      }
+
+      const times = result?.times;
+      if (!times) continue;
+
+      const fajrAt = parseApiLocalDateTime(times.fajr);
+      const dhuhrAt = parseApiLocalDateTime(times.dhuhr);
+      const asrAt = parseApiLocalDateTime(times.asr);
+      const maghribAt = parseApiLocalDateTime(times.maghrib);
+      const ishaAt = parseApiLocalDateTime(times.isha);
+
+      const scheduleIfFuture = async (id: string, date: Date | null, fn: (date: Date, id: string) => Promise<unknown>) => {
+        if (!date) return;
+        if (date.getTime() <= now.getTime() + 10 * 1000) return;
+        await fn(date, id);
+      };
+
+      if (opts.enabled.AdhanFajr) await scheduleIfFuture(`adhan-Fajr-${ymd}`, fajrAt, (d, id) => scheduleAdhanDateReminder('Fajr', d, id));
+      if (opts.enabled.AdhanDhuhr) await scheduleIfFuture(`adhan-Dhuhr-${ymd}`, dhuhrAt, (d, id) => scheduleAdhanDateReminder('Dhuhr', d, id));
+      if (opts.enabled.AdhanAsr) await scheduleIfFuture(`adhan-Asr-${ymd}`, asrAt, (d, id) => scheduleAdhanDateReminder('Asr', d, id));
+      if (opts.enabled.AdhanMaghrib) await scheduleIfFuture(`adhan-Maghrib-${ymd}`, maghribAt, (d, id) => scheduleAdhanDateReminder('Maghrib', d, id));
+      if (opts.enabled.AdhanIsha) await scheduleIfFuture(`adhan-Isha-${ymd}`, ishaAt, (d, id) => scheduleAdhanDateReminder('Isha', d, id));
+
+      // Suhoor = 30 min before Fajr
+      if (opts.enabled.SuhoorLocal && fajrAt) {
+        const suhoorAt = addMinutesToDate(fajrAt, -30);
+        await scheduleIfFuture(`suhoor-${ymd}`, suhoorAt, scheduleSuhoorDateReminder);
+      }
+
+      // Iftar = Maghrib
+      if (opts.enabled.IftarLocal) {
+        await scheduleIfFuture(`iftar-${ymd}`, maghribAt, scheduleIftarDateReminder);
+      }
+
+      // Dhikr morning/evening: align to prayers (default +20 minutes)
+      if (opts.enabled.DhikrMorning && fajrAt) {
+        const at = addMinutesToDate(fajrAt, 20);
+        await scheduleIfFuture(`dhikr-morning-${ymd}`, at, scheduleDhikrMorningDateReminder);
+      }
+      if (opts.enabled.DhikrEvening && asrAt && maghribAt) {
+        // After Asr, but before Maghrib
+        let at = addMinutesToDate(asrAt, 20);
+        const latestAllowed = addMinutesToDate(maghribAt, -10);
+        if (at.getTime() >= maghribAt.getTime()) {
+          at = latestAllowed;
+        } else if (at.getTime() > latestAllowed.getTime()) {
+          at = latestAllowed;
+        }
+        await scheduleIfFuture(`dhikr-evening-${ymd}`, at, scheduleDhikrEveningDateReminder);
+      }
+    }
+  }, [LOCAL_SCHEDULE_DAYS_AHEAD, addMinutesToDate, formatYmd, parseApiLocalDateTime]);
 
   // ── Local reminders: load persisted state ──────────────────────────────────
   useEffect(() => {
@@ -178,6 +369,11 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
       : `adhan-${type.replace("Adhan", "")}`;
 
     if (isOn) {
+      if (type.startsWith('Adhan')) await cancelRemindersByPrefix(`adhan-${type.replace('Adhan', '')}-`);
+      else if (type === 'SuhoorLocal') await cancelRemindersByPrefix('suhoor-');
+      else if (type === 'IftarLocal') await cancelRemindersByPrefix('iftar-');
+      else if (type === 'DhikrMorning') await cancelRemindersByPrefix('dhikr-morning-');
+      else if (type === 'DhikrEvening') await cancelRemindersByPrefix('dhikr-evening-');
       await cancelReminder(id);
       setLocalEnabled((prev) => { const next = { ...prev, [type]: false }; void persistLocal(next); return next; });
       showToast("Rappel désactivé");
@@ -185,45 +381,60 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     }
 
     try {
-      if (type.startsWith("Adhan")) {
-        const key = type.replace("Adhan", "") as keyof NonNullable<typeof adhanTimes>;
-        const slot = adhanTimes?.[key];
-        if (!slot) { showToast("⏳ Horaires de prière non encore chargés."); return; }
-        await scheduleAdhanReminder(key, slot.hour, slot.minute);
-      } else if (type === "SuhoorLocal") {
-        const fajr = adhanTimes?.Fajr;
-        if (!fajr) { showToast("⏳ Horaires non chargés."); return; }
-        const s = subtractMinutes(fajr, 30);
-        await scheduleSuhoorReminder(s.hour, s.minute);
-      } else if (type === "IftarLocal") {
-        const maghrib = adhanTimes?.Maghrib;
-        if (!maghrib) { showToast("⏳ Horaires non chargés."); return; }
-        await scheduleIftarReminder(maghrib.hour, maghrib.minute);
-      } else if (type === "DhikrMorning") {
-        await scheduleDhikrMorningReminder();
-      } else if (type === "DhikrEvening") {
-        await scheduleDhikrEveningReminder();
-      } else if (type === "JumuahReminder") {
+      if (type === 'JumuahReminder') {
         await scheduleJumuahReminder();
+      } else {
+        const lat = detectedLoc.latitude;
+        const lng = detectedLoc.longitude;
+        if (!lat || !lng) {
+          showToast('Active le GPS pour planifier les rappels.');
+          return;
+        }
+        await scheduleEnabledLocalsForNextDays({
+          latitude: lat,
+          longitude: lng,
+          timeZone: detectedLoc.timeZone ?? undefined,
+          enabled: { ...localEnabled, [type]: true },
+        });
       }
       setLocalEnabled((prev) => { const next = { ...prev, [type]: true }; void persistLocal(next); return next; });
       showToast("✅ Rappel activé");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Impossible d'activer le rappel.");
     }
-  }, [localEnabled, adhanTimes, persistLocal, subtractMinutes, showToast]);
+  }, [detectedLoc.latitude, detectedLoc.longitude, detectedLoc.timeZone, localEnabled, persistLocal, scheduleEnabledLocalsForNextDays, showToast]);
 
-  // Auto-reschedule when prayer times update
+  // Track previous coordinates to detect city-change (significant location shift).
+  const prevCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Auto-reschedule date-based reminders whenever prayer times load/refresh OR location changes.
+  // This ensures that moving from one city to another (e.g. Yaoundé → Douala) cancels old
+  // adhan notifications and schedules new ones for the current city's exact prayer times.
   useEffect(() => {
-    if (!adhanTimes) return;
-    const tasks: Array<Promise<unknown>> = [];
-    if (localEnabled.AdhanFajr && adhanTimes.Fajr) tasks.push(scheduleAdhanReminder("Fajr", adhanTimes.Fajr.hour, adhanTimes.Fajr.minute));
-    if (localEnabled.AdhanDhuhr && adhanTimes.Dhuhr) tasks.push(scheduleAdhanReminder("Dhuhr", adhanTimes.Dhuhr.hour, adhanTimes.Dhuhr.minute));
-    if (localEnabled.AdhanAsr && adhanTimes.Asr) tasks.push(scheduleAdhanReminder("Asr", adhanTimes.Asr.hour, adhanTimes.Asr.minute));
-    if (localEnabled.AdhanMaghrib && adhanTimes.Maghrib) tasks.push(scheduleAdhanReminder("Maghrib", adhanTimes.Maghrib.hour, adhanTimes.Maghrib.minute));
-    if (localEnabled.AdhanIsha && adhanTimes.Isha) tasks.push(scheduleAdhanReminder("Isha", adhanTimes.Isha.hour, adhanTimes.Isha.minute));
-    Promise.all(tasks).catch(() => {});
-  }, [adhanTimes]);
+    if (!prayerResult?.times) return;
+    const lat = detectedLoc.latitude;
+    const lng = detectedLoc.longitude;
+    if (!lat || !lng) return;
+
+    const prev = prevCoordsRef.current;
+    const cityChanged =
+      prev === null ||
+      Math.abs(prev.lat - lat) > 0.05 ||
+      Math.abs(prev.lng - lng) > 0.05;
+
+    prevCoordsRef.current = { lat, lng };
+
+    const anyEnabled = Object.values(localEnabled).some(Boolean);
+    if (!anyEnabled && !cityChanged) return;
+
+    void scheduleEnabledLocalsForNextDays({
+      latitude: lat,
+      longitude: lng,
+      timeZone: detectedLoc.timeZone ?? prayerResult.location?.timeZone,
+      enabled: localEnabled,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prayerResult, detectedLoc.latitude, detectedLoc.longitude, detectedLoc.timeZone, localEnabled, scheduleEnabledLocalsForNextDays]);
 
   // ── Parse prayer time from either "HH:MM" or ISO datetime "2026-02-19T12:36:00"
   const parsePrayerTime = (raw: string | undefined): { hour: number; minute: number } | null => {
@@ -347,6 +558,10 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     navigation.navigate('Plus', { screen: 'HijriCalendar' });
   };
 
+  const handleNavigateToTasbih = () => {
+    navigation.navigate('Plus', { screen: 'Tasbih' });
+  };
+
   const locationLabel = detectedLoc.city && detectedLoc.country
     ? `${detectedLoc.city}, ${detectedLoc.country}`
     : detectedLoc.city ?? "Détection...";
@@ -373,15 +588,12 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   })();
 
   return (
-    <ScrollView
-      style={[s.container, { backgroundColor: palette.bg }]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
-        ) : undefined
-      }
-    >
+    <View style={[s.container, { backgroundColor: palette.bg }]}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 30 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh?.()} tintColor={palette.primaryDark} />}
+      >
       {/* Header */}
       <Header
         user={user}
@@ -524,6 +736,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
         <View style={s.quickRow}>
           {[
             { label: 'Dhikr',     icon: 'radio'      as const, onPress: handleNavigateToDhikr,    color: palette.primary },
+            { label: 'Tasbih',    icon: 'radio-button-on' as const, onPress: handleNavigateToTasbih, color: palette.accent },
             { label: 'Mosquées',  icon: 'business'   as const, onPress: handleNavigateToMosque,   color: palette.secondary },
             { label: 'Qibla',     icon: 'compass'    as const, onPress: handleNavigateToQibla,    color: palette.accent },
             { label: 'Zakat',     icon: 'calculator' as const, onPress: handleNavigateToZakat,    color: '#388E3C' },
@@ -563,13 +776,70 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
         </View>
       ) : null}
 
-    </ScrollView>
+      </ScrollView>
+
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={handleNavigateToTasbih}
+        accessibilityRole="button"
+        accessibilityLabel="Ouvrir Tasbih"
+        style={[
+          s.tasbihFab,
+          {
+            backgroundColor: palette.primary,
+            bottom: Math.max(16, insets.bottom + 12),
+          },
+        ]}
+      >
+        <Ionicons name="radio-button-on" size={26} color="#fff" />
+        {tasbihLive && (
+          <View style={s.tasbihBadge}>
+            <Text style={s.tasbihBadgeText}>
+              {tasbihLive.count}/{tasbihLive.target}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  tasbihFab: {
+    position: 'absolute',
+    right: 18,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  tasbihBadge: {
+    position: 'absolute',
+    right: 6,
+    top: 6,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    backgroundColor: '#1A2332',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  tasbihBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
   },
   section: {
     paddingHorizontal: 20,

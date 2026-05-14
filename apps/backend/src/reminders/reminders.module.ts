@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { RemindersController } from './reminders.controller';
@@ -14,11 +14,22 @@ import { PrismaModule } from '../prisma/prisma.module';
     PrismaModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          url: configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379',
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const logger = new Logger('RemindersModule');
+        const redisUrl = configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
+        return {
+          connection: { url: redisUrl },
+          defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+          onClientCreated(client) {
+            client.on('error', (err: Error) => {
+              logger.error(`Redis connection error: ${err.message}`);
+            });
+            client.on('connect', () => {
+              logger.log('Redis connected');
+            });
+          },
+        };
+      },
     }),
     BullModule.registerQueue({
       name: REMINDER_QUEUE,

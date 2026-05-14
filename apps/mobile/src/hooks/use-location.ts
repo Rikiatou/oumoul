@@ -22,8 +22,8 @@ const FALLBACK: DetectedLocation = {
   timestamp: 0,
 };
 
-// Cache duration: 30 minutes
-const CACHE_MS = 30 * 60 * 1000;
+// Cache duration: 5 minutes (plus fréquemment pour meilleure détection)
+const CACHE_MS = 5 * 60 * 1000;
 
 /**
  * Shared hook that auto-detects GPS location, reverse-geocodes to city/country,
@@ -77,7 +77,7 @@ export function useLocation() {
     // Get GPS position
     try {
       const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.High,
       });
 
       const { latitude, longitude } = pos.coords;
@@ -86,8 +86,9 @@ export function useLocation() {
       let city: string | null = null;
       let country: string | null = null;
       try {
-        const [geo] = await Location.reverseGeocodeAsync({ latitude, longitude });
-        if (geo) {
+        const results = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (results && results.length > 0) {
+          const geo = results[0];
           city = geo.city ?? geo.subregion ?? geo.region ?? null;
           country = geo.country ?? null;
         }
@@ -132,7 +133,8 @@ export function useLocation() {
   }, []);
 
   useEffect(() => {
-    void detect();
+    // Use cached location first; only fetch fresh GPS if cache is stale
+    void detect(false);
   }, []);
 
   return {

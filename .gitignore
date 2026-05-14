@@ -13,6 +13,8 @@ out/
 .expo/
 .next/
 coverage/
+*.apk
+*.aab
 
 # OS files
 .DS_Store

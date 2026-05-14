@@ -4,10 +4,12 @@
  */
 
 export interface DailyInspiration {
-  type: "ayah" | "dua";
+  type: "ayah" | "dua" | "hadith";
+  id?: string;
   arabic: string;
   transliteration: string;
   translation: string;
+  english?: string;
   source: string;
 }
 
@@ -209,6 +211,34 @@ const INSPIRATIONS: DailyInspiration[] = [
     transliteration: "Allahumma innaka 'Afuwwun tuhibbul-'afwa fa'fu 'anni",
     translation: "Ô Allah, Tu es Celui qui pardonne, Tu aimes le pardon, alors pardonne-moi.",
     source: "Hadith — At-Tirmidhi, Ibn Majah",
+  },
+  // ── Hadiths ──
+  {
+    type: "hadith",
+    id: "hadith_001",
+    arabic: "إِنَّمَا الْأَعْمَالُ بِالنِّيَّاتِ",
+    transliteration: "Innamal a'malu bin niyyat",
+    translation: "Les actes ne valent que par les intentions",
+    english: "Indeed, deeds are only by intention",
+    source: "Bukhari & Muslim",
+  },
+  {
+    type: "hadith",
+    id: "hadith_002",
+    arabic: "الْمُسْلِمُ أَخُو الْمُسْلِمِ",
+    transliteration: "Al-muslimu akhu al-muslim",
+    translation: "Le musulman est le frère du musulman",
+    english: "The Muslim is the brother of another Muslim",
+    source: "Bukhari & Muslim",
+  },
+  {
+    type: "hadith",
+    id: "hadith_003",
+    arabic: "مَنْ قَالَ لَا إِلَهَ إِلَّا اللَّهُ دَخَلَ الْجَنَّةَ",
+    transliteration: "Man qala la ilaha illallah dakhalal jannah",
+    translation: "Quiconque dit 'Il n'y a de divinité qu'Allah' entrera au Paradis",
+    english: "Whoever says 'There is no deity but Allah' will enter Paradise",
+    source: "Muslim",
   },
 ];
 

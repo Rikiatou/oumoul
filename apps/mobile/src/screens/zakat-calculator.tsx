@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { AuthUser } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
 
@@ -97,9 +98,7 @@ export function ZakatCalculatorScreen({ user, onBack }: { user: AuthUser; onBack
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn} accessibilityLabel="Retour" accessibilityRole="button">
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={st.headerTitle} accessibilityRole="header">Calculateur Zakat</Text>
         <HelpTip screenName="Calculateur Zakat" tips={[
           { icon: 'calculator', title: 'Calcul automatique', description: 'Entre tes actifs et dettes, la zakat (2.5%) est calculée automatiquement.' },

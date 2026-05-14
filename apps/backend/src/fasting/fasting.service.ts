@@ -63,6 +63,8 @@ export class FastingService {
     return this.prisma.fastingLog.findMany({
       where,
       orderBy: { date: 'asc' },
+      take: query.limit ?? 100,
+      skip: query.offset ?? 0,
     });
   }
 
@@ -301,15 +303,4 @@ export class FastingService {
     }
   }
 
-  private nextWeekday(startDate: Date, allowedDays: number[]) {
-    const date = new Date(startDate);
-    for (let i = 0; i < 14; i += 1) {
-      const day = date.getDay();
-      if (allowedDays.includes(day)) {
-        return new Date(date);
-      }
-      date.setDate(date.getDate() + 1);
-    }
-    return new Date(startDate);
-  }
 }

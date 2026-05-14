@@ -5,6 +5,7 @@ import { palette } from "../../theme";
 import { getTodayInspiration } from "../../data/daily-inspiration";
 import { Locale } from "../../i18n";
 import { t } from "../../i18n";
+import { HadithCard } from "../../components/hadith/HadithCard";
 
 interface DailyInspirationCardProps {
   locale: Locale;
@@ -13,6 +14,27 @@ interface DailyInspirationCardProps {
 export function DailyInspirationCard({ locale }: DailyInspirationCardProps) {
   const daily = getTodayInspiration();
 
+  // If it's a hadith, use the new HadithCard with sharing
+  if (daily.type === "hadith") {
+    return (
+      <HadithCard 
+        hadith={{
+          id: daily.id || "daily_hadith",
+          arabic: daily.arabic,
+          french: daily.translation,
+          english: daily.english || daily.translation,
+          source: daily.source,
+          category: "daily",
+          theme: "inspiration"
+        }}
+        locale={locale}
+        showArabic={true}
+        showEnglish={locale === "fr"}
+      />
+    );
+  }
+
+  // For ayah and dua, keep the original simple card
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>

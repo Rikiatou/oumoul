@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { AuthUser } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { ALLAH_NAMES } from '../data/allah-names';
 import { QURAN_WORDS } from '../data/quran-words';
@@ -25,8 +26,8 @@ interface SearchResult {
 }
 
 const FEATURE_ITEMS: SearchResult[] = [
-  { id: 'f-prayer', type: 'feature', title: 'Horaires de prière', subtitle: 'Consulter les horaires de prière du jour', icon: 'time', screen: 'Dashboard' },
-  { id: 'f-quran', type: 'feature', title: 'Lire le Coran', subtitle: 'Sourates, versets et traduction', icon: 'book', screen: 'ImaneQuran' },
+  { id: 'f-prayer', type: 'feature', title: 'Horaires de prière', subtitle: 'Consulter les horaires de prière du jour', icon: 'time', screen: 'PrayerTracking' },
+  { id: 'f-quran', type: 'feature', title: 'Lire le Coran', subtitle: 'Sourates, versets et traduction', icon: 'book', screen: '__CORAN_TAB__' },
   { id: 'f-track', type: 'feature', title: 'Suivi des prières', subtitle: 'Enregistrer et suivre tes prières', icon: 'checkmark-done', screen: 'PrayerTracking' },
   { id: 'f-audio', type: 'feature', title: 'Écouter le Coran', subtitle: 'Audio avec récitateurs', icon: 'musical-notes', screen: 'QuranAudio' },
   { id: 'f-hadith', type: 'feature', title: 'Hadith du jour', subtitle: 'Hadiths par thème avec favoris', icon: 'book', screen: 'HadithDaily' },
@@ -154,9 +155,7 @@ export function GlobalSearchScreen({ user, onBack, onNavigate }: { user: AuthUse
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <View style={st.searchBar}>
           <Ionicons name="search" size={18} color={palette.muted} />
           <TextInput

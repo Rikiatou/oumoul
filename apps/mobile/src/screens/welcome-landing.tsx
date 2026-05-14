@@ -37,9 +37,9 @@ export function WelcomeLandingScreen({ onGetStarted }: WelcomeLandingProps) {
 
       {/* Content */}
       <View style={s.content}>
-        {/* App icon */}
-        <View style={s.iconContainer}>
-          <Image source={require("../../assets/icon.png")} style={s.icon} resizeMode="contain" />
+        {/* Welcome Image */}
+        <View style={s.welcomeImageContainer}>
+          <Image source={require("../../assets/loginimage.png")} style={s.welcomeImage} resizeMode="cover" />
         </View>
 
         {/* App name */}
@@ -108,6 +108,23 @@ const s = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 60,
   },
+  welcomeImageContainer: {
+    width: width * 0.8,
+    height: 200,
+    borderRadius: 20,
+    marginBottom: 24,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  welcomeImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
+  },
   iconContainer: {
     width: 100,
     height: 100,
@@ -123,9 +140,10 @@ const s = StyleSheet.create({
     elevation: 10,
   },
   icon: {
-    width: 72,
-    height: 72,
-    borderRadius: 18,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    marginBottom: 24,
   },
   appName: {
     fontSize: 34,
@@ -173,6 +191,7 @@ const s = StyleSheet.create({
   bottom: {
     paddingHorizontal: 32,
     paddingBottom: 48,
+    paddingTop: 40,
     alignItems: "center",
   },
   btn: {

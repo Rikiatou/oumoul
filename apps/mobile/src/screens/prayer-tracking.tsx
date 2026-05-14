@@ -11,9 +11,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import type { AuthUser } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { PrayerStatus } from '@oumoul/api';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
+import { awardEvent } from '../gamification/gamification-events';
 
 const PRAYER_LOGS_KEY = 'oumoul_prayer_logs';
 
@@ -119,6 +121,15 @@ export function PrayerTrackingScreen({ user, onBack }: { user: AuthUser; onBack:
       const updated = { ...dayLog };
       if (nextStatus) {
         updated[prayer] = nextStatus;
+        // Award gamification points for praying
+        if (nextStatus === PrayerStatus.PRAYED_ON_TIME) void awardEvent('prayer_on_time');
+        else if (nextStatus === PrayerStatus.PRAYED_LATE) void awardEvent('prayer_late');
+        // Check if all 5 prayers done today
+        const newDay = { ...updated };
+        const prayedCount = Object.values(newDay).filter(
+          (s) => s === PrayerStatus.PRAYED_ON_TIME || s === PrayerStatus.PRAYED_LATE
+        ).length;
+        if (prayedCount === 5) void awardEvent('all_prayers_day');
       } else {
         delete updated[prayer];
       }
@@ -171,9 +182,7 @@ export function PrayerTrackingScreen({ user, onBack }: { user: AuthUser; onBack:
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn} accessibilityLabel="Retour" accessibilityRole="button">
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={st.headerTitle} accessibilityRole="header">Suivi des prières</Text>
         <HelpTip screenName="Suivi des prières" tips={[
           { icon: 'checkmark-done', title: 'Enregistre tes prières', description: 'Appuie sur une prière pour changer son statut : à l\'heure, en retard ou manquée.' },

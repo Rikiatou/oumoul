@@ -37,8 +37,8 @@ const LOCAL_REMINDER_LABELS: Record<LocalReminderType, string> = {
   AdhanIsha: "Adhan Isha",
   SuhoorLocal: "Suhoor (30 min avant Fajr)",
   IftarLocal: "Iftar (Maghrib)",
-  DhikrMorning: "Adhkar du matin (06h30)",
-  DhikrEvening: "Adhkar du soir (18h00)",
+  DhikrMorning: "Adhkar du matin (après Fajr)",
+  DhikrEvening: "Adhkar du soir (après Asr, avant Maghrib)",
   JumuahReminder: "Rappel Jumu'ah (vendredi 12h)",
 };
 

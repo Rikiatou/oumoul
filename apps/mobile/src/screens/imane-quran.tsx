@@ -138,10 +138,24 @@ const FONT_SIZES = [
   { arabic: 40, trans: 18, label: 'Maximum' },
 ];
 
-export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function ImaneQuranScreen({
+  user,
+  onBack,
+  onOpenTafsir,
+  onOpenAudio,
+  onOpenWords,
+  onOpenRecitation,
+}: {
+  user: AuthUser;
+  onBack: () => void;
+  onOpenTafsir?: (surahId: number, ayah: number, locale: 'fr' | 'en') => void;
+  onOpenAudio?: () => void;
+  onOpenWords?: () => void;
+  onOpenRecitation?: () => void;
+}) {
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const [searchQuery, setSearchQuery] = useState('');
-  const [fontSizeIndex, setFontSizeIndex] = useState(1);
+  const [fontSizeIndex, setFontSizeIndex] = useState(2);
   const [showSurahList, setShowSurahList] = useState(true);
 
   const lastReadKey = useRef(`oumoul.quran.lastRead.${user.email}`).current;
@@ -164,9 +178,10 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
   const [tafsirError, setTafsirError] = useState<string | null>(null);
 
   const error = surahError ?? versesError ?? tafsirError;
-  const [tafSirLoading, setTafsirLoading] = useState(false);
-  const [selectedTafsirAyah, setSelectedTafsirAyah] = useState<number | null>(null);
-  const [tafSirText, setTafsirText] = useState<string | null>(null);
+  const [tafsirOpenKey, setTafsirOpenKey] = useState<string | null>(null);
+  const [tafsirLoadingKey, setTafsirLoadingKey] = useState<string | null>(null);
+  const [tafsirTextByKey, setTafsirTextByKey] = useState<Record<string, string>>({});
+  const tafsirRequestIdRef = useRef(0);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
@@ -193,11 +208,7 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
     setIsPlaying(false);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      void stopAndUnloadSound();
-    };
-  }, [stopAndUnloadSound]);
+  // Intentionally do NOT stop audio on unmount — allows background playback when leaving screen.
 
   useEffect(() => {
     setAudioError(null);
@@ -335,8 +346,9 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
   }, [didAutoScroll, hydrated, lastRead, selectedSurahId, verseOffsets]);
 
   useEffect(() => {
-    setSelectedTafsirAyah(null);
-    setTafsirText(null);
+    setTafsirOpenKey(null);
+    setTafsirLoadingKey(null);
+    setTafsirTextByKey({});
     setTafsirError(null);
     setVerseOffsets({});
     setDidAutoScroll(false);
@@ -448,10 +460,23 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
 
   const handleShowTafsir = useCallback(
     async (surahId: number, ayahNumber: number) => {
-      setTafsirLoading(true);
-      setSelectedTafsirAyah(ayahNumber);
+      const key = `${surahId}:${ayahNumber}:${language}`;
+
+      if (tafsirOpenKey === key) {
+        setTafsirOpenKey(null);
+        return;
+      }
+
+      setTafsirOpenKey(key);
       setTafsirError(null);
       setAndPersistLastRead({ surahId, ayah: ayahNumber, language });
+
+      if (tafsirTextByKey[key]) {
+        return;
+      }
+
+      setTafsirLoadingKey(key);
+      const requestId = ++tafsirRequestIdRef.current;
       try {
         const tafsirCacheKey = `tafsir_${surahId}_${ayahNumber}_${language}`;
         const response = await offlineCache.getWithFallback(
@@ -459,16 +484,18 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
           () => tafsirApi.getTafsir({ surah: surahId, ayah: ayahNumber, locale: language }),
           CACHE_TTL.WEEK,
         );
-        setTafsirText(response.text);
+        if (tafsirRequestIdRef.current !== requestId) return;
+        setTafsirTextByKey((prev) => (prev[key] === response.text ? prev : { ...prev, [key]: response.text }));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Impossible de charger le résumé.';
         setTafsirError(message);
-        setTafsirText(null);
       } finally {
-        setTafsirLoading(false);
+        if (tafsirRequestIdRef.current === requestId) {
+          setTafsirLoadingKey((prev) => (prev === key ? null : prev));
+        }
       }
     },
-    [language, setAndPersistLastRead],
+    [language, setAndPersistLastRead, tafsirOpenKey, tafsirTextByKey],
   );
 
   const filteredSurahs = useMemo(() => {
@@ -516,6 +543,30 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
             <LanguageToggle language={language} onChange={setLanguage} />
           </View>
         </View>
+
+        {/* Quick-access Coran tools */}
+        {(onOpenAudio || onOpenWords || onOpenRecitation) && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: 16, marginBottom: 8 }} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
+            {onOpenAudio && (
+              <TouchableOpacity style={q.quickTool} onPress={onOpenAudio} activeOpacity={0.75}>
+                <Ionicons name="musical-note" size={16} color={q_c.accent} />
+                <Text style={q.quickToolText}>Écouter</Text>
+              </TouchableOpacity>
+            )}
+            {onOpenWords && (
+              <TouchableOpacity style={q.quickTool} onPress={onOpenWords} activeOpacity={0.75}>
+                <Ionicons name="language" size={16} color={q_c.accent} />
+                <Text style={q.quickToolText}>Vocabulaire</Text>
+              </TouchableOpacity>
+            )}
+            {onOpenRecitation && (
+              <TouchableOpacity style={q.quickTool} onPress={onOpenRecitation} activeOpacity={0.75}>
+                <Ionicons name="mic" size={16} color={q_c.accent} />
+                <Text style={q.quickToolText}>Récitation</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        )}
 
         {/* Search */}
         <View style={q.searchContainer}>
@@ -694,7 +745,11 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
                         <TouchableOpacity
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           onPress={() => void handleShowTafsir(selectedSurahId, verse.verseNumber)}
-                          disabled={tafSirLoading && selectedTafsirAyah === verse.verseNumber}
+                          onLongPress={() => {
+                            if (!onOpenTafsir) return;
+                            onOpenTafsir(selectedSurahId, verse.verseNumber, language);
+                          }}
+                          disabled={tafsirLoadingKey === `${selectedSurahId}:${verse.verseNumber}:${language}`}
                         >
                           <Ionicons name="book-outline" size={18} color={q_c.muted} />
                         </TouchableOpacity>
@@ -714,6 +769,13 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
                   {verse.textArabic}
                 </Text>
 
+                {/* Transliteration */}
+                {verse.textTransliteration && (
+                  <Text style={[q.transliterationText, { fontSize: currentFont.trans - 1, lineHeight: (currentFont.trans - 1) * 1.5 }]}>
+                    {verse.textTransliteration}
+                  </Text>
+                )}
+
                 {/* Divider */}
                 <View style={q.verseDivider} />
 
@@ -725,13 +787,13 @@ export function ImaneQuranScreen({ user, onBack }: { user: AuthUser; onBack: () 
                 )}
 
                 {/* Tafsir inline */}
-                {selectedTafsirAyah === verse.verseNumber && tafSirLoading && (
+                {tafsirOpenKey === `${selectedSurahId}:${verse.verseNumber}:${language}` && tafsirLoadingKey === `${selectedSurahId}:${verse.verseNumber}:${language}` && (
                   <ActivityIndicator color={q_c.accent} style={{ marginTop: 8 }} />
                 )}
-                {selectedTafsirAyah === verse.verseNumber && tafSirText && (
+                {tafsirOpenKey === `${selectedSurahId}:${verse.verseNumber}:${language}` && tafsirTextByKey[`${selectedSurahId}:${verse.verseNumber}:${language}`] && (
                   <View style={q.tafsirBox}>
                     <Text style={q.tafsirLabel}>Tafsir</Text>
-                    <Text style={[q.tafsirText, { fontSize: currentFont.trans, lineHeight: currentFont.trans * 1.6 }]}>{tafSirText}</Text>
+                    <Text style={[q.tafsirText, { fontSize: currentFont.trans, lineHeight: currentFont.trans * 1.6 }]}>{tafsirTextByKey[`${selectedSurahId}:${verse.verseNumber}:${language}`]}</Text>
                   </View>
                 )}
               </View>
@@ -940,12 +1002,30 @@ const q = StyleSheet.create({
   arabicText: {
     color: '#1B3A2D',
     textAlign: 'right',
-    fontFamily: 'Amiri-Regular',
+    fontFamily: 'Amiri-Bold',
+    letterSpacing: 0.5,
   },
+  quickTool: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: q_c.accentLight,
+    borderWidth: 1,
+    borderColor: q_c.accent + '30',
+  },
+  quickToolText: { fontSize: 13, fontWeight: '600', color: q_c.accent },
   verseDivider: {
     height: 1,
     backgroundColor: q_c.border,
     marginVertical: 12,
+  },
+  transliterationText: {
+    color: q_c.muted,
+    fontStyle: 'italic',
+    marginTop: 6,
   },
   translationText: {
     color: q_c.textSoft,

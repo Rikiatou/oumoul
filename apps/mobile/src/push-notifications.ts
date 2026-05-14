@@ -107,9 +107,23 @@ type DateReminderPayload = {
   date: Date;
   id?: string;
   channelId?: string;
+  sound?: string;
 };
 
-export async function scheduleDateReminder({ title, body, date, id, channelId }: DateReminderPayload) {
+export async function cancelRemindersByPrefix(prefix: string) {
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const ids = scheduled
+      .map((n) => n.identifier)
+      .filter((id): id is string => typeof id === 'string' && id.startsWith(prefix));
+
+    await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id)));
+  } catch {
+    // Ignore — best-effort cleanup
+  }
+}
+
+export async function scheduleDateReminder({ title, body, date, id, channelId, sound }: DateReminderPayload) {
   await ensureChannel();
   const ok = await ensureLocalNotificationPermission();
   if (!ok) {
@@ -137,7 +151,7 @@ export async function scheduleDateReminder({ title, body, date, id, channelId }:
     content: {
       title,
       body,
-      sound: "default",
+      sound: sound ?? "default",
     },
     trigger,
   });
@@ -183,6 +197,53 @@ export async function scheduleAdhanReminder(prayer: string, hour: number, minute
     minute,
     channelId: ADHAN_CHANNEL_ID,
     sound: ADHAN_SOUND,
+  });
+}
+
+export async function scheduleAdhanDateReminder(prayer: string, date: Date, id: string) {
+  return scheduleDateReminder({
+    id,
+    title: 'Adhan',
+    body: `C'est l'heure de ${prayer}`,
+    date,
+    channelId: ADHAN_CHANNEL_ID,
+    sound: ADHAN_SOUND,
+  });
+}
+
+export async function scheduleSuhoorDateReminder(date: Date, id: string) {
+  return scheduleDateReminder({
+    id,
+    title: 'Suhoor',
+    body: 'Prépare-toi pour le Suhoor',
+    date,
+  });
+}
+
+export async function scheduleIftarDateReminder(date: Date, id: string) {
+  return scheduleDateReminder({
+    id,
+    title: 'Iftar',
+    body: "C'est presque l'heure de rompre le jeûne",
+    date,
+  });
+}
+
+export async function scheduleDhikrMorningDateReminder(date: Date, id: string) {
+  return scheduleDateReminder({
+    id,
+    title: 'Adhkar du matin ☀️',
+    body: "N'oublie pas tes invocations du matin",
+    date,
+  });
+}
+
+export async function scheduleDhikrEveningDateReminder(date: Date, id: string) {
+  return scheduleDateReminder({
+    id,
+    title: 'Adhkar du soir 🌙',
+    body: "N'oublie pas tes invocations du soir",
+    date,
   });
 }
 

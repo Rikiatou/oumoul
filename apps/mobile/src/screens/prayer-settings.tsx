@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import type { AuthUser, CalculationMethodOption, HighLatitudeRuleOption, MadhabOption } from "@oumoul/api";
 import { CalculationMethodOption as CalculationMethodEnum, HighLatitudeRuleOption as HighLatitudeRuleEnum, MadhabOption as MadhabEnum } from "@oumoul/api";
 import { useLocationContext } from "../context/location-context";
-import { palette } from "../theme";
+import { useTheme } from "../context/theme-context";
+import { setupDailyReminders, cancelDailyReminders } from "../notifications/daily-reminders";
+import { scheduleAdhanReminder, cancelReminder, syncPushTokenWithBackend } from "../push-notifications";
+import * as Notifications from "expo-notifications";
 
 type StoredPrayerSettings = {
   latitude: string;
@@ -89,11 +92,12 @@ function ProChoiceRow<T extends string>({
   value: T;
   onChange: (next: T) => void;
 }) {
+  const { palette } = useTheme();
   return (
     <View style={{ marginTop: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <Ionicons name={icon as any} size={16} color={ps_c.accent} />
-        <Text style={ps.fieldLabel}>{title}</Text>
+        <Ionicons name={icon as any} size={16} color={palette.primaryDark} />
+        <Text style={[ps.fieldLabel, { color: palette.muted }]}>{title}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -102,10 +106,10 @@ function ProChoiceRow<T extends string>({
             return (
               <TouchableOpacity
                 key={option.value}
-                style={[ps.choiceChip, active && ps.choiceChipActive]}
+                style={[ps.choiceChip, { borderColor: palette.border }, active && { backgroundColor: palette.primaryDark, borderColor: palette.primaryDark }]}
                 onPress={() => onChange(option.value)}
               >
-                <Text style={[ps.choiceChipText, active && ps.choiceChipTextActive]}>{option.label}</Text>
+                <Text style={[ps.choiceChipText, { color: palette.text }, active && ps.choiceChipTextActive]}>{option.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -130,17 +134,18 @@ function ProField({
   placeholder?: string;
   keyboardType?: 'default' | 'numeric' | 'decimal-pad';
 }) {
+  const { palette } = useTheme();
   return (
     <View style={ps.fieldRow}>
-      <View style={ps.fieldIconWrap}>
-        <Ionicons name={icon as any} size={16} color={ps_c.accent} />
+      <View style={[ps.fieldIconWrap, { backgroundColor: palette.accentLight }]}>
+        <Ionicons name={icon as any} size={16} color={palette.primaryDark} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={ps.fieldSmallLabel}>{label}</Text>
+        <Text style={[ps.fieldSmallLabel, { color: palette.muted }]}>{label}</Text>
         <TextInput
-          style={ps.fieldInput}
+          style={[ps.fieldInput, { color: palette.text, borderColor: palette.border }]}
           placeholder={placeholder}
-          placeholderTextColor={ps_c.muted}
+          placeholderTextColor={palette.muted}
           value={value}
           onChangeText={onChangeText}
           keyboardType={keyboardType}
@@ -150,13 +155,40 @@ function ProField({
   );
 }
 
+const ADHAN_STORAGE_KEY = 'oumoul.localReminders';
+
+const ADHAN_PRAYERS = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
+type AdhanPrayer = typeof ADHAN_PRAYERS[number];
+
+const ADHAN_ICONS: Record<AdhanPrayer, string> = {
+  Fajr: 'sunny-outline',
+  Dhuhr: 'sunny',
+  Asr: 'partly-sunny-outline',
+  Maghrib: 'cloudy-night-outline',
+  Isha: 'moon-outline',
+};
+
 export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+  const { palette } = useTheme();
+  const ps_c = {
+    bg: palette.bgAlt,
+    card: palette.card,
+    border: palette.border,
+    text: palette.text,
+    textSoft: palette.textSoft,
+    muted: palette.muted,
+    accent: palette.primaryDark,
+    accentLight: palette.accentLight,
+  };
   const { location: detectedLoc, loading: locLoading } = useLocationContext();
   const [settings, setSettings] = useState<StoredPrayerSettings>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [gpsApplied, setGpsApplied] = useState(false);
+  const [dailyNotifications, setDailyNotifications] = useState(false);
+  const [adhanEnabled, setAdhanEnabled] = useState<Record<AdhanPrayer, boolean>>({ Fajr: false, Dhuhr: false, Asr: false, Maghrib: false, Isha: false });
+  const [adhanLoading, setAdhanLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Auto-fill from GPS if no saved settings exist
   useEffect(() => {
@@ -208,6 +240,61 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
     void load();
   }, [load]);
 
+  // Load persisted adhan toggles
+  useEffect(() => {
+    SecureStore.getItemAsync(ADHAN_STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as Record<string, boolean>;
+          setAdhanEnabled((prev) => ({
+            ...prev,
+            Fajr: parsed.AdhanFajr ?? prev.Fajr,
+            Dhuhr: parsed.AdhanDhuhr ?? prev.Dhuhr,
+            Asr: parsed.AdhanAsr ?? prev.Asr,
+            Maghrib: parsed.AdhanMaghrib ?? prev.Maghrib,
+            Isha: parsed.AdhanIsha ?? prev.Isha,
+          }));
+        } catch {}
+      }
+    }).catch(() => {});
+  }, []);
+
+  const toggleAdhan = useCallback(async (prayer: AdhanPrayer) => {
+    const id = `adhan-${prayer}`;
+    const isEnabled = adhanEnabled[prayer];
+    setAdhanLoading(true);
+    try {
+      if (isEnabled) {
+        await cancelReminder(id);
+      } else {
+        const synced = await syncPushTokenWithBackend();
+        if (!synced) {
+          setError('Active les notifications dans les réglages système.');
+          return;
+        }
+        // Use saved prayer times if available — otherwise schedule at a placeholder time
+        // The actual time will be rescheduled when the dashboard loads prayer times
+        await scheduleAdhanReminder(prayer, 0, 0);
+      }
+      setAdhanEnabled((prev) => {
+        const next = { ...prev, [prayer]: !isEnabled };
+        const stored: Record<string, boolean> = {
+          AdhanFajr: next.Fajr,
+          AdhanDhuhr: next.Dhuhr,
+          AdhanAsr: next.Asr,
+          AdhanMaghrib: next.Maghrib,
+          AdhanIsha: next.Isha,
+        };
+        SecureStore.setItemAsync(ADHAN_STORAGE_KEY, JSON.stringify(stored)).catch(() => {});
+        return next;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur notification');
+    } finally {
+      setAdhanLoading(false);
+    }
+  }, [adhanEnabled]);
+
   const save = useCallback(async () => {
     if (!canSave) return;
     setSaving(true);
@@ -236,6 +323,30 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
       setSaving(false);
     }
   }, []);
+
+  const toggleDailyNotifications = useCallback(async () => {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: newStatus } = await Notifications.requestPermissionsAsync();
+        if (newStatus !== 'granted') {
+          setError("Permission de notification refusée");
+          return;
+        }
+      }
+
+      if (dailyNotifications) {
+        await cancelDailyReminders();
+        setDailyNotifications(false);
+      } else {
+        await setupDailyReminders();
+        setDailyNotifications(true);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur de notification";
+      setError(message);
+    }
+  }, [dailyNotifications]);
 
   const insets = useSafeAreaInsets();
 
@@ -361,6 +472,61 @@ export function PrayerSettingsScreen({ user, onBack }: { user: AuthUser; onBack:
           ))}
         </View>
 
+        {/* Adhan notifications card */}
+        <View style={ps.card}>
+          <View style={ps.cardHeader}>
+            <Ionicons name="notifications-outline" size={18} color={ps_c.accent} />
+            <Text style={ps.sectionTitle}>Notifications Adhan</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: ps_c.muted, marginBottom: 12, lineHeight: 17 }}>
+            Active les rappels pour chaque prière. Les horaires sont mis à jour automatiquement selon ta localisation.
+          </Text>
+          {adhanLoading && <ActivityIndicator size="small" color={ps_c.accent} style={{ marginBottom: 8 }} />}
+          {ADHAN_PRAYERS.map((prayer) => (
+            <View key={prayer} style={ps.adhanRow}>
+              <View style={ps.adhanIconWrap}>
+                <Ionicons name={ADHAN_ICONS[prayer] as any} size={16} color={ps_c.accent} />
+              </View>
+              <Text style={ps.adhanLabel}>{prayer}</Text>
+              <Switch
+                value={adhanEnabled[prayer]}
+                onValueChange={() => void toggleAdhan(prayer)}
+                trackColor={{ true: ps_c.accent, false: 'rgba(0,0,0,0.1)' }}
+                thumbColor={adhanEnabled[prayer] ? ps_c.accent : '#ccc'}
+                disabled={adhanLoading}
+              />
+            </View>
+          ))}
+        </View>
+
+        {/* Daily reminders card */}
+        <View style={ps.card}>
+          <View style={ps.cardHeader}>
+            <Ionicons name="sparkles-outline" size={18} color={ps_c.accent} />
+            <Text style={ps.sectionTitle}>Rappels spirituels</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: ps_c.text }}>Hadith, dhikr, Coran, douas</Text>
+              <Text style={{ fontSize: 12, color: ps_c.muted, marginTop: 2 }}>Notifications quotidiennes automatiques</Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                { width: 48, height: 28, borderRadius: 14, backgroundColor: dailyNotifications ? ps_c.accent : ps_c.border },
+                { justifyContent: 'center', alignItems: 'center' }
+              ]}
+              onPress={toggleDailyNotifications}
+            >
+              <View
+                style={[
+                  { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff' },
+                  dailyNotifications ? { alignSelf: 'flex-end', marginRight: 2 } : { alignSelf: 'flex-start', marginLeft: 2 }
+                ]}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Action buttons */}
         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginTop: 8 }}>
           <TouchableOpacity
@@ -390,19 +556,8 @@ export const prayerSettingsStorage = {
   defaults: DEFAULTS,
 } as const;
 
-const ps_c = {
-  bg: palette.bgAlt,
-  card: palette.card,
-  border: palette.border,
-  text: palette.text,
-  textSoft: palette.textSoft,
-  muted: palette.muted,
-  accent: palette.primaryDark,
-  accentLight: palette.accentLight,
-};
-
 const ps = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: ps_c.bg },
+  screen: { flex: 1 },
 
   topBar: {
     flexDirection: 'row',
@@ -411,33 +566,29 @@ const ps = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: ps_c.border,
   },
-  topTitle: { fontSize: 20, fontWeight: '700', color: ps_c.text },
+  topTitle: { fontSize: 20, fontWeight: '700' },
 
   heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ps_c.accentLight,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 14,
     padding: 16,
   },
-  heroTitle: { fontSize: 16, fontWeight: '700', color: ps_c.text },
-  heroSub: { fontSize: 12, color: ps_c.muted, marginTop: 2 },
+  heroTitle: { fontSize: 16, fontWeight: '700' },
+  heroSub: { fontSize: 12, marginTop: 2 },
 
   errorText: { color: '#C62828', fontSize: 13, paddingHorizontal: 16, marginTop: 8 },
-  mutedText: { color: ps_c.muted, fontSize: 13 },
+  mutedText: { fontSize: 13 },
 
   card: {
-    backgroundColor: ps_c.card,
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 16,
     padding: 18,
     borderWidth: 1,
-    borderColor: ps_c.border,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -445,9 +596,9 @@ const ps = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: ps_c.text },
+  sectionTitle: { fontSize: 16, fontWeight: '700' },
 
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: ps_c.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  fieldLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -458,20 +609,17 @@ const ps = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: ps_c.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fieldSmallLabel: { fontSize: 10, fontWeight: '600', color: ps_c.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  fieldSmallLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
   fieldInput: {
     backgroundColor: 'rgba(0,0,0,0.03)',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    color: ps_c.text,
     borderWidth: 1,
-    borderColor: ps_c.border,
   },
 
   choiceChip: {
@@ -480,10 +628,9 @@ const ps = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.04)',
     borderWidth: 1,
-    borderColor: ps_c.border,
   },
-  choiceChipActive: { backgroundColor: ps_c.accent, borderColor: ps_c.accent },
-  choiceChipText: { fontSize: 12, fontWeight: '600', color: ps_c.text },
+  choiceChipActive: {},
+  choiceChipText: { fontSize: 12, fontWeight: '600' },
   choiceChipTextActive: { color: '#fff' },
 
   adjustRow: {
@@ -491,29 +638,26 @@ const ps = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: ps_c.border,
     gap: 10,
   },
   adjustIconWrap: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: ps_c.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  adjustLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: ps_c.text },
+  adjustLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
   adjustControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   adjustBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: ps_c.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  adjustValue: { fontSize: 16, fontWeight: '700', color: ps_c.text, minWidth: 28, textAlign: 'center' },
+  adjustValue: { fontSize: 16, fontWeight: '700', minWidth: 28, textAlign: 'center' },
 
   resetBtn: {
     flex: 1,
@@ -523,19 +667,33 @@ const ps = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     borderWidth: 1.5,
-    borderColor: ps_c.border,
     gap: 6,
   },
-  resetBtnText: { color: ps_c.text, fontWeight: '600', fontSize: 14 },
+  resetBtnText: { fontWeight: '600', fontSize: 14 },
   saveBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: ps_c.accent,
     borderRadius: 12,
     paddingVertical: 14,
     gap: 6,
   },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+
+  adhanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    gap: 10,
+  },
+  adhanIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adhanLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
 });

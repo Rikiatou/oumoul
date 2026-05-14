@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import React, { Component, useCallback, useEffect, useMemo, useState } from "react";
+import React, { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFonts } from "expo-font";
 import {
   ActivityIndicator,
@@ -61,6 +61,19 @@ import { GamificationScreen } from "./src/screens/GamificationScreen";
 import { AISystemScreen } from "./src/screens/AISystemScreen";
 import { ShareSystemScreen } from "./src/screens/ShareSystemScreen";
 import { DarkModeScreen } from "./src/screens/DarkModeScreen";
+import { HalalMapScreen } from "./src/screens/halal-map";
+import { DuaScreen } from "./src/screens/dua-screen";
+import { IhsanModeScreen } from "./src/screens/ihsan-mode";
+import { TravelCompanionScreen } from "./src/screens/travel-companion";
+import { ShareCardScreen } from "./src/screens/share-card";
+import { RecitationCheckerScreen } from "./src/screens/recitation-checker";
+import { CommunityScreen } from "./src/screens/community-screen";
+import { KidsModuleScreen } from "./src/screens/kids-module";
+import { HifzScreen } from "./src/screens/hifz-screen";
+import { MoodGuidanceScreen } from "./src/screens/mood-guidance";
+import { FeminineHubScreen } from "./src/screens/feminine-hub";
+import { setupDailyReminders } from "./src/notifications/daily-reminders";
+import * as Notifications from "expo-notifications";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -171,10 +184,49 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
   }
 }
 
+const NOTIF_SETUP_KEY = "oumoul_notif_setup_done";
+
 function RootSwitch() {
-  const { user, loading, pendingVerificationEmail } = useAuth();
+  const { user, loading, pendingVerificationEmail, authToast, clearAuthToast } = useAuth();
   const [welcomeStep, setWelcomeStep] = useState<"slides" | "landing" | "done">("slides");
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // Whether user has ever logged in before (skip welcome/auth on return)
+  const [hasEverLoggedIn, setHasEverLoggedIn] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // On mount: check if a cached session exists → skip welcome slides
+  useEffect(() => {
+    SecureStore.getItemAsync("oumoul_cached_user").then((val: string | null) => {
+      if (val) setHasEverLoggedIn(true);
+    }).catch(() => {}).finally(() => setSessionChecked(true));
+  }, []);
+
+  // Auto-setup daily reminders: request permission on first launch, reschedule on every launch
+  useEffect(() => {
+    async function initNotifications() {
+      try {
+        const { status: existing } = await Notifications.getPermissionsAsync();
+        if (existing === "granted") {
+          // Already granted — reschedule reminders silently on every app open
+          await setupDailyReminders();
+          return;
+        }
+        // First time: check if we already asked before
+        const alreadyAsked = await SecureStore.getItemAsync(NOTIF_SETUP_KEY);
+        if (alreadyAsked) return; // User denied before, don't ask again
+        // Request permission
+        const { status } = await Notifications.requestPermissionsAsync();
+        await SecureStore.setItemAsync(NOTIF_SETUP_KEY, "asked");
+        if (status === "granted") {
+          await setupDailyReminders();
+        }
+      } catch {
+        // Never block app launch for notification errors
+      }
+    }
+    void initNotifications();
+  }, []);
 
   // Check if user has seen onboarding
   useEffect(() => {
@@ -190,36 +242,81 @@ function RootSwitch() {
     SecureStore.setItemAsync("oumoul_onboarding_done", "true").catch(() => {});
   }, []);
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color={C.primaryDark} />
-        <Text style={{ color: C.textSoft, marginTop: 12, fontSize: 14 }}>Chargement...</Text>
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (!authToast) return;
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      clearAuthToast();
+    }, 3000);
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, [authToast, clearAuthToast]);
 
-  if (pendingVerificationEmail) {
-    return <VerifyEmailScreen email={pendingVerificationEmail} />;
-  }
+  const content = useMemo(() => {
+    // Wait for both auth context and session check before rendering
+    if (loading || !sessionChecked) {
+      return (
+        <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={C.primaryDark} />
+          <Text style={{ color: C.textSoft, marginTop: 12, fontSize: 14 }}>Chargement...</Text>
+        </View>
+      );
+    }
 
-  if (!user && welcomeStep === "slides") {
-    return <WelcomeScreen onFinish={() => setWelcomeStep("landing")} />;
-  }
+    // User is authenticated — show app
+    if (user) {
+      if (showOnboarding) {
+        return <OnboardingTourScreen onFinish={finishOnboarding} />;
+      }
+      return <MainApp user={user} />;
+    }
 
-  if (!user && welcomeStep === "landing") {
-    return <WelcomeLandingScreen onGetStarted={() => setWelcomeStep("done")} />;
-  }
+    // Returning user: has session cached but auth context not yet resolved (e.g. slow network)
+    // Already handled in auth-context by restoring cachedUser — this is a fallback loading state
+    if (hasEverLoggedIn) {
+      return (
+        <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={C.primaryDark} />
+          <Text style={{ color: C.textSoft, marginTop: 12, fontSize: 14 }}>Reconnexion...</Text>
+        </View>
+      );
+    }
 
-  if (!user) {
+    // First-time user: show welcome slides → landing → auth
+    if (welcomeStep === "slides") {
+      return <WelcomeScreen onFinish={() => setWelcomeStep("landing")} />;
+    }
+
+    if (welcomeStep === "landing") {
+      return <WelcomeLandingScreen onGetStarted={() => setWelcomeStep("done")} />;
+    }
+
     return <AuthFlow />;
-  }
+  }, [finishOnboarding, hasEverLoggedIn, loading, sessionChecked, showOnboarding, user, welcomeStep]);
 
-  if (showOnboarding) {
-    return <OnboardingTourScreen onFinish={finishOnboarding} />;
-  }
-
-  return <MainApp user={user} />;
+  return (
+    <View style={{ flex: 1 }}>
+      {content}
+      {authToast ? (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => clearAuthToast()}
+          style={{
+            position: 'absolute',
+            left: 20,
+            right: 20,
+            bottom: 16,
+            backgroundColor: '#1A2332',
+            borderRadius: 12,
+            padding: 14,
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 13, textAlign: 'center' }}>{authToast}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
 }
 
 function MainApp({ user }: { user: AuthUser }) {
@@ -236,8 +333,8 @@ function MainApp({ user }: { user: AuthUser }) {
             backgroundColor: p.tabBar,
             borderTopColor: p.border,
             borderTopWidth: 1,
-            height: Platform.OS === "ios" ? 88 : 56 + bottomInset,
-            paddingBottom: Platform.OS === "ios" ? 28 : bottomInset + 4,
+            height: Platform.OS === "ios" ? 88 : 60 + bottomInset,
+            paddingBottom: Platform.OS === "ios" ? 28 : bottomInset + 6,
             paddingTop: 8,
             elevation: 8,
             shadowColor: "#000",
@@ -247,14 +344,14 @@ function MainApp({ user }: { user: AuthUser }) {
           },
           tabBarActiveTintColor: p.primaryDark,
           tabBarInactiveTintColor: p.tabInactive,
-          tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginTop: 2 },
+          tabBarLabelStyle: { fontSize: 10, fontWeight: "600", marginTop: 2 },
           tabBarIcon: ({ color, size }) => {
             const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
               Accueil: "home",
+              "Prière": "time",
               Coran: "book",
-              Dhikr: "heart",
-              Ramadan: "moon",
-              Plus: "grid",
+              Apprendre: "school",
+              Plus: "grid-outline",
             };
             const name = icons[route.name] ?? "ellipse";
             return <Ionicons name={name} size={size - 2} color={color} />;
@@ -264,17 +361,17 @@ function MainApp({ user }: { user: AuthUser }) {
         <Tab.Screen name="Accueil">
           {() => <HomeStack user={user} />}
         </Tab.Screen>
+        <Tab.Screen name="Prière">
+          {() => <PrayerStack user={user} />}
+        </Tab.Screen>
         <Tab.Screen name="Coran">
           {() => <QuranStack user={user} />}
         </Tab.Screen>
-        <Tab.Screen name="Dhikr">
-          {() => <DhikrStack user={user} />}
-        </Tab.Screen>
-        <Tab.Screen name="Ramadan">
-          {() => <RamadanStack user={user} />}
+        <Tab.Screen name="Apprendre">
+          {() => <LearnStack user={user} />}
         </Tab.Screen>
         <Tab.Screen name="Plus">
-          {() => <MoreStack user={user} />}
+          {() => <SettingsStack user={user} />}
         </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
@@ -295,214 +392,47 @@ function HomeStack({ user }: { user: AuthUser }) {
   );
 }
 
-function QuranStack({ user }: { user: AuthUser }) {
+// ─── Prayer Stack ─────────────────────────────────────────────────────────────
+function PrayerStack({ user }: { user: AuthUser }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ImaneQuran">
-        {(props) => <ImaneQuranScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="PrayerHub">
+        {(props) => <PrayerHubScreen navigation={props.navigation} user={user} />}
       </Stack.Screen>
-      <Stack.Screen name="Tafsir" options={{ animation: "slide_from_right" }}>
-        {(props) => <TafsirScreen user={user} onBackToDashboard={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-    </Stack.Navigator>
-  );
-}
-
-function DhikrStack({ user }: { user: AuthUser }) {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="DhikrMain">
-        {(props) => <DhikrScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-    </Stack.Navigator>
-  );
-}
-
-function RamadanStack({ user }: { user: AuthUser }) {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ImaneRamadan">
-        {(props) => <ImaneRamadanScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="RamadanCatchup" options={{ animation: "slide_from_right" }}>
-        {(props) => <RamadanCatchupScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-    </Stack.Navigator>
-  );
-}
-
-function MoreScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
-  const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
-  const { location: detectedLoc } = useLocationContext();
-  const { isDark, toggleTheme, palette: p } = useTheme();
-
-  const categories = {
-  "📖 Spirituel": [
-    { key: "allahNames", label: "99 Noms d'Allah", icon: "heart" as keyof typeof Ionicons.glyphMap, screen: "AllahNames" },
-    { key: "tasbih", label: "Tasbih", icon: "radio" as keyof typeof Ionicons.glyphMap, screen: "Tasbih" },
-    { key: "hadith", label: "Hadith du jour", icon: "book" as keyof typeof Ionicons.glyphMap, screen: "HadithDaily" },
-  ],
-  "📅 Suivi": [
-    { key: "prayerTrack", label: "Suivi des prières", icon: "checkmark" as keyof typeof Ionicons.glyphMap, screen: "PrayerTracking" },
-    { key: "prog", label: "Programme Imane", icon: "checkbox" as keyof typeof Ionicons.glyphMap, screen: "ImaneProgram" },
-  ],
-  "🌙 Ramadan": [
-    { key: "ramadan", label: "Ramadan", icon: "moon" as keyof typeof Ionicons.glyphMap, screen: "ImaneRamadan" },
-    { key: "eid", label: "Cartes de vœux", icon: "gift" as keyof typeof Ionicons.glyphMap, screen: "EidGreetings" },
-  ],
-  "👩‍🦰 Cycle": [
-    { key: "cycle", label: "Suivi du cycle", icon: "heart" as keyof typeof Ionicons.glyphMap, screen: "ImaneCycle" },
-  ],
-  "📖 Coran": [
-    { key: "quranAudio", label: "Écouter le Coran", icon: "musical-note" as keyof typeof Ionicons.glyphMap, screen: "QuranAudio" },
-    { key: "quranWords", label: "Vocabulaire du Coran", icon: "language" as keyof typeof Ionicons.glyphMap, screen: "QuranWords" },
-  ],
-  "🕌 Prière": [
-    { key: "mosque", label: "Mosquées à proximité", icon: "business" as keyof typeof Ionicons.glyphMap, screen: "MosqueFinder" },
-    { key: "qibla", label: "Direction Qibla", icon: "compass" as keyof typeof Ionicons.glyphMap, screen: "Qibla" },
-    { key: "zakat", label: "Calculateur Zakat", icon: "calculator" as keyof typeof Ionicons.glyphMap, screen: "ZakatCalculator" },
-  ],
-  "⚙️ Outils": [
-    { key: "search", label: "Recherche globale", icon: "search" as keyof typeof Ionicons.glyphMap, screen: "GlobalSearch" },
-    { key: "cal", label: "Calendrier Hijri", icon: "calendar" as keyof typeof Ionicons.glyphMap, screen: "HijriCalendar" },
-    { key: "guide", label: "Guide de l'app", icon: "help-circle-outline" as keyof typeof Ionicons.glyphMap, screen: "AppGuide" },
-    { key: "darkmode", label: "Thème & Apparence", icon: "moon" as keyof typeof Ionicons.glyphMap, screen: "DarkMode" },
-  ],
-  "🚀 ULTRA Features": [
-    { key: "gamification", label: "Gamification", icon: "trophy" as keyof typeof Ionicons.glyphMap, screen: "Gamification" },
-    { key: "ai", label: "Système IA", icon: "sparkles" as keyof typeof Ionicons.glyphMap, screen: "AISystem" },
-    { key: "share", label: "Partage", icon: "share-social" as keyof typeof Ionicons.glyphMap, screen: "ShareSystem" },
-  ],
-  "📄 Légal": [
-    { key: "about", label: "À Propos", icon: "business" as keyof typeof Ionicons.glyphMap, screen: "About" },
-    { key: "privacy", label: "Confidentialité", icon: "lock-closed" as keyof typeof Ionicons.glyphMap, screen: "Privacy" },
-    { key: "terms", label: "Conditions", icon: "document-text" as keyof typeof Ionicons.glyphMap, screen: "Terms" },
-  ],
-  };
-
-  const settingsItems: Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; screen: string }> = [
-    { key: "prayer", label: "Réglages prière", icon: "settings", screen: "PrayerSettingsMore" },
-  ];
-
-  const cityLabel = detectedLoc.city && detectedLoc.country
-    ? `${detectedLoc.city}, ${detectedLoc.country}`
-    : detectedLoc.city ?? "GPS actif";
-
-  return (
-    <View style={[s.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-        {Object.entries(categories).map(([category, items]) => (
-          <View key={category}>
-            <Text style={[s.sectionTitle, { marginTop: 16, color: p.text }]}>{category}</Text>
-            {items.map((item) => (
-              <TouchableOpacity key={item.key} style={[s.listItem, { backgroundColor: p.card, borderColor: p.border }]} onPress={() => {
-                if (item.screen === '__CORAN_TAB__') {
-                  navigation.getParent()?.navigate('Coran');
-                } else if (item.screen === '__CYCLE_TAB__') {
-                  navigation.getParent()?.navigate('Accueil', { screen: 'ImaneCycle' });
-                } else if (item.screen === 'ImaneRamadan') {
-                  navigation.getParent()?.navigate('Ramadan');
-                } else {
-                  navigation.navigate(item.screen);
-                }
-              }} activeOpacity={0.7}>
-                <View style={[s.listIconWrap, { backgroundColor: p.accentLight }]}>
-                  <Ionicons name={item.icon} size={20} color={p.primaryDark} />
-                </View>
-                <Text style={[s.listLabel, { color: p.text }]}>{item.label}</Text>
-                <Ionicons name="chevron-forward-outline" size={18} color={p.tabInactive} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        ))}
-
-        <Text style={[s.sectionTitle, { marginTop: 20, color: p.text }]}>⚙️ Réglages</Text>
-        {settingsItems.map((item) => (
-          <TouchableOpacity key={item.key} style={[s.listItem, { backgroundColor: p.card, borderColor: p.border }]} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.7}>
-            <View style={[s.listIconWrap, { backgroundColor: p.accentLight }]}>
-              <Ionicons name={item.icon} size={20} color={p.primaryDark} />
-            </View>
-            <Text style={[s.listLabel, { color: p.text }]}>{item.label}</Text>
-            <Ionicons name="chevron-forward-outline" size={18} color={p.tabInactive} />
-          </TouchableOpacity>
-        ))}
-
-        {/* Dark mode toggle */}
-        <View style={[s.listItem, { backgroundColor: p.card, borderColor: p.border }]}>
-          <View style={[s.listIconWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(26,127,100,0.08)" }]}>
-            <Ionicons name={isDark ? "moon" : "sunny"} size={20} color={p.primaryDark} />
-          </View>
-          <Text style={[s.listLabel, { flex: 1, color: p.text }]}>Mode sombre</Text>
-          <Switch
-            value={isDark}
-            onValueChange={toggleTheme}
-            trackColor={{ false: "#E0E0E0", true: p.primaryDark }}
-            thumbColor="#fff"
-          />
-        </View>
-
-        {/* Location info */}
-        <View style={[s.listItem, { marginTop: 20, backgroundColor: "rgba(26,127,100,0.06)" }]}>
-          <View style={[s.listIconWrap, { backgroundColor: "rgba(26,127,100,0.12)" }]}>
-            <Ionicons name="location" size={20} color={p.primaryDark} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.listLabel, { color: p.text }]}>{cityLabel}</Text>
-            <Text style={{ fontSize: 11, color: p.textSoft, marginTop: 2 }}>Position GPS automatique</Text>
-          </View>
-        </View>
-
-        {/* About */}
-        <Text style={[s.sectionTitle, { marginTop: 20, color: p.text }]}>À propos</Text>
-        <View style={[s.listItem, { backgroundColor: p.card, borderColor: p.border }]}>
-          <View style={s.listIconWrap}>
-            <Ionicons name="information-circle-outline" size={20} color={p.primaryDark} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.listLabel, { color: p.text }]}>{appMetadata.name}</Text>
-            <Text style={{ fontSize: 11, color: p.textSoft, marginTop: 2 }}>Version 1.1.0 · {user.email}</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[s.listItem, { marginTop: 24, borderColor: "#FFCDD2" }]}
-          onPress={() => void logout()}
-          activeOpacity={0.7}
-        >
-          <View style={[s.listIconWrap, { backgroundColor: "#FFEBEE" }]}>
-            <Ionicons name="log-out-outline" size={20} color={p.error} />
-          </View>
-          <Text style={[s.listLabel, { color: p.error }]}>Se déconnecter</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
-  );
-}
-
-function MoreStack({ user }: { user: AuthUser }) {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="MoreMenu">
-        {(props) => <MoreScreen navigation={props.navigation} user={user} />}
-      </Stack.Screen>
-      <Stack.Screen name="HijriCalendar" options={{ animation: "slide_from_right" }}>
-        {(props) => <HijriCalendarScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="Qibla" options={{ animation: "slide_from_right" }}>
-        {(props) => <QiblaScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="ImaneProgram" options={{ animation: "slide_from_right" }}>
-        {(props) => <ImaneProgramScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="PrayerSettingsMore" options={{ animation: "slide_from_right" }}>
+      <Stack.Screen name="PrayerSettings" options={{ animation: "slide_from_right" }}>
         {(props) => <PrayerSettingsScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="PrayerTracking" options={{ animation: "slide_from_right" }}>
         {(props) => <PrayerTrackingScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="Qibla" options={{ animation: "slide_from_right" }}>
+        {(props) => <QiblaScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="MosqueFinder" options={{ animation: "slide_from_right" }}>
+        {(props) => <MosqueFinderScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="TravelCompanion" options={{ animation: "slide_from_right" }}>
+        {(props) => <TravelCompanionScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ZakatCalculator" options={{ animation: "slide_from_right" }}>
+        {(props) => <ZakatCalculatorScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="HalalMap" options={{ animation: "slide_from_right" }}>
+        {(props) => <HalalMapScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+}
+
+// ─── Learn Stack ──────────────────────────────────────────────────────────────
+function LearnStack({ user }: { user: AuthUser }) {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="LearnHub">
+        {(props) => <LearnHubScreen navigation={props.navigation} user={user} />}
+      </Stack.Screen>
+      <Stack.Screen name="HadithDaily" options={{ animation: "slide_from_right" }}>
+        {(props) => <HadithDailyScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="AllahNames" options={{ animation: "slide_from_right" }}>
         {(props) => <AllahNamesScreen user={user} onBack={() => props.navigation.goBack()} initialNameId={(props.route.params as any)?.initialNameId} />}
@@ -510,53 +440,103 @@ function MoreStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="Tasbih" options={{ animation: "slide_from_right" }}>
         {(props) => <TasbihScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="MosqueFinder" options={{ animation: "slide_from_right" }}>
-        {(props) => <MosqueFinderScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="DhikrMain" options={{ animation: "slide_from_right" }}>
+        {(props) => <DhikrScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="HadithDaily" options={{ animation: "slide_from_right" }}>
-        {(props) => <HadithDailyScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="Dua" options={{ animation: "slide_from_right" }}>
+        {(props) => <DuaScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="ZakatCalculator" options={{ animation: "slide_from_right" }}>
-        {(props) => <ZakatCalculatorScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="IhsanMode" options={{ animation: "slide_from_right" }}>
+        {(props) => <IhsanModeScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Gamification" options={{ animation: "slide_from_right" }}>
+        {(props) => <GamificationScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="AISystem" options={{ animation: "slide_from_right" }}>
+        {(props) => <AISystemScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Community" options={{ animation: "slide_from_right" }}>
+        {(props) => <CommunityScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ImaneRamadan" options={{ animation: "slide_from_right" }}>
+        {(props) => <ImaneRamadanScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="RamadanCatchup" options={{ animation: "slide_from_right" }}>
+        {(props) => <RamadanCatchupScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ImaneProgram" options={{ animation: "slide_from_right" }}>
+        {(props) => <ImaneProgramScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="EidGreetings" options={{ animation: "slide_from_right" }}>
         {(props) => <EidGreetingsScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
+      <Stack.Screen name="ShareCard" options={{ animation: "slide_from_right" }}>
+        {(props) => <ShareCardScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="ShareSystem" options={{ animation: "slide_from_right" }}>
+        {(props) => <ShareSystemScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="KidsModule" options={{ animation: "slide_from_right" }}>
+        {(props) => <KidsModuleScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Hifz" options={{ animation: "slide_from_right" }}>
+        {(props) => <HifzScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="MoodGuidance" options={{ animation: "slide_from_right" }}>
+        {(props) => <MoodGuidanceScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="FeminineHub" options={{ animation: "slide_from_right" }}>
+        {(props) => (
+          <FeminineHubScreen
+            onBack={() => props.navigation.goBack()}
+            onOpenCycle={() => {
+              props.navigation.goBack();
+              props.navigation.getParent()?.navigate('Accueil', { screen: 'ImaneCycle' });
+            }}
+          />
+        )}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+}
+
+// ─── Settings Stack (Plus) ───────────────────────────────────────────────────
+function SettingsStack({ user }: { user: AuthUser }) {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="SettingsHub">
+        {(props) => <SettingsScreen navigation={props.navigation} user={user} />}
+      </Stack.Screen>
+      <Stack.Screen name="PrayerSettingsMore" options={{ animation: "slide_from_right" }}>
+        {(props) => <PrayerSettingsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="HijriCalendar" options={{ animation: "slide_from_right" }}>
+        {(props) => <HijriCalendarScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="GlobalSearch" options={{ animation: "slide_from_right" }}>
         {(props) => <GlobalSearchScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
           const parentNav = props.navigation.getParent();
-          if (screen === '__CORAN_TAB__') {
-            parentNav?.navigate('Coran');
-          } else if (screen === 'ImaneRamadan') {
-            parentNav?.navigate('Ramadan');
-          } else if (screen === 'ImaneCycle') {
-            parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
-          } else {
-            (props.navigation as any).navigate(screen);
-          }
+          if (screen === '__CORAN_TAB__') parentNav?.navigate('Coran');
+          else if (screen === 'ImaneRamadan') parentNav?.navigate('Apprendre', { screen: 'ImaneRamadan' });
+          else if (screen === 'ImaneCycle') parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
+          else if (screen === 'AISystem') parentNav?.navigate('Apprendre', { screen: 'AISystem' });
+          else (props.navigation as any).navigate(screen);
         }} />}
       </Stack.Screen>
       <Stack.Screen name="AppGuide" options={{ animation: "slide_from_right" }}>
         {(props) => <AppGuideScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
-              // Handle navigation to different tabs and screens
           const parentNav = props.navigation.getParent();
-          if (screen === '__CORAN_TAB__') {
-            parentNav?.navigate('Coran');
-          } else if (screen === 'ImaneRamadan') {
-            parentNav?.navigate('Ramadan');
-          } else if (screen === 'ImaneCycle') {
-            parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
-          } else if (screen === 'Gamification') {
-            parentNav?.navigate('Plus', { screen: 'Gamification' });
-          } else {
-            (props.navigation as any).navigate(screen);
-          }
+          if (screen === '__CORAN_TAB__') parentNav?.navigate('Coran');
+          else if (screen === 'ImaneRamadan') parentNav?.navigate('Apprendre', { screen: 'ImaneRamadan' });
+          else if (screen === 'Gamification') parentNav?.navigate('Apprendre', { screen: 'Gamification' });
+          else if (screen === 'AISystem') parentNav?.navigate('Apprendre', { screen: 'AISystem' });
+          else (props.navigation as any).navigate(screen);
         }} />}
       </Stack.Screen>
-            <Stack.Screen name="About" options={{ animation: "slide_from_right" }}>
+      <Stack.Screen name="DarkMode" options={{ animation: "slide_from_right" }}>
+        {(props) => <DarkModeScreen onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="About" options={{ animation: "slide_from_right" }}>
         {(props) => <AboutScreen onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="Privacy" options={{ animation: "slide_from_right" }}>
@@ -565,24 +545,296 @@ function MoreStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="Terms" options={{ animation: "slide_from_right" }}>
         {(props) => <TermsScreen onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="Gamification" options={{ animation: "slide_from_right" }}>
-        {(props) => <GamificationScreen onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
+        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
       </Stack.Screen>
-      <Stack.Screen name="AISystem" options={{ animation: "slide_from_right" }}>
-        {(props) => <AISystemScreen onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="RecitationChecker" options={{ animation: "slide_from_right" }}>
+        {(props) => <RecitationCheckerScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="ShareSystem" options={{ animation: "slide_from_right" }}>
-        {(props) => <ShareSystemScreen onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
-      <Stack.Screen name="DarkMode" options={{ animation: "slide_from_right" }}>
-        {(props) => <DarkModeScreen onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
+        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
     </Stack.Navigator>
   );
 }
 
+function QuranStack({ user }: { user: AuthUser }) {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ImaneQuran">
+        {(props) => (
+          <ImaneQuranScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+            onOpenTafsir={(surahId, ayah, locale) => props.navigation.navigate('Tafsir' as never, ({ surahId, ayah, locale, autoLoad: true } as never))}
+            onOpenAudio={() => props.navigation.navigate('QuranAudio' as never)}
+            onOpenWords={() => props.navigation.navigate('QuranWords' as never)}
+            onOpenRecitation={() => props.navigation.navigate('RecitationChecker' as never)}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="Tafsir" options={{ animation: "slide_from_right" }}>
+        {(props) => (
+          <TafsirScreen
+            user={user}
+            onBackToDashboard={() => props.navigation.goBack()}
+            initialSelection={(props.route.params as any) ?? null}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
+        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
+        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
+      </Stack.Screen>
+      <Stack.Screen name="RecitationChecker" options={{ animation: "slide_from_right" }}>
+        {(props) => <RecitationCheckerScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+      <Stack.Screen name="Hifz" options={{ animation: "slide_from_right" }}>
+        {(props) => <HifzScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+}
+
+// ─── Prayer Hub ───────────────────────────────────────────────────────────────
+function PrayerHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
+  const insets = useSafeAreaInsets();
+  const { palette: p } = useTheme();
+
+  type HubItem = { key: string; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap; screen: string; color: string };
+  const items: HubItem[] = [
+    { key: "tracking", label: "Suivi des prières", sub: "Enregistre tes 5 prières", icon: "checkmark-circle", screen: "PrayerTracking", color: "#1A7F64" },
+    { key: "qibla", label: "Direction Qibla", sub: "Boussole vers La Mecque", icon: "compass", screen: "Qibla", color: "#2563EB" },
+    { key: "mosque", label: "Mosquées à proximité", sub: "Trouver une mosquée", icon: "business", screen: "MosqueFinder", color: "#7C3AED" },
+    { key: "halal", label: "Carte Halal", sub: "Restaurants & lieux halal", icon: "map", screen: "HalalMap", color: "#D97706" },
+    { key: "travel", label: "Compagnon de voyage", sub: "Musafir, Qasr & Jam", icon: "airplane", screen: "TravelCompanion", color: "#0891B2" },
+    { key: "zakat", label: "Calculateur Zakat", sub: "Calcule ta Zakat", icon: "calculator", screen: "ZakatCalculator", color: "#059669" },
+    { key: "settings", label: "Réglages prière", sub: "Horaires & notifications Adhan", icon: "settings", screen: "PrayerSettings", color: "#6B7280" },
+  ];
+
+  return (
+    <View style={[s.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>🕌 Prière</Text>
+        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>Horaires, suivi et direction de la Qibla</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        {items.map((item) => (
+          <TouchableOpacity
+            key={item.key}
+            style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]}
+            onPress={() => navigation.navigate(item.screen)}
+            activeOpacity={0.75}
+          >
+            <View style={[s.hubIconWrap, { backgroundColor: item.color + "18" }]}>
+              <Ionicons name={item.icon} size={24} color={item.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.hubLabel, { color: p.text }]}>{item.label}</Text>
+              <Text style={[s.hubSub, { color: p.textSoft }]}>{item.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={p.tabInactive} />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Learn Hub ────────────────────────────────────────────────────────────────
+function LearnHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
+  const insets = useSafeAreaInsets();
+  const { palette: p } = useTheme();
+
+  type HubItem = { key: string; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap; screen: string; color: string };
+  const sections: Array<{ title: string; items: HubItem[] }> = [
+    {
+      title: "📿 Spiritualité quotidienne",
+      items: [
+        { key: "dhikr", label: "Dhikr & Tasbih", sub: "Invocations et compteur", icon: "radio", screen: "DhikrMain", color: "#1A7F64" },
+        { key: "dua", label: "Du'as & Invocations", sub: "Par situation et contexte", icon: "hand-left", screen: "Dua", color: "#7C3AED" },
+        { key: "tasbih", label: "Tasbih numérique", sub: "Compteur de dhikr", icon: "repeat", screen: "Tasbih", color: "#0891B2" },
+        { key: "ihsan", label: "Mode Ihsan", sub: "Score spirituel journalier", icon: "star", screen: "IhsanMode", color: "#D97706" },
+      ],
+    },
+    {
+      title: "📚 Connaissance islamique",
+      items: [
+        { key: "hadith", label: "Hadith du jour", sub: "Un hadith authentique chaque jour", icon: "book", screen: "HadithDaily", color: "#1A7F64" },
+        { key: "allahNames", label: "99 Noms d'Allah", sub: "Mémorise les attributs divins", icon: "heart", screen: "AllahNames", color: "#EC4899" },
+        { key: "ai", label: "Assistant IA islamique", sub: "Répond à tes questions", icon: "sparkles", screen: "AISystem", color: "#6366F1" },
+      ],
+    },
+    {
+      title: "🌙 Ramadan & Calendrier",
+      items: [
+        { key: "ramadan", label: "Ramadan", sub: "Suivi du jeûne et suhoor", icon: "moon", screen: "ImaneRamadan", color: "#1A7F64" },
+        { key: "prog", label: "Programme Imane", sub: "Plan spirituel personnalisé", icon: "checkbox", screen: "ImaneProgram", color: "#2563EB" },
+        { key: "eid", label: "Cartes de vœux Aïd", sub: "Partager la joie de l'Aïd", icon: "gift", screen: "EidGreetings", color: "#D97706" },
+      ],
+    },
+    {
+      title: "📜 Hifz & Coran",
+      items: [
+        { key: "hifz", label: "Hifz — Mémorisation", sub: "Répétition espacée intelligente", icon: "library", screen: "Hifz", color: "#2563EB" },
+        { key: "mood", label: "Guidance selon ton humeur", sub: "Versets & du'as selon ton état", icon: "heart-half", screen: "MoodGuidance", color: "#EC4899" },
+      ],
+    },
+    {
+      title: "🌸 Espace Sœurs",
+      items: [
+        { key: "feminine", label: "Espace Sœurs", sub: "Cycle, fiqh féminin & du'as", icon: "flower", screen: "FeminineHub", color: "#EC4899" },
+      ],
+    },
+    {
+      title: "👶 Enfants",
+      items: [
+        { key: "kids", label: "Module Enfants", sub: "Alphabet arabe, prophètes, du'as", icon: "happy", screen: "KidsModule", color: "#EC4899" },
+      ],
+    },
+    {
+      title: "🏆 Progression & Communauté",
+      items: [
+        { key: "gamification", label: "Mes récompenses", sub: "XP, badges et achievements", icon: "trophy", screen: "Gamification", color: "#D97706" },
+        { key: "community", label: "Communauté", sub: "Posts, défis et partages", icon: "people", screen: "Community", color: "#EC4899" },
+        { key: "sharecard", label: "Partager une citation", sub: "Génère une carte islamique", icon: "share-social", screen: "ShareCard", color: "#6366F1" },
+      ],
+    },
+  ];
+
+  return (
+    <View style={[s.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>📚 Apprendre</Text>
+        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>Spiritualité, connaissance et progression</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        {sections.map((section) => (
+          <View key={section.title}>
+            <Text style={[s.sectionTitle, { color: p.text, marginTop: 16 }]}>{section.title}</Text>
+            {section.items.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]}
+                onPress={() => navigation.navigate(item.screen)}
+                activeOpacity={0.75}
+              >
+                <View style={[s.hubIconWrap, { backgroundColor: item.color + "18" }]}>
+                  <Ionicons name={item.icon} size={24} color={item.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.hubLabel, { color: p.text }]}>{item.label}</Text>
+                  <Text style={[s.hubSub, { color: p.textSoft }]}>{item.sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={p.tabInactive} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Settings Screen (Plus) ───────────────────────────────────────────────────
+function SettingsScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
+  const insets = useSafeAreaInsets();
+  const { logout } = useAuth();
+  const { location: detectedLoc } = useLocationContext();
+  const { isDark, toggleTheme, palette: p } = useTheme();
+
+  const cityLabel = detectedLoc.city && detectedLoc.country
+    ? `${detectedLoc.city}, ${detectedLoc.country}`
+    : detectedLoc.city ?? "GPS actif";
+
+  type SettingItem = { key: string; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap; screen: string };
+  const settingsItems: SettingItem[] = [
+    { key: "prayer", label: "Réglages prière", sub: "Méthode de calcul & Adhan", icon: "time-outline", screen: "PrayerSettingsMore" },
+    { key: "calendar", label: "Calendrier Hijri", sub: "Dates islamiques", icon: "calendar-outline", screen: "HijriCalendar" },
+    { key: "search", label: "Recherche globale", sub: "Chercher dans toute l'app", icon: "search-outline", screen: "GlobalSearch" },
+    { key: "guide", label: "Guide de l'app", sub: "Découvrir toutes les fonctions", icon: "help-circle-outline", screen: "AppGuide" },
+    { key: "darkmode", label: "Thème & Apparence", sub: "Clair, sombre, couleurs", icon: "color-palette-outline", screen: "DarkMode" },
+  ];
+  const legalItems: SettingItem[] = [
+    { key: "about", label: "À propos", sub: appMetadata.name, icon: "information-circle-outline", screen: "About" },
+    { key: "privacy", label: "Confidentialité", sub: "Politique de confidentialité", icon: "lock-closed-outline", screen: "Privacy" },
+    { key: "terms", label: "Conditions d'utilisation", sub: "CGU de l'application", icon: "document-text-outline", screen: "Terms" },
+  ];
+
+  return (
+    <View style={[s.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>⚙️ Réglages</Text>
+        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>{user.email}</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+        {/* Location */}
+        <View style={[s.hubCard, { backgroundColor: "rgba(26,127,100,0.06)", borderColor: p.border, marginTop: 8 }]}>
+          <View style={[s.hubIconWrap, { backgroundColor: "rgba(26,127,100,0.12)" }]}>
+            <Ionicons name="location" size={24} color={p.primaryDark} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.hubLabel, { color: p.text }]}>{cityLabel}</Text>
+            <Text style={[s.hubSub, { color: p.textSoft }]}>Position GPS automatique</Text>
+          </View>
+        </View>
+
+        {/* Dark mode toggle */}
+        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>Apparence</Text>
+        <View style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]}>
+          <View style={[s.hubIconWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(26,127,100,0.08)" }]}>
+            <Ionicons name={isDark ? "moon" : "sunny"} size={24} color={p.primaryDark} />
+          </View>
+          <Text style={[s.hubLabel, { flex: 1, color: p.text }]}>Mode sombre</Text>
+          <Switch value={isDark} onValueChange={toggleTheme} trackColor={{ false: "#E0E0E0", true: p.primaryDark }} thumbColor="#fff" />
+        </View>
+
+        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>Paramètres</Text>
+        {settingsItems.map((item) => (
+          <TouchableOpacity key={item.key} style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.75}>
+            <View style={[s.hubIconWrap, { backgroundColor: p.accentLight }]}>
+              <Ionicons name={item.icon} size={24} color={p.primaryDark} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.hubLabel, { color: p.text }]}>{item.label}</Text>
+              <Text style={[s.hubSub, { color: p.textSoft }]}>{item.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={p.tabInactive} />
+          </TouchableOpacity>
+        ))}
+
+        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>Légal</Text>
+        {legalItems.map((item) => (
+          <TouchableOpacity key={item.key} style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.75}>
+            <View style={[s.hubIconWrap, { backgroundColor: p.accentLight }]}>
+              <Ionicons name={item.icon} size={24} color={p.primaryDark} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.hubLabel, { color: p.text }]}>{item.label}</Text>
+              <Text style={[s.hubSub, { color: p.textSoft }]}>{item.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={p.tabInactive} />
+          </TouchableOpacity>
+        ))}
+
+        <TouchableOpacity style={[s.hubCard, { marginTop: 24, borderColor: "#FFCDD2", backgroundColor: p.card }]} onPress={() => void logout()} activeOpacity={0.7}>
+          <View style={[s.hubIconWrap, { backgroundColor: "#FFEBEE" }]}>
+            <Ionicons name="log-out-outline" size={24} color={p.error} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.hubLabel, { color: p.error }]}>Se déconnecter</Text>
+            <Text style={[s.hubSub, { color: p.textSoft }]}>{user.email}</Text>
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
+
 function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
-  return <ModernDashboard user={user} onSearch={() => navigation.getParent()?.navigate("Plus", { screen: "GlobalSearch" })} />;
+  return <ModernDashboard user={user} locale="fr" onSearch={() => navigation.getParent()?.navigate("Plus", { screen: "SettingsHub", params: { openSearch: true } })} />;
 }
 
 function AuthFlow() {
@@ -993,6 +1245,25 @@ const s = StyleSheet.create({
     marginRight: 14,
   },
   listLabel: { flex: 1, fontSize: 15, fontWeight: "600", color: C.text },
+  hubCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    marginBottom: 10,
+  },
+  hubIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  hubLabel: { fontSize: 15, fontWeight: "700", color: C.text, marginBottom: 2 },
+  hubSub: { fontSize: 12, color: C.textSoft },
 });
 
 const auth = StyleSheet.create({

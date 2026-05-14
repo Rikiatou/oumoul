@@ -3,7 +3,11 @@
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
@@ -13,19 +17,45 @@
     "allowJs": false,
     "baseUrl": ".",
     "paths": {
-      "@oumoul/ui": ["packages/ui/src/index.ts"],
-      "@oumoul/ui/*": ["packages/ui/src/*"],
-      "@oumoul/config": ["packages/config/src/index.ts"],
-      "@oumoul/config/*": ["packages/config/src/*"],
-      "@oumoul/api": ["packages/api/src/index.ts"],
-      "@oumoul/api/*": ["packages/api/src/*"]
+      "@oumoul/ui": [
+        "packages/ui/src/index.ts"
+      ],
+      "@oumoul/ui/*": [
+        "packages/ui/src/*"
+      ],
+      "@oumoul/config": [
+        "packages/config/src/index.ts"
+      ],
+      "@oumoul/config/*": [
+        "packages/config/src/*"
+      ],
+      "@oumoul/api": [
+        "packages/api/src/index.ts"
+      ],
+      "@oumoul/api/*": [
+        "packages/api/src/*"
+      ]
     }
   },
-  "include": ["packages", "apps"],
-  "references": [
-    { "path": "./packages/ui" },
-    { "path": "./packages/config" },
-    { "path": "./packages/api" }
+  "include": [
+    "packages",
+    "apps"
   ],
-  "exclude": ["**/node_modules", "**/dist", "**/build"]
+  "references": [
+    {
+      "path": "./packages/ui"
+    },
+    {
+      "path": "./packages/config"
+    },
+    {
+      "path": "./packages/api"
+    }
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "**/build"
+  ],
+  "extends": "expo/tsconfig.base"
 }

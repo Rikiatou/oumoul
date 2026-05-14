@@ -16,6 +16,8 @@ import { CycleModule } from './cycle/cycle.module';
 import appConfig from './config/app.config';
 import { RamadanModule } from './ramadan/ramadan.module';
 import { EmailModule } from './email/email.module';
+import { PlacesModule } from './places/places.module';
+import { CommunityModule } from './community/community.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { EmailModule } from './email/email.module';
     HadithModule,
     CycleModule,
     RamadanModule,
+    PlacesModule,
+    CommunityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

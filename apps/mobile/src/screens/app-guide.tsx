@@ -9,6 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { AuthUser } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 
 interface ModuleInfo {
@@ -35,21 +36,22 @@ const MODULES: ModuleInfo[] = [
   // ── Prière & Adoration ──
   {
     id: 'dashboard',
-    name: 'Tableau de bord',
+    name: 'Dashboard Moderne IA',
     icon: 'home',
-    color: '#1A7F64',
-    screen: 'Dashboard',
+    color: '#10B981',
+    screen: 'HomeScreen',
     category: 'Prière & Adoration',
-    shortDesc: 'Vue d\'ensemble de ta journée spirituelle',
-    longDesc: 'Le tableau de bord est ta page d\'accueil. Il affiche la prochaine prière avec un compte à rebours, une inspiration quotidienne (dua ou ayah), ta série de prières et dhikr, le statut du Ramadan, et tes rappels locaux.',
+    shortDesc: 'Tableau de bord intelligent avec IA et design moderne',
+    longDesc: 'Le dashboard moderne utilise l\'IA pour analyser tes patterns et personnaliser ton expérience. Il affiche les priorités du jour, une vue d\'ensemble avec grid 2x2, des accès rapides, et s\'adapte à ton usage. Le design émeraude+rose offre une expérience visuelle exceptionnelle.',
     features: [
-      'Compte à rebours de la prochaine prière',
-      'Inspiration quotidienne (dua / ayah)',
-      'Carte de séries (prières + dhikr)',
-      'Bannière Ramadan dynamique',
-      'Statistiques de jeûne',
-      'Rappels locaux configurables',
-      'Plan de rattrapage des jours manqués',
+      '🧠 IA adaptative selon tes patterns d\'usage',
+      '📊 Vue d\'ensemble moderne (grid 2x2)',
+      '🎯 Priorités intelligentes (Ramadan, Imane, prières)',
+      '🎨 Design émeraude+rose avec micro-interactions',
+      '👆 Swipe gestures fluides sur les cards',
+      '📱 Accès rapides personnalisés',
+      '🔔 Notifications contextuelles et émotionnelles',
+      '🌙 Dark mode toggle instantané',
     ],
   },
   {
@@ -123,7 +125,7 @@ const MODULES: ModuleInfo[] = [
     name: 'Lire le Coran',
     icon: 'book',
     color: '#1565C0',
-    screen: 'ImaneQuran',
+    screen: '__CORAN_TAB__',
     category: 'Coran & Apprentissage',
     shortDesc: 'Lis le Coran avec traduction et tafsir',
     longDesc: 'Parcours les 114 sourates avec le texte arabe, la traduction (français ou anglais), et le tafsir verset par verset. Ajuste la taille de la police, écoute l\'audio, et marque ta dernière lecture.',
@@ -155,20 +157,22 @@ const MODULES: ModuleInfo[] = [
   },
   {
     id: 'quran-words',
-    name: 'Vocabulaire du Coran',
+    name: '400 Mots Coraniques - Maîtrise ULTRA',
     icon: 'language',
     color: '#FF9800',
     screen: 'QuranWords',
     category: 'Coran & Apprentissage',
-    shortDesc: 'Apprends les 400 mots les plus fréquents du Coran',
-    longDesc: 'Une liste complète des 400 mots les plus fréquents du Coran, classés par catégorie (Allah & Attributs, Foi, Prière, Prophètes, etc.). Chaque mot affiche l\'arabe, la translittération et la traduction française. Marque les mots appris et suis ta progression.',
+    shortDesc: 'Mémorisation contextuelle et gamification avancée',
+    longDesc: 'Système ULTRA de maîtrise des 400 mots coraniques les plus fréquents. Mémorisation contextuelle selon les moments de la journée, gamification avec quêtes et achievements, et IA adaptative qui optimise ton apprentissage selon tes patterns personnels.',
     features: [
-      '400 mots classés par catégorie',
-      'Arabe + translittération + français',
-      'Fréquence d\'apparition dans le Coran',
-      'Suivi de progression (mots appris)',
-      'Recherche et filtres par catégorie',
-      'Barre de progression globale',
+      '🧠 Mémorisation contextuelle (prière, transport, attente)',
+      '🎮 Gamification avec quêtes quotidiennes/hebdomadaires',
+      '🏆 15+ achievements épiques et légendaires',
+      '🎯 Power-ups intelligents (double points, protection)',
+      '📊 Analyse des patterns d\'apprentissage',
+      '🔔 Notifications adaptatives selon contexte',
+      '📈 Système de niveaux et progression',
+      '🌍 Leaderboard communautaire',
     ],
   },
   {
@@ -210,20 +214,22 @@ const MODULES: ModuleInfo[] = [
   },
   {
     id: 'allah-names',
-    name: '99 Noms d\'Allah',
+    name: '99 Noms d\'Allah - Système ULTRA',
     icon: 'heart',
     color: '#E91E63',
     screen: 'AllahNames',
     category: 'Spiritualité & Dhikr',
-    shortDesc: 'Apprends et mémorise les 99 noms d\'Allah',
-    longDesc: 'Découvre les 99 noms d\'Allah avec leur signification et leurs bienfaits. Marque les noms mémorisés, cherche par nom, et teste-toi avec le mode quiz.',
+    shortDesc: 'Mémorisation intelligente avec algorithm Ebbinghaus',
+    longDesc: 'Système ULTRA de mémorisation des 99 noms d\'Allah utilisant l\'algorithm Ebbinghaus personnalisé. Rappels intelligents selon contexte (prière, transport), techniques mnémoniques multiples (visuelles, auditives, kinesthésiques), et analyse de performance pour optimiser ton apprentissage.',
     features: [
-      '99 noms avec signification',
-      'Bienfaits de chaque nom',
-      'Vue grille et liste',
-      'Mode quiz interactif',
-      'Suivi de mémorisation persistant',
-      'Recherche par nom',
+      '🧠 Algorithm Ebbinghaus personnalisé',
+      '📱 Rappels contextuels (prière, transport, attente)',
+      '🎨 Techniques mnémoniques multiples',
+      '📊 Analyse de performance et adaptation',
+      '🎯 Plan d\'apprentissage quotidien personnalisé',
+      '🔔 Notifications espacées intelligentes',
+      '📈 Tracking de progression par difficulté',
+      '🧮 Prédiction de performance basée sur l\'historique',
     ],
   },
   {
@@ -231,7 +237,7 @@ const MODULES: ModuleInfo[] = [
     name: 'Dhikr & Invocations',
     icon: 'leaf',
     color: '#2E7D32',
-    screen: 'Dhikr',
+    screen: 'DhikrMain',
     category: 'Spiritualité & Dhikr',
     shortDesc: 'Invocations quotidiennes et rappels',
     longDesc: 'Accède à une collection d\'invocations (adhkar) pour le matin, le soir, après la prière, et d\'autres occasions. Enregistre tes sessions de dhikr.',
@@ -357,17 +363,22 @@ const MODULES: ModuleInfo[] = [
   },
   {
     id: 'imane-program',
-    name: 'Programme Imane',
+    name: 'Programme Imane IA - Adaptatif',
     icon: 'checkbox',
     color: '#283593',
     screen: 'ImaneProgram',
     category: 'Vie Musulmane',
-    shortDesc: 'Programme de développement spirituel',
-    longDesc: 'Un programme structuré pour renforcer ta foi et ta pratique. Suis ta progression à travers différents modules et objectifs spirituels.',
+    shortDesc: 'Programme intelligent qui s\'adapte à ta progression',
+    longDesc: 'Programme Imane IA qui analyse ta performance en temps réel et adapte automatiquement la difficulté. 15 tâches quotidiennes intelligentes qui évoluent selon tes capacités, avec suggestions de rattrapage et optimisation basée sur l\'IA.',
     features: [
-      'Modules de progression',
-      'Objectifs spirituels',
-      'Suivi de progression',
+      '🤖 IA adaptative selon ta performance réelle',
+      '📊 Analyse en temps réel des tâches complétées',
+      '🎯 15 tâches quotidiennes intelligentes',
+      '📈 Difficulté auto-ajustée (facile → difficile)',
+      '💡 Suggestions de rattrapage personnalisées',
+      '🔥 Streak tracking avec bonus IA',
+      '📈 Performance prediction et optimisation',
+      '🎯 Objectifs adaptatifs basés sur l\'historique',
     ],
   },
 
@@ -390,19 +401,63 @@ const MODULES: ModuleInfo[] = [
     ],
   },
   {
-    id: 'app-guide',
-    name: 'Guide de l\'app',
-    icon: 'help-circle',
-    color: '#546E7A',
-    screen: 'AppGuide',
+    id: 'gamification',
+    name: 'Gamification',
+    icon: 'trophy',
+    color: '#FF6B35',
+    screen: 'Gamification',
     category: 'Outils & Réglages',
-    shortDesc: 'Découvre toutes les fonctionnalités',
-    longDesc: 'Tu es ici ! Ce guide liste toutes les fonctionnalités de l\'app avec une description détaillée de chacune. Appuie sur un module pour voir ses détails et y accéder directement.',
+    shortDesc: 'Système de gamification avec achievements et quêtes',
+    longDesc: 'Système de gamification avec 15+ achievements épiques et légendaires, quêtes dynamiques quotidiennes/hebdomadaires, power-ups intelligents, leaderboard mondial, et events spéciaux (Ramadan, Eid, Jumuah).',
     features: [
-      'Liste complète des modules',
-      'Description détaillée de chaque module',
-      'Navigation directe vers chaque écran',
-      'Classement par catégorie',
+      '15+ achievements épiques et légendaires',
+      'Quêtes dynamiques quotidiennes/hebdomadaires',
+      'Power-ups intelligents (double points, protection)',
+      'Leaderboard mondial et communautaire',
+      'Events spéciaux (Ramadan, Eid, Jumuah)',
+      'Système de niveaux et progression',
+      'Récompenses automatiques et streaks',
+      'Features sociales (partage, aide)',
+    ],
+  },
+  {
+    id: 'ai-system',
+    name: 'Système IA',
+    icon: 'sparkles',
+    color: '#9333EA',
+    screen: 'AISystem',
+    category: 'Outils & Réglages',
+    shortDesc: 'IA adaptative qui analyse et optimise ton apprentissage',
+    longDesc: 'Système qui analyse tes patterns d\'apprentissage, prédit ta performance, s\'adapte à ton état émotionnel et environnemental, et génère des rappels ultra-personnalisés selon contexte, heure, et météo.',
+    features: [
+      'Analyse des patterns d\'apprentissage',
+      'Prédiction de performance basée sur l\'historique',
+      'Analyse émotionnelle adaptative',
+      'Conscience contextuelle (lieu, activité, météo)',
+      'Rappels ultra-personnalisés',
+      'Recommandations d\'apprentissage IA',
+      'Optimisation automatique des sessions',
+      'Adaptation continue selon ton évolution',
+    ],
+  },
+  {
+    id: 'share-system',
+    name: 'Partage Social & WhatsApp',
+    icon: 'share-social',
+    color: '#25D366',
+    screen: 'ShareSystem',
+    category: 'Outils & Réglages',
+    shortDesc: 'Partage WhatsApp et features sociales intégrées',
+    longDesc: 'Partagez facilement vos hadiths, douas, versets et progression via WhatsApp avec intégration native. Features sociales pour inspirer votre communauté.',
+    features: [
+      'Partage WhatsApp natif pour hadiths',
+      'Partage progression et achievements',
+      'Partage douas et versets du Coran',
+      'Leaderboard communautaire',
+      'Aide et motivation sociale',
+      'Analytics d\'usage et patterns',
+      'Suggestions intelligentes de partage',
+      'Liens de partage personnalisés',
     ],
   },
 ];
@@ -411,6 +466,11 @@ export function AppGuideScreen({ user, onBack, onNavigate }: { user: AuthUser; o
   const insets = useSafeAreaInsets();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Enhanced navigation handler for screens in different stacks
+  const handleNavigate = (screenName: string) => {
+    onNavigate(screenName);
+  };
 
   const filteredModules = selectedCategory
     ? MODULES.filter((m) => m.category === selectedCategory)
@@ -424,9 +484,7 @@ export function AppGuideScreen({ user, onBack, onNavigate }: { user: AuthUser; o
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <View style={{ flex: 1 }}>
           <Text style={st.headerTitle}>Guide de l'app</Text>
           <Text style={st.headerSub}>{MODULES.length} modules disponibles</Text>
@@ -500,7 +558,7 @@ export function AppGuideScreen({ user, onBack, onNavigate }: { user: AuthUser; o
 
                   <TouchableOpacity
                     style={[st.goBtn, { backgroundColor: mod.color }]}
-                    onPress={() => onNavigate(mod.screen)}
+                    onPress={() => handleNavigate(mod.screen)}
                     activeOpacity={0.8}
                   >
                     <Text style={st.goBtnText}>Ouvrir {mod.name}</Text>

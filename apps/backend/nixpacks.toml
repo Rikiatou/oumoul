@@ -11,7 +11,7 @@ cmds = [
 ]
 
 [phases.start]
-cmds = ["npm run start:prod"]
+cmds = ["npx prisma migrate deploy", "npm run start:prod"]
 
 [variables]
 NODE_ENV = "production"

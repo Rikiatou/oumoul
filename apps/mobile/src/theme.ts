@@ -6,44 +6,44 @@ import { colors } from "@oumoul/ui";
 
 export const lightPalette = {
   // ── Base backgrounds ──
-  bg: "#FAF5EF",
-  bgAlt: "#FAFAF5",
-  card: "#FFFFFF",
-  border: "rgba(0,0,0,0.06)",
+  bg: colors.background,
+  bgAlt: colors.neutral200,
+  card: colors.neutral100,
+  border: "rgba(0,0,0,0.08)",
 
   // ── Brand ──
-  primary: colors.primary,
-  primaryDark: colors.primaryDark,
-  accent: colors.accent,
-  secondary: colors.secondary,
+  primary: "#EC4899", // Rose principal
+  primaryDark: "#BE185D", // Rose foncé
+  accent: "#F472B6", // Rose clair
+  secondary: "#10B981", // Émeraude secondaire
 
   // ── Text ──
   text: colors.neutral900,
-  textSoft: "rgba(26,26,26,0.7)",
-  muted: "rgba(26,26,26,0.5)",
+  textSoft: "rgba(30,41,59,0.7)",
+  muted: "rgba(30,41,59,0.5)",
   textOnPrimary: "#FFFFFF",
 
   // ── Arabic / Islamic content ──
-  arabic: "#1B3A2D",
-  transliteration: "#6B4C3B",
+  arabic: colors.primaryDark,
+  transliteration: colors.secondary,
 
   // ── Input ──
   inputBg: "rgba(0,0,0,0.04)",
   inputBorder: "rgba(0,0,0,0.10)",
 
   // ── Tab bar ──
-  tabBar: "#FFFFFF",
-  tabInactive: "rgba(26,26,26,0.35)",
+  tabBar: colors.neutral100,
+  tabInactive: "rgba(30,41,59,0.4)",
 
   // ── Feedback ──
-  error: "#D32F2F",
-  errorBg: "#FFEBEE",
-  success: "#2E7D32",
-  successBg: "#E8F5E9",
+  error: "#EF4444",
+  errorBg: "rgba(239,68,68,0.1)",
+  success: colors.primary,
+  successBg: "rgba(16,185,129,0.1)",
 
   // ── Accent light (for icon backgrounds) ──
-  accentLight: "rgba(26,127,100,0.08)",
-  accentLightAlt: "rgba(26,127,100,0.1)",
+  accentLight: "rgba(16,185,129,0.12)",
+  accentLightAlt: "rgba(236,72,153,0.12)",
 
   // ── Dark overlay (Ramadan banner, toasts) ──
   dark: "#1A2332",
@@ -51,44 +51,44 @@ export const lightPalette = {
 
 export const darkPalette = {
   // ── Base backgrounds ──
-  bg: "#0F0F0F",
-  bgAlt: "#1A1A1A",
-  card: "#2A2A2A",
-  border: "rgba(255,255,255,0.1)",
+  bg: "#0A0A0A",
+  bgAlt: "#141414",
+  card: "#1F1F1F",
+  border: "rgba(255,255,255,0.08)",
 
-  // ── Brand ──
-  primary: colors.primary,
-  primaryDark: colors.primaryDark,
-  accent: colors.accent,
-  secondary: colors.secondary,
+  // ── Brand (rose+emerald optimized for dark) ──
+  primary: "#EC4899", // Rose principal
+  primaryDark: "#BE185D", // Rose foncé
+  accent: "#F472B6", // Rose clair
+  secondary: "#10B981", // Émeraude secondaire
 
   // ── Text ──
-  text: "#FFFFFF",
-  textSoft: "rgba(255,255,255,0.7)",
-  muted: "rgba(255,255,255,0.5)",
+  text: "#F8FAFC",
+  textSoft: "rgba(248,250,252,0.7)",
+  muted: "rgba(248,250,252,0.5)",
   textOnPrimary: "#FFFFFF",
 
   // ── Arabic / Islamic content ──
-  arabic: "#E8F5E9",
-  transliteration: "#C8E6C9",
+  arabic: "#10B981", // Emerald for Arabic text
+  transliteration: "#EC4899", // Rose for transliteration
 
   // ── Input ──
-  inputBg: "rgba(255,255,255,0.1)",
-  inputBorder: "rgba(255,255,255,0.2)",
+  inputBg: "rgba(255,255,255,0.05)",
+  inputBorder: "rgba(255,255,255,0.1)",
 
   // ── Tab bar ──
-  tabBar: "#2A2A2A",
-  tabInactive: "rgba(255,255,255,0.35)",
+  tabBar: "#1F1F1F",
+  tabInactive: "rgba(248,250,252,0.3)",
 
   // ── Feedback ──
-  error: "#EF5350",
-  errorBg: "rgba(239,83,80,0.1)",
-  success: "#66BB6A",
-  successBg: "rgba(102,187,106,0.1)",
+  error: "#EF4444",
+  errorBg: "rgba(239,68,68,0.15)",
+  success: colors.primary,
+  successBg: "rgba(16,185,129,0.15)",
 
-  // ── Accent light (for icon backgrounds) ──
-  accentLight: "rgba(26,127,100,0.15)",
-  accentLightAlt: "rgba(26,127,100,0.2)",
+  // ── Accent light (optimized for dark) ──
+  accentLight: "rgba(16,185,129,0.12)",
+  accentLightAlt: "rgba(236,72,153,0.12)",
 
   // ── Dark overlay (Ramadan banner, toasts) ──
   dark: "#1A2332",

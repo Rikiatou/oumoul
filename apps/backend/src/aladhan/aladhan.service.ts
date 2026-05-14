@@ -16,6 +16,14 @@ export interface HijriCalendarDay {
   };
 }
 
+const FETCH_TIMEOUT_MS = 10_000;
+
+function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 @Injectable()
 export class AladhanService {
   private readonly baseUrl = 'https://api.aladhan.com/v1';
@@ -38,7 +46,7 @@ export class AladhanService {
     url.searchParams.set('country', country);
     url.searchParams.set('method', String(method));
 
-    const response = await fetch(url.toString());
+    const response = await fetchWithTimeout(url.toString());
     if (!response.ok) {
       throw new InternalServerErrorException('Erreur lors de la récupération du calendrier de Ramadan.');
     }
@@ -87,7 +95,7 @@ export class AladhanService {
     url.searchParams.set('country', country);
     url.searchParams.set('method', String(method));
 
-    const response = await fetch(url.toString());
+    const response = await fetchWithTimeout(url.toString());
     if (!response.ok) {
       throw new InternalServerErrorException('Erreur lors de la récupération du calendrier Hijri.');
     }
@@ -125,7 +133,7 @@ export class AladhanService {
   async getQiblaDirection(latitude: number, longitude: number): Promise<{ direction: number }> {
     const url = new URL(`${this.baseUrl}/qibla/${latitude}/${longitude}`);
 
-    const response = await fetch(url.toString());
+    const response = await fetchWithTimeout(url.toString());
     if (!response.ok) {
       throw new InternalServerErrorException("Erreur lors de la récupération de la Qibla.");
     }

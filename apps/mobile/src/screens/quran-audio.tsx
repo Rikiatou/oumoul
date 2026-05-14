@@ -15,6 +15,7 @@ import type { AuthUser } from '@oumoul/api';
 import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
+import { awardEvent } from '../gamification/gamification-events';
 
 interface Surah {
   id: number;
@@ -203,9 +204,8 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
     isCleaningUpRef.current = false;
   }, []);
 
-  useEffect(() => {
-    return () => { void cleanup(); };
-  }, [cleanup]);
+  // Intentionally do NOT cleanup on unmount.
+  // This allows audio to keep playing in background when leaving the screen.
 
   const playSurah = useCallback(async (surah: Surah) => {
     await cleanup();
@@ -245,10 +245,27 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
       }
       soundRef.current = sound;
       setPlayback('playing');
+      void awardEvent('quran_read');
     } catch (err) {
       setPlayback('idle');
     }
   }, [cleanup, selectedQari]);
+
+  const getSurahIndex = useCallback((id: number) => SURAHS.findIndex((s) => s.id === id), []);
+
+  const playPrevSurah = useCallback(async () => {
+    if (!selectedSurah) return;
+    const idx = getSurahIndex(selectedSurah.id);
+    if (idx <= 0) return;
+    await playSurah(SURAHS[idx - 1]);
+  }, [getSurahIndex, playSurah, selectedSurah]);
+
+  const playNextSurah = useCallback(async () => {
+    if (!selectedSurah) return;
+    const idx = getSurahIndex(selectedSurah.id);
+    if (idx < 0 || idx >= SURAHS.length - 1) return;
+    await playSurah(SURAHS[idx + 1]);
+  }, [getSurahIndex, playSurah, selectedSurah]);
 
   const togglePlayPause = useCallback(async () => {
     if (!soundRef.current) return;
@@ -317,7 +334,7 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
       {(selectedSurah || playbackState !== 'idle') && (
         <View style={st.nowPlaying}>
           <View style={{ flex: 1 }}>
-            <Text style={st.npTitle}>{selectedSurah ? `${selectedSurah.arabicName} — ${selectedSurah.name}` : '...'}</Text>
+            <Text style={st.npTitle}>{selectedSurah ? `${selectedSurah.arabicName} — ${selectedSurah.name}` : '...'} </Text>
             <Text style={st.npQari}>{selectedQari.name}</Text>
             {duration > 0 && (
               <View style={st.npProgressRow}>
@@ -330,6 +347,9 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
             )}
           </View>
           <View style={st.npControls}>
+            <TouchableOpacity onPress={playPrevSurah} style={st.npBtn} disabled={!selectedSurah || selectedSurah.id === 1}>
+              <Ionicons name="play-skip-back" size={20} color={(!selectedSurah || selectedSurah.id === 1) ? palette.muted : palette.textSoft} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => { const next = repeatMode === 'none' ? 'one' : 'none'; repeatModeRef.current = next; setRepeatMode(next); }}
               style={st.npBtn}
@@ -345,6 +365,9 @@ export function QuranAudioScreen({ user, onBack }: { user: AuthUser; onBack: () 
             )}
             <TouchableOpacity onPress={stopPlayback} style={st.npBtn}>
               <Ionicons name="stop" size={20} color={palette.textSoft} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={playNextSurah} style={st.npBtn} disabled={!selectedSurah || selectedSurah.id === 114}>
+              <Ionicons name="play-skip-forward" size={20} color={(!selectedSurah || selectedSurah.id === 114) ? palette.muted : palette.textSoft} />
             </TouchableOpacity>
           </View>
         </View>

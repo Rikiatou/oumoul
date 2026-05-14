@@ -14,23 +14,27 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { AuthUser } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
 import { useLocationContext } from '../context/location-context';
+import { httpClient } from '../api';
+import { API_URL } from '../api';
 
 interface MosqueLocal {
   id: string;
   name: string;
   address: string;
-  city: string;
-  country: string;
+  city?: string;
+  country?: string;
   latitude: number;
   longitude: number;
   phone?: string;
   distance: number;
   facilities: string[];
-  rating: number;
-  reviewCount: number;
+  rating?: number;
+  reviewCount?: number;
+  isOpen?: boolean;
   prayerTimes?: {
     fajr: string;
     dhuhr: string;
@@ -41,46 +45,32 @@ interface MosqueLocal {
   };
 }
 
-// Sample mosques data (in production, this would come from the API)
-function generateNearbyMosques(lat: number, lng: number): MosqueLocal[] {
-  const mosques: MosqueLocal[] = [
-    {
-      id: '1', name: 'Mosquée Centrale', address: 'Rue principale', city: 'Douala',
-      country: 'Cameroun', latitude: lat + 0.002, longitude: lng + 0.001, phone: '+237 6XX XXX XXX',
-      distance: 0.3, facilities: ['parking', 'wodu', 'sisters_area'], rating: 4.8, reviewCount: 124,
-      prayerTimes: { fajr: '05:15', dhuhr: '13:00', asr: '16:30', maghrib: '18:45', isha: '20:00', jummah: '13:30' },
-    },
-    {
-      id: '2', name: 'Masjid An-Nour', address: 'Avenue de la Liberté', city: 'Douala',
-      country: 'Cameroun', latitude: lat + 0.005, longitude: lng - 0.003, phone: '+237 6XX XXX XXX',
-      distance: 0.7, facilities: ['wodu', 'disabled_access'], rating: 4.5, reviewCount: 67,
-      prayerTimes: { fajr: '05:20', dhuhr: '13:00', asr: '16:30', maghrib: '18:45', isha: '20:00', jummah: '13:15' },
-    },
-    {
-      id: '3', name: 'Mosquée Al-Iman', address: 'Quartier Bali', city: 'Douala',
-      country: 'Cameroun', latitude: lat - 0.008, longitude: lng + 0.006,
-      distance: 1.2, facilities: ['parking', 'wodu', 'sisters_area', 'kids_area', 'islamic_school'], rating: 4.9, reviewCount: 203,
-      prayerTimes: { fajr: '05:15', dhuhr: '13:00', asr: '16:30', maghrib: '18:45', isha: '20:00', jummah: '13:00' },
-    },
-    {
-      id: '4', name: 'Masjid As-Salam', address: 'Rue de la Paix', city: 'Douala',
-      country: 'Cameroun', latitude: lat + 0.012, longitude: lng + 0.009,
-      distance: 1.8, facilities: ['wodu', 'parking'], rating: 4.3, reviewCount: 45,
-      prayerTimes: { fajr: '05:20', dhuhr: '13:00', asr: '16:30', maghrib: '18:45', isha: '20:00', jummah: '13:30' },
-    },
-    {
-      id: '5', name: 'Grande Mosquée', address: 'Boulevard de la République', city: 'Douala',
-      country: 'Cameroun', latitude: lat - 0.015, longitude: lng - 0.01,
-      distance: 2.5, facilities: ['parking', 'wodu', 'sisters_area', 'disabled_access', 'funeral_services', 'islamic_school'], rating: 4.7, reviewCount: 312,
-      prayerTimes: { fajr: '05:15', dhuhr: '13:00', asr: '16:30', maghrib: '18:45', isha: '20:00', jummah: '12:45' },
-    },
-    {
-      id: '6', name: 'Mosquée Al-Firdaws', address: 'Carrefour Ndokoti', city: 'Douala',
-      country: 'Cameroun', latitude: lat + 0.02, longitude: lng - 0.015,
-      distance: 3.1, facilities: ['wodu', 'sisters_area'], rating: 4.4, reviewCount: 89,
-    },
-  ];
-  return mosques;
+async function fetchNearbyMosques(lat: number, lng: number, radius = 5000): Promise<MosqueLocal[]> {
+  const url = `${API_URL}/places/mosques?lat=${lat}&lng=${lng}&radius=${radius}`;
+  const res = await (httpClient as any).rawFetch(url, { method: 'GET' }).catch(() => null);
+  if (!res || !res.ok) {
+    // fallback: use direct fetch with auth header
+    return fetchNearbyMosquesFallback(lat, lng, radius);
+  }
+  const json = await res.json();
+  return (json.results ?? []) as MosqueLocal[];
+}
+
+async function fetchNearbyMosquesFallback(lat: number, lng: number, radius = 5000): Promise<MosqueLocal[]> {
+  try {
+    const { tokenStore } = await import('../api');
+    const session = await tokenStore.getTokens();
+    const token = session?.accessToken;
+    const url = `${API_URL}/places/mosques?lat=${lat}&lng=${lng}&radius=${radius}`;
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.results ?? []) as MosqueLocal[];
+  } catch {
+    return [];
+  }
 }
 
 const FACILITY_LABELS: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
@@ -107,11 +97,32 @@ export function MosqueFinderScreen({ user, onBack }: { user: AuthUser; onBack: (
   const [search, setSearch] = useState('');
   const [selectedMosque, setSelectedMosque] = useState<MosqueLocal | null>(null);
   const [filterFacility, setFilterFacility] = useState<string | null>(null);
+  const [mosques, setMosques] = useState<MosqueLocal[]>([]);
+  const [loadingMosques, setLoadingMosques] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const userLat = detectedLoc.latitude ?? 4.0511;
   const userLng = detectedLoc.longitude ?? 9.7679;
 
-  const mosques = useMemo(() => generateNearbyMosques(userLat, userLng), [userLat, userLng]);
+  const loadMosques = useCallback(async (lat: number, lng: number) => {
+    setLoadingMosques(true);
+    setError(null);
+    try {
+      const results = await fetchNearbyMosquesFallback(lat, lng, 5000);
+      setMosques(results);
+      if (results.length === 0) setError('Aucune mosquée trouvée. Vérifie ta connexion ou la clé API Google Places.');
+    } catch {
+      setError('Impossible de charger les mosquées.');
+    } finally {
+      setLoadingMosques(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!locLoading && userLat && userLng) {
+      void loadMosques(userLat, userLng);
+    }
+  }, [userLat, userLng, locLoading, loadMosques]);
 
   const filteredMosques = useMemo(() => {
     let result = mosques;
@@ -125,7 +136,8 @@ export function MosqueFinderScreen({ user, onBack }: { user: AuthUser; onBack: (
     return result.sort((a, b) => a.distance - b.distance);
   }, [mosques, search, filterFacility]);
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number | undefined) => {
+    if (rating == null) return null;
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
@@ -144,9 +156,7 @@ export function MosqueFinderScreen({ user, onBack }: { user: AuthUser; onBack: (
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn} accessibilityLabel="Retour" accessibilityRole="button">
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={st.headerTitle} accessibilityRole="header">Mosquées à proximité</Text>
         <HelpTip screenName="Mosquées à proximité" tips={[
           { icon: 'location', title: 'Géolocalisation', description: 'L\'app utilise ta position GPS pour trouver les mosquées proches.' },
@@ -196,7 +206,31 @@ export function MosqueFinderScreen({ user, onBack }: { user: AuthUser; onBack: (
         <Text style={st.locText}>
           {locLoading ? 'Détection GPS...' : `${detectedLoc.city ?? 'Position détectée'} · ${filteredMosques.length} mosquée(s)`}
         </Text>
+        {!loadingMosques && userLat && userLng && (
+          <TouchableOpacity onPress={() => void loadMosques(userLat as number, userLng as number)} style={{ marginLeft: 8 }}>
+            <Ionicons name="refresh" size={14} color={palette.primaryDark} />
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Loading overlay */}
+      {loadingMosques && (
+        <View style={st.loadingBox}>
+          <ActivityIndicator color={palette.primaryDark} size="small" />
+          <Text style={st.loadingText}>Recherche des mosquées...</Text>
+        </View>
+      )}
+
+      {/* Error */}
+      {!loadingMosques && error && mosques.length === 0 && (
+        <View style={st.errorBox}>
+          <Ionicons name="warning-outline" size={32} color={palette.muted} />
+          <Text style={st.errorText}>{error}</Text>
+          <TouchableOpacity style={st.retryBtn} onPress={() => { if (userLat && userLng) void loadMosques(userLat as number, userLng as number); }}>
+            <Text style={st.retryBtnText}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Mosque Detail */}
       {selectedMosque ? (
@@ -368,4 +402,12 @@ const st = StyleSheet.create({
   facilitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   facilityChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: palette.accentLight, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   facilityText: { fontSize: 12, fontWeight: '600', color: palette.primaryDark },
+  loadingBox: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingVertical: 12 },
+  loadingText: { fontSize: 13, color: palette.textSoft },
+  errorBox: { alignItems: 'center', paddingTop: 40, paddingHorizontal: 24, gap: 12 },
+  errorText: { fontSize: 13, color: palette.textSoft, textAlign: 'center' },
+  retryBtn: { backgroundColor: palette.primaryDark, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
+  retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  isOpenBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', marginTop: 4 },
+  isOpenText: { fontSize: 11, fontWeight: '700' },
 });

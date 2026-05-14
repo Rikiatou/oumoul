@@ -36,6 +36,9 @@ model User {
   quranFavorites     QuranFavorite[]
   dhikrFavorites     DhikrFavorite[]
   cycleDays          CycleDay[]
+  communityPosts     CommunityPost[]
+  communityLikes     CommunityLike[]
+  challengeParticipations ChallengeParticipant[]
 }
 
 model RefreshToken {
@@ -168,6 +171,7 @@ model ReminderPreference {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
+  @@unique([userId, type], map: "ReminderPreference_user_type_key")
   @@index([userId, type], map: "ReminderPreference_user_type_idx")
 }
 
@@ -250,8 +254,8 @@ model QuranFavorite {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([userId, surah, ayah], map: "QuranFavorite_user_surah_ayah_key")
   @@index([userId], map: "QuranFavorite_user_idx")
-  @@index([userId, surah, ayah], map: "QuranFavorite_user_surah_ayah_idx")
 }
 
 model DhikrFavorite {
@@ -265,6 +269,73 @@ model DhikrFavorite {
 
   @@unique([userId, entryId], map: "DhikrFavorite_user_entry_key")
   @@index([userId, entryId], map: "DhikrFavorite_user_entry_idx")
+}
+
+// ─── Community ────────────────────────────────────────────────────────────────
+
+enum PostType {
+  achievement
+  milestone
+  question
+  tip
+  motivation
+}
+
+model CommunityPost {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      PostType  @default(motivation)
+  content   String    @db.Text
+  tags      String?   @db.Text
+  likeCount Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  likes     CommunityLike[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model CommunityLike {
+  id        String        @id @default(cuid())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime      @default(now())
+
+  @@unique([postId, userId], map: "CommunityLike_post_user_key")
+  @@index([postId])
+  @@index([userId])
+}
+
+model CommunityChallenge {
+  id           String   @id @default(cuid())
+  title        String
+  description  String   @db.Text
+  icon         String
+  color        String
+  durationDays Int
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  participants ChallengeParticipant[]
+
+  @@index([isActive])
+}
+
+model ChallengeParticipant {
+  id          String             @id @default(cuid())
+  challenge   CommunityChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  challengeId String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  joinedAt    DateTime           @default(now())
+
+  @@unique([challengeId, userId], map: "ChallengeParticipant_challenge_user_key")
+  @@index([challengeId])
+  @@index([userId])
 }
 
 enum TafsirLanguage {

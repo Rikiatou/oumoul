@@ -1,12 +1,29 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
 
+const REQUIRED_ENV_VARS = [
+  'DATABASE_URL',
+  'JWT_ACCESS_TOKEN_SECRET',
+  'JWT_REFRESH_TOKEN_SECRET',
+  'REDIS_URL',
+  'WEB_APP_BASE_URL',
+];
+
 async function bootstrap() {
+  const startupLogger = new Logger('Bootstrap');
+
+  // Validate required environment variables before anything else
+  const missing = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    startupLogger.error(`Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
@@ -34,9 +51,12 @@ async function bootstrap() {
     }),
   );
 
-  // CORS: allow all origins for mobile app (React Native doesn't send Origin header)
+  // CORS: mobile (React Native) never sends Origin, so allow all for mobile.
+  // In production, additionally allow the web dashboard origin explicitly.
   app.enableCors({
-    origin: true,
+    origin: isProd
+      ? [frontendUrl, /\.railway\.app$/]
+      : true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -58,5 +78,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix(apiPrefix);
   await app.listen(port, '0.0.0.0');
+  startupLogger.log(`Application running on port ${port} (${isProd ? 'production' : 'development'})`);
 }
 bootstrap();

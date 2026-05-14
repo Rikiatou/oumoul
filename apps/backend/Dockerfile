@@ -37,4 +37,4 @@ COPY --from=build /monorepo/node_modules ./node_modules
 ENV NODE_ENV=production
 EXPOSE 3333
 
-CMD ["node", "dist/src/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -90,6 +91,7 @@ const CYCLE_ICON_COLORS: Record<CycleStatus, string> = {
 const CYCLE_STATUSES: CycleStatus[] = ['PURE', 'MENSES', 'SPOTTING', 'POSTPARTUM'];
 
 export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+  const navigation = useNavigation<any>();
   const [year, setYear] = useState(new Date().getUTCFullYear());
   const [data, setData] = useState<RamadanSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -417,6 +419,16 @@ export function ImaneRamadanScreen({ user, onBack }: { user: AuthUser; onBack: (
         </TouchableOpacity>
         <Text style={r.topTitle} accessibilityRole="header">Ramadan</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {outstandingMakeupDays > 0 && (
+            <TouchableOpacity
+              style={r.catchupBtn}
+              onPress={() => navigation.navigate('RamadanCatchup')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="calendar" size={14} color="#fff" />
+              <Text style={r.catchupBtnText}>Rattrapage</Text>
+            </TouchableOpacity>
+          )}
           <HelpTip screenName="Ramadan" tips={[
             { icon: 'moon', title: 'Suivi du jeûne', description: 'Appuie sur un jour du calendrier pour enregistrer ton statut : jeûné, raté, exemptée ou rattrapé.' },
             { icon: 'today', title: 'Carte du jour', description: 'Pendant le Ramadan, une carte rapide te demande chaque jour si tu as jeûné.' },
@@ -1214,4 +1226,15 @@ const r = StyleSheet.create({
     marginTop: 14,
   },
   reminderBtnText: { color: r_c.accent, fontWeight: '700', fontSize: 14 },
+
+  catchupBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: r_c.accent,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 4,
+  },
+  catchupBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 });

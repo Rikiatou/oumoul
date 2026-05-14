@@ -356,6 +356,7 @@ export interface QuranVerse {
   verseNumber: number;
   textArabic: string;
   textTranslated: string | null;
+  textTransliteration?: string | null;
 }
 
 export interface QuranSurahVersesResponse {

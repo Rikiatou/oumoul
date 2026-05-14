@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -10,13 +10,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { Request } from 'express';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-  };
-}
+import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -62,12 +56,7 @@ export class AuthController {
   @Post('push-token')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  registerPushToken(@Req() req: AuthenticatedRequest, @Body() payload: UpdatePushTokenDto) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      throw new UnauthorizedException('User context missing');
-    }
-
-    return this.authService.updatePushToken(userId, payload.pushToken, payload.platform);
+  registerPushToken(@CurrentUser() user: AuthenticatedUser, @Body() payload: UpdatePushTokenDto) {
+    return this.authService.updatePushToken(user.userId, payload.pushToken, payload.platform);
   }
 }

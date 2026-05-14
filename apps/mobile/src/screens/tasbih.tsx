@@ -13,11 +13,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import type { AuthUser } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
+import { awardEvent } from '../gamification/gamification-events';
 
 const TASBIH_SESSIONS_KEY = 'oumoul_tasbih_sessions';
 const TASBIH_CUSTOM_KEY = 'oumoul_tasbih_custom';
+const TASBIH_LIVE_KEY = 'oumoul_tasbih_live';
 
 interface DhikrPreset {
   id: string;
@@ -71,9 +74,20 @@ export function TasbihScreen({ user, onBack }: { user: AuthUser; onBack: () => v
     Promise.all([
       SecureStore.getItemAsync(TASBIH_SESSIONS_KEY),
       SecureStore.getItemAsync(TASBIH_CUSTOM_KEY),
-    ]).then(([sessRaw, custRaw]: [string | null, string | null]) => {
+      SecureStore.getItemAsync(TASBIH_LIVE_KEY),
+    ]).then(([sessRaw, custRaw, liveRaw]: [string | null, string | null, string | null]) => {
       if (sessRaw) try { setSessions(JSON.parse(sessRaw)); } catch {}
       if (custRaw) try { setCustomDhikrs(JSON.parse(custRaw)); } catch {}
+      if (liveRaw) {
+        try {
+          const live = JSON.parse(liveRaw);
+          if (live?.preset && live?.count != null && live?.target != null) {
+            setSelectedPreset(live.preset);
+            setCount(live.count);
+            setTarget(live.target);
+          }
+        } catch {}
+      }
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, []);
@@ -133,7 +147,10 @@ export function TasbihScreen({ user, onBack }: { user: AuthUser; onBack: () => v
     ]).start();
 
     if (next >= target && selectedPreset) {
-      // Session complete
+      // Session complete — award gamification points
+      const evt = next >= 200 ? 'dhikr_200' : next >= 99 ? 'dhikr_99' : 'dhikr_33';
+      void awardEvent(evt);
+      void awardEvent('tasbih_complete');
       setSessions((prev) => [
         {
           id: Date.now().toString(),
@@ -147,16 +164,25 @@ export function TasbihScreen({ user, onBack }: { user: AuthUser; onBack: () => v
       ]);
       if (vibrate) Vibration.vibrate([0, 100, 50, 100]);
     }
-  }, [count, target, vibrate, selectedPreset]);
+
+    // Persist live state
+    if (selectedPreset) {
+      SecureStore.setItemAsync(TASBIH_LIVE_KEY, JSON.stringify({ preset: selectedPreset, count: next, target })).catch(() => {});
+    }
+  }, [count, target, vibrate, selectedPreset, scaleAnim]);
 
   const resetCounter = useCallback(() => {
     setCount(0);
-  }, []);
+    if (selectedPreset) {
+      SecureStore.setItemAsync(TASBIH_LIVE_KEY, JSON.stringify({ preset: selectedPreset, count: 0, target })).catch(() => {});
+    }
+  }, [selectedPreset, target]);
 
   const selectPreset = useCallback((preset: DhikrPreset) => {
     setSelectedPreset(preset);
     setTarget(preset.target);
     setCount(0);
+    SecureStore.setItemAsync(TASBIH_LIVE_KEY, JSON.stringify({ preset, count: 0, target: preset.target })).catch(() => {});
   }, []);
 
   const addCustomDhikr = useCallback(() => {
@@ -181,9 +207,7 @@ export function TasbihScreen({ user, onBack }: { user: AuthUser; onBack: () => v
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn} accessibilityLabel="Retour" accessibilityRole="button">
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={st.headerTitle} accessibilityRole="header">Tasbih</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <HelpTip screenName="Tasbih" tips={[

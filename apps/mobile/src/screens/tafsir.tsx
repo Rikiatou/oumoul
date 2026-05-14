@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { AuthUser, Locale, TafsirResponse } from '@oumoul/api';
 import { quranApi, tafsirApi } from '../api';
 import { loadTafsirSelection, saveTafsirSelection } from '../storage/tafsir-selection-store';
-import { palette } from '../theme';
+import { BackButton } from '../components/BackButton';
+import { useTheme } from '../context/theme-context';
 
 interface TafsirFormState {
   surah: string;
@@ -13,6 +14,14 @@ interface TafsirFormState {
   locale: Locale;
   source?: string;
 }
+
+type TafsirInitialSelection = {
+  surahId?: number;
+  ayah?: number;
+  locale?: Locale;
+  source?: string;
+  autoLoad?: boolean;
+} | null;
 
 const DEFAULT_FORM: TafsirFormState = {
   surah: '2',
@@ -27,7 +36,63 @@ const LANG_OPTIONS: Array<{ value: Locale; label: string; icon: string }> = [
   { value: 'ar', label: 'العربية', icon: 'language-outline' },
 ];
 
-export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBackToDashboard: () => void }) {
+export function TafsirScreen({
+  user,
+  onBackToDashboard,
+  initialSelection,
+}: {
+  user: AuthUser;
+  onBackToDashboard: () => void;
+  initialSelection?: TafsirInitialSelection;
+}) {
+  const { palette } = useTheme();
+  const tf_c = useMemo(() => ({
+    bg: palette.bgAlt,
+    card: palette.card,
+    border: palette.border,
+    text: palette.text,
+    textSoft: palette.textSoft,
+    muted: palette.muted,
+    accent: palette.primaryDark,
+    accentLight: palette.accentLight,
+  }), [palette]);
+  const tf = useMemo(() => StyleSheet.create({
+    screen: { flex: 1, backgroundColor: tf_c.bg },
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: tf_c.border },
+    topTitle: { fontSize: 20, fontWeight: '700', color: tf_c.text },
+    selectionBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: tf_c.accentLight, marginHorizontal: 16, marginTop: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
+    selectionText: { fontSize: 13, fontWeight: '600', color: tf_c.text },
+    card: { backgroundColor: tf_c.card, marginHorizontal: 16, marginTop: 14, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: tf_c.border },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: tf_c.text },
+    fieldLabel: { fontSize: 11, fontWeight: '700', color: tf_c.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+    surahChip: { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: tf_c.border, alignItems: 'center', minWidth: 70 },
+    surahChipActive: { backgroundColor: tf_c.accent, borderColor: tf_c.accent },
+    surahChipNum: { fontSize: 16, fontWeight: '800', color: tf_c.text },
+    surahChipName: { fontSize: 10, fontWeight: '600', color: tf_c.textSoft, marginTop: 2 },
+    surahChipArabic: { fontSize: 10, color: tf_c.muted },
+    ayahChip: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.03)', borderWidth: 1, borderColor: tf_c.border },
+    ayahChipActive: { backgroundColor: tf_c.accent, borderColor: tf_c.accent },
+    ayahChipText: { fontSize: 13, fontWeight: '700', color: tf_c.text },
+    langChip: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.04)', borderWidth: 1, borderColor: tf_c.border },
+    langChipActive: { backgroundColor: tf_c.accent, borderColor: tf_c.accent },
+    langChipText: { fontSize: 13, fontWeight: '600', color: tf_c.text },
+    sourceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.04)', borderWidth: 1, borderColor: tf_c.border },
+    sourceChipActive: { backgroundColor: tf_c.accent, borderColor: tf_c.accent },
+    sourceChipText: { fontSize: 12, fontWeight: '600', color: tf_c.text },
+    submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: tf_c.accent, borderRadius: 14, paddingVertical: 16, gap: 8 },
+    submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    errorText: { color: '#C62828', fontSize: 13, marginTop: 8 },
+    skeletonCard: { backgroundColor: tf_c.card, marginHorizontal: 16, marginTop: 16, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: tf_c.border },
+    resultCard: { backgroundColor: tf_c.card, marginHorizontal: 16, marginTop: 16, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: tf_c.border },
+    resultHeader: { fontSize: 15, fontWeight: '700', color: tf_c.text },
+    resultSourceBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 14 },
+    resultSourceText: { fontSize: 11, color: tf_c.muted, fontWeight: '600' },
+    resultArabic: { fontSize: 22, lineHeight: 40, color: '#1B3A2D', textAlign: 'right' as const, fontFamily: 'Amiri-Regular', marginBottom: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: tf_c.border },
+    resultText: { color: tf_c.text, fontSize: 16, lineHeight: 26 },
+    toast: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', backgroundColor: '#1A2332', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, marginTop: 16 },
+    toastText: { color: '#fff', fontSize: 13 },
+  }), [tf_c]);
   const [form, setForm] = useState<TafsirFormState>(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +106,8 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const didApplyInitialSelectionRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -88,15 +155,22 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
     const loadSurahs = async () => {
       setSurahLoading(true);
       try {
-        const data = await quranApi.listSurahs(form.locale);
+        const requestedLang = form.locale === 'ar' ? 'fr' : form.locale;
+        let data = await quranApi.listSurahs(requestedLang);
+
+        // Defensive fallback: if API returns empty list, retry with French
+        if (!data?.surahs?.length && requestedLang !== 'fr') {
+          data = await quranApi.listSurahs('fr');
+        }
         if (!isMounted) return;
         const mapped = data.surahs.map((s) => ({ id: s.id, name: s.nameSimple ?? `Surah ${s.id}`, nameArabic: s.nameArabic, versesCount: s.versesCount }));
         setSurahs(mapped);
         const currentNum = Number.parseInt(form.surah, 10);
         const selected = mapped.find((s) => s.id === currentNum) ?? mapped[0];
         if (selected) setForm((prev) => ({ ...prev, surah: String(selected.id) }));
-      } catch {
-        setToast('Impossible de charger les sourates.');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Impossible de charger les sourates.';
+        setToast(message);
       } finally {
         if (isMounted) setSurahLoading(false);
       }
@@ -140,22 +214,24 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
     setForm((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  const handleSubmit = useCallback(async () => {
+  const fetchTafsir = useCallback(async (next: { surah: number; ayah: number; locale: Locale; source?: string }) => {
     setLoading(true);
     setError(null);
     try {
-      const surah = Number.parseInt(form.surah, 10);
-      const ayah = Number.parseInt(form.ayah, 10);
-      if (!Number.isFinite(surah) || !Number.isFinite(ayah) || surah <= 0 || ayah <= 0) {
+      if (!Number.isFinite(next.surah) || !Number.isFinite(next.ayah) || next.surah <= 0 || next.ayah <= 0) {
         throw new Error('Veuillez fournir un numéro de sourate et de verset valides.');
       }
-      const [response, surahData] = await Promise.all([
-        tafsirApi.getTafsir({ surah, ayah, locale: form.locale, source: form.source }),
-        quranApi.getSurah(surah, 'ar').catch(() => null),
-      ]);
+      const response = await tafsirApi.getTafsir({ surah: next.surah, ayah: next.ayah, locale: next.locale, source: next.source });
       setResult(response);
-      const verse = surahData?.verses?.find((v: { verseNumber: number }) => v.verseNumber === ayah);
-      setArabicVerse(verse?.textArabic ?? null);
+
+      // Load Arabic verse separately with better error handling
+      try {
+        const surahData = await quranApi.getSurah(next.surah, 'ar');
+        const verse = surahData?.verses?.find((v: { verseNumber: number }) => v.verseNumber === next.ayah);
+        setArabicVerse(verse?.textArabic ?? null);
+      } catch {
+        setArabicVerse(null);
+      }
       setToast('Tafsir chargé.');
     } catch (err) {
       const message = err instanceof Error ? err.message : "Impossible de récupérer le tafsir.";
@@ -165,7 +241,39 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
     } finally {
       setLoading(false);
     }
-  }, [form.surah, form.ayah, form.locale]);
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
+    const surah = Number.parseInt(form.surah, 10);
+    const ayah = Number.parseInt(form.ayah, 10);
+    await fetchTafsir({ surah, ayah, locale: form.locale, source: form.source });
+  }, [fetchTafsir, form.ayah, form.locale, form.source, form.surah]);
+
+  useEffect(() => {
+    // Initial selection may come from navigation params (ImaneQuran -> Tafsir)
+    // Apply once and optionally autoload.
+    if (didApplyInitialSelectionRef.current) return;
+    if (!initialSelection) return;
+
+    const surahId = initialSelection.surahId;
+    const ayah = initialSelection.ayah;
+    const locale = initialSelection.locale;
+
+    if (!surahId || !ayah) return;
+
+    didApplyInitialSelectionRef.current = true;
+    setForm((prev) => ({
+      ...prev,
+      surah: String(surahId),
+      ayah: String(ayah),
+      locale: locale ?? prev.locale,
+      source: initialSelection.source ?? prev.source,
+    }));
+
+    if (initialSelection.autoLoad) {
+      void fetchTafsir({ surah: surahId, ayah, locale: locale ?? form.locale, source: initialSelection.source ?? form.source });
+    }
+  }, [fetchTafsir, form.locale, form.source, initialSelection]);
 
   const insets = useSafeAreaInsets();
 
@@ -173,9 +281,7 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
     <View style={[tf.screen, { paddingTop: insets.top }]}>
       {/* Top bar */}
       <View style={tf.topBar}>
-        <TouchableOpacity onPress={onBackToDashboard} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="chevron-back" size={24} color={tf_c.accent} />
-        </TouchableOpacity>
+        <BackButton onPress={onBackToDashboard} />
         <Text style={tf.topTitle}>Tafsir</Text>
         <TouchableOpacity onPress={() => { setForm(DEFAULT_FORM); setResult(null); setError(null); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="refresh-outline" size={20} color={tf_c.muted} />
@@ -320,62 +426,3 @@ export function TafsirScreen({ user, onBackToDashboard }: { user: AuthUser; onBa
   );
 }
 
-const tf_c = {
-  bg: palette.bgAlt,
-  card: palette.card,
-  border: palette.border,
-  text: palette.text,
-  textSoft: palette.textSoft,
-  muted: palette.muted,
-  accent: palette.primaryDark,
-  accentLight: palette.accentLight,
-};
-
-const tf = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: tf_c.bg },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: tf_c.border },
-  topTitle: { fontSize: 20, fontWeight: '700', color: tf_c.text },
-
-  selectionBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: tf_c.accentLight, marginHorizontal: 16, marginTop: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
-  selectionText: { fontSize: 13, fontWeight: '600', color: tf_c.text },
-
-  card: { backgroundColor: tf_c.card, marginHorizontal: 16, marginTop: 14, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: tf_c.border },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: tf_c.text },
-
-  fieldLabel: { fontSize: 11, fontWeight: '700', color: tf_c.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-
-  surahChip: { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: tf_c.border, alignItems: 'center', minWidth: 70 },
-  surahChipActive: { backgroundColor: tf_c.accent, borderColor: tf_c.accent },
-  surahChipNum: { fontSize: 16, fontWeight: '800', color: tf_c.text },
-  surahChipName: { fontSize: 10, fontWeight: '600', color: tf_c.textSoft, marginTop: 2 },
-  surahChipArabic: { fontSize: 10, color: tf_c.muted },
-
-  ayahChip: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.03)', borderWidth: 1, borderColor: tf_c.border },
-  ayahChipActive: { backgroundColor: tf_c.accent, borderColor: tf_c.accent },
-  ayahChipText: { fontSize: 13, fontWeight: '700', color: tf_c.text },
-
-  langChip: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.04)', borderWidth: 1, borderColor: tf_c.border },
-  langChipActive: { backgroundColor: tf_c.accent, borderColor: tf_c.accent },
-  langChipText: { fontSize: 13, fontWeight: '600', color: tf_c.text },
-
-  sourceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.04)', borderWidth: 1, borderColor: tf_c.border },
-  sourceChipActive: { backgroundColor: tf_c.accent, borderColor: tf_c.accent },
-  sourceChipText: { fontSize: 12, fontWeight: '600', color: tf_c.text },
-
-  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: tf_c.accent, borderRadius: 14, paddingVertical: 16, gap: 8 },
-  submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  errorText: { color: '#C62828', fontSize: 13, marginTop: 8 },
-
-  skeletonCard: { backgroundColor: tf_c.card, marginHorizontal: 16, marginTop: 16, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: tf_c.border },
-
-  resultCard: { backgroundColor: tf_c.card, marginHorizontal: 16, marginTop: 16, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: tf_c.border },
-  resultHeader: { fontSize: 15, fontWeight: '700', color: tf_c.text },
-  resultSourceBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 14 },
-  resultSourceText: { fontSize: 11, color: tf_c.muted, fontWeight: '600' },
-  resultArabic: { fontSize: 22, lineHeight: 40, color: '#1B3A2D', textAlign: 'right' as const, fontFamily: 'Amiri-Regular', marginBottom: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: tf_c.border },
-  resultText: { color: tf_c.text, fontSize: 16, lineHeight: 26 },
-
-  toast: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', backgroundColor: '#1A2332', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, marginTop: 16 },
-  toastText: { color: '#fff', fontSize: 13 },
-});

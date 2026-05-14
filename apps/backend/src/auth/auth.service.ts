@@ -194,7 +194,7 @@ export class AuthService {
       },
     });
 
-    const appBaseUrl = this.configService.get<string>('WEB_APP_BASE_URL') ?? 'http://localhost:3000';
+    const appBaseUrl = this.configService.getOrThrow<string>('WEB_APP_BASE_URL');
     const resetUrl = `${appBaseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
 
     await this.emailService.sendPasswordResetEmail(user.email, user.firstName, resetUrl);

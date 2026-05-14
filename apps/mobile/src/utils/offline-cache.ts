@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CACHE_PREFIX = 'oumoul_cache_';
 const CACHE_TTL_KEY = 'oumoul_cache_ttl_';
@@ -16,22 +16,22 @@ export const offlineCache = {
   async set<T>(key: string, data: T, ttlMs?: number): Promise<void> {
     try {
       const entry: CacheEntry<T> = { data, timestamp: Date.now() };
-      await SecureStore.setItemAsync(CACHE_PREFIX + key, JSON.stringify(entry));
+      await AsyncStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
       if (ttlMs) {
-        await SecureStore.setItemAsync(CACHE_TTL_KEY + key, String(ttlMs));
+        await AsyncStorage.setItem(CACHE_TTL_KEY + key, String(ttlMs));
       }
     } catch {}
   },
 
   async get<T>(key: string): Promise<T | null> {
     try {
-      const raw = await SecureStore.getItemAsync(CACHE_PREFIX + key);
+      const raw = await AsyncStorage.getItem(CACHE_PREFIX + key);
       if (!raw) return null;
 
       const entry: CacheEntry<T> = JSON.parse(raw);
 
       // Check TTL
-      const ttlRaw = await SecureStore.getItemAsync(CACHE_TTL_KEY + key);
+      const ttlRaw = await AsyncStorage.getItem(CACHE_TTL_KEY + key);
       if (ttlRaw) {
         const ttl = parseInt(ttlRaw, 10);
         if (Date.now() - entry.timestamp > ttl) {
@@ -48,8 +48,8 @@ export const offlineCache = {
 
   async remove(key: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(CACHE_PREFIX + key);
-      await SecureStore.deleteItemAsync(CACHE_TTL_KEY + key);
+      await AsyncStorage.removeItem(CACHE_PREFIX + key);
+      await AsyncStorage.removeItem(CACHE_TTL_KEY + key);
     } catch {}
   },
 
@@ -70,7 +70,7 @@ export const offlineCache = {
     } catch (err) {
       // If fetch fails, try stale cache (ignore TTL)
       try {
-        const raw = await SecureStore.getItemAsync(CACHE_PREFIX + key);
+        const raw = await AsyncStorage.getItem(CACHE_PREFIX + key);
         if (raw) {
           const entry: CacheEntry<T> = JSON.parse(raw);
           return entry.data;

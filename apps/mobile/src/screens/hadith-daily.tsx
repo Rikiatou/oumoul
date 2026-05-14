@@ -12,9 +12,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import type { AuthUser, HadithItem } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
 import { offlineCache, CACHE_KEYS, CACHE_TTL } from '../utils/offline-cache';
+import { awardEvent } from '../gamification/gamification-events';
 
 const HADITH_FAVS_KEY = 'oumoul_hadith_favorites';
 
@@ -159,6 +161,18 @@ export function HadithDailyScreen({ user, onBack }: { user: AuthUser; onBack: ()
   const dailyHadith = useMemo(() => getDailyHadith(), []);
   const topicHadiths = useMemo(() => getHadithsByTopic(selectedTopic), [selectedTopic]);
 
+  // Award gamification point once per day for reading hadith
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `oumoul_hadith_read_${today}`;
+    SecureStore.getItemAsync(key).then((val) => {
+      if (!val) {
+        void awardEvent('hadith_read');
+        void SecureStore.setItemAsync(key, '1');
+      }
+    }).catch(() => {});
+  }, []);  
+
   const toggleFavorite = useCallback((ref: string) => {
     setFavorites((prev) => {
       const next = new Set(prev);
@@ -173,6 +187,7 @@ export function HadithDailyScreen({ user, onBack }: { user: AuthUser; onBack: ()
       await Share.share({
         message: `${hadith.text}\n\n— ${hadith.reference ?? hadith.collection}\n\nPartagé via Oumoul`,
       });
+      void awardEvent('hadith_read');
     } catch {}
   }, []);
 
@@ -180,9 +195,7 @@ export function HadithDailyScreen({ user, onBack }: { user: AuthUser; onBack: ()
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn} accessibilityLabel="Retour" accessibilityRole="button">
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={st.headerTitle} accessibilityRole="header">Hadith du jour</Text>
         <HelpTip screenName="Hadith du jour" tips={[
           { icon: 'book', title: 'Hadith quotidien', description: 'Un nouveau hadith est affiché chaque jour automatiquement.' },

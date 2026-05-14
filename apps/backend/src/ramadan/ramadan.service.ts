@@ -114,11 +114,13 @@ export class RamadanService {
     // Real Ramadan ranges (approx, civil calendar) for a few years, in UTC.
     // These can be extended/adjusted as needed.
     const ranges: Record<number, { start: string; end: string }> = {
-      2024: { start: '2024-03-11', end: '2024-04-10' },
-      2025: { start: '2025-03-01', end: '2025-03-30' },
+      2024: { start: '2024-03-11', end: '2024-04-09' },
+      2025: { start: '2025-03-01', end: '2025-03-29' },
       2026: { start: '2026-02-18', end: '2026-03-19' },
-      2027: { start: '2027-02-08', end: '2027-03-09' },
+      2027: { start: '2027-02-07', end: '2027-03-08' },
       2028: { start: '2028-01-28', end: '2028-02-26' },
+      2029: { start: '2029-01-17', end: '2029-02-14' },
+      2030: { start: '2030-01-06', end: '2030-02-04' },
     };
 
     const range = ranges[year];

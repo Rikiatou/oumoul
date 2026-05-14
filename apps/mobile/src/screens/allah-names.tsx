@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -13,19 +13,21 @@ import * as SecureStore from 'expo-secure-store';
 import type { AuthUser } from '@oumoul/api';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
+import { BackButton } from '../components/BackButton';
 import { ALLAH_NAMES, AllahNameLocal } from '../data/allah-names';
 
 const NAMES_PROGRESS_KEY = 'oumoul_allah_names_progress';
 
 type ViewMode = 'grid' | 'list' | 'quiz';
 
-export function AllahNamesScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
+export function AllahNamesScreen({ user, onBack, initialNameId }: { user: AuthUser; onBack: () => void; initialNameId?: number }) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialNameId ? 'list' : 'grid');
   const [memorized, setMemorized] = useState<Set<number>>(new Set());
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(initialNameId ?? null);
   const [loaded, setLoaded] = useState(false);
+  const listRef = useRef<FlatList>(null);
 
   // Load persisted memorization progress
   useEffect(() => {
@@ -109,6 +111,17 @@ export function AllahNamesScreen({ user, onBack }: { user: AuthUser; onBack: () 
     return options;
   }, [quizIndex, shuffledNames]);
 
+  // Auto-scroll to initialNameId after load
+  useEffect(() => {
+    if (!initialNameId || !loaded) return;
+    const idx = ALLAH_NAMES.findIndex((n) => n.id === initialNameId);
+    if (idx >= 0) {
+      setTimeout(() => {
+        listRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.3 });
+      }, 400);
+    }
+  }, [initialNameId, loaded]);
+
   const memorizedCount = memorized.size;
   const progressPct = Math.round((memorizedCount / 99) * 100);
 
@@ -116,9 +129,7 @@ export function AllahNamesScreen({ user, onBack }: { user: AuthUser; onBack: () 
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn} accessibilityLabel="Retour" accessibilityRole="button">
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={st.headerTitle} accessibilityRole="header">99 Noms d'Allah</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <HelpTip screenName="99 Noms d'Allah" tips={[
@@ -213,11 +224,14 @@ export function AllahNamesScreen({ user, onBack }: { user: AuthUser; onBack: () 
           {/* Names */}
           {viewMode === 'grid' ? (
             <FlatList
+              ref={listRef}
               data={filteredNames}
+              key="grid"
               numColumns={3}
               keyExtractor={(item) => item.id.toString()}
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
               columnWrapperStyle={{ gap: 8, marginBottom: 8 }}
+              onScrollToIndexFailed={() => {}}
               renderItem={({ item }) => {
                 const isMemo = memorized.has(item.id);
                 return (
@@ -237,9 +251,12 @@ export function AllahNamesScreen({ user, onBack }: { user: AuthUser; onBack: () 
             />
           ) : (
             <FlatList
+              ref={listRef}
               data={filteredNames}
+              key="list"
               keyExtractor={(item) => item.id.toString()}
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+              onScrollToIndexFailed={() => {}}
               renderItem={({ item }) => {
                 const isMemo = memorized.has(item.id);
                 const isExpanded = expandedId === item.id;

@@ -1,15 +1,8 @@
-import { BadRequestException, Body, Controller, Get, Put, Query, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request } from 'express';
 import { ImaneProgramService, ImaneProgramItems } from './imane-program.service';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-  };
-}
+import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('imane-program')
 @ApiBearerAuth()
@@ -18,23 +11,15 @@ interface AuthenticatedRequest extends Request {
 export class ImaneProgramController {
   constructor(private readonly imaneProgramService: ImaneProgramService) {}
 
-  private extractUserId(req: AuthenticatedRequest): string {
-    if (!req.user?.userId) {
-      throw new UnauthorizedException();
-    }
-    return req.user.userId;
-  }
-
   @Get()
   @ApiOkResponse({ description: 'Programme spirituel du jour pour la date donnée.' })
   @ApiQuery({ name: 'date', required: false, type: String, example: '2025-11-18' })
-  async getProgram(@Req() req: AuthenticatedRequest, @Query('date') dateParam?: string) {
-    const userId = this.extractUserId(req);
+  async getProgram(@CurrentUser() user: AuthenticatedUser, @Query('date') dateParam?: string) {
     const date = dateParam ? new Date(dateParam) : new Date();
     if (dateParam && Number.isNaN(date.getTime())) {
       throw new BadRequestException('Invalid date. Expected YYYY-MM-DD.');
     }
-    const items = await this.imaneProgramService.getProgramForDate(userId, date);
+    const items = await this.imaneProgramService.getProgramForDate(user.userId, date);
     const startOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
     return { date: startOfDay.toISOString().slice(0, 10), items };
   }
@@ -42,16 +27,14 @@ export class ImaneProgramController {
   @Put()
   @ApiOkResponse({ description: 'Met à jour le programme spirituel pour la date donnée.' })
   async updateProgram(
-    @Req() req: AuthenticatedRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() body: { date?: string; items: ImaneProgramItems },
   ) {
-    const userId = this.extractUserId(req);
     const date = body.date ? new Date(body.date) : new Date();
     if (body.date && Number.isNaN(date.getTime())) {
       throw new BadRequestException('Invalid date. Expected YYYY-MM-DD.');
     }
-    const result = await this.imaneProgramService.upsertProgramForDate(userId, date, body.items);
-    return result;
+    return this.imaneProgramService.upsertProgramForDate(user.userId, date, body.items);
   }
 
   @Get('month')
@@ -59,11 +42,11 @@ export class ImaneProgramController {
   @ApiQuery({ name: 'year', required: true, type: Number, example: 2025 })
   @ApiQuery({ name: 'month', required: true, type: Number, example: 11, description: '1-12' })
   async getMonth(
-    @Req() req: AuthenticatedRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Query('year') yearParam: string,
     @Query('month') monthParam: string,
   ) {
-    const userId = this.extractUserId(req);
+    const userId = user.userId;
     const year = Number(yearParam);
     const month = Number(monthParam);
     const rows = await this.imaneProgramService.getProgramsForMonth(userId, year, month);

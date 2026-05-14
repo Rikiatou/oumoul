@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, ParseFloatPipe, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { PrayerService } from './prayer.service';
@@ -31,9 +31,10 @@ export class PrayerController {
   @ApiOkResponse({ description: 'Qibla direction for the requested coordinates.' })
   @ApiQuery({ name: 'latitude', type: Number, required: true })
   @ApiQuery({ name: 'longitude', type: Number, required: true })
-  async getQibla(@Query('latitude') latitude: string, @Query('longitude') longitude: string) {
-    const lat = Number(latitude);
-    const lng = Number(longitude);
-    return this.aladhanService.getQiblaDirection(lat, lng);
+  async getQibla(
+    @Query('latitude', ParseFloatPipe) latitude: number,
+    @Query('longitude', ParseFloatPipe) longitude: number,
+  ) {
+    return this.aladhanService.getQiblaDirection(latitude, longitude);
   }
 }

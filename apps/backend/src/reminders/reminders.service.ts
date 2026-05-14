@@ -83,7 +83,7 @@ export class RemindersService {
       {
         jobId: this.jobId(userId, ReminderJobType.Monthly),
         delay: Math.max(firstRun.getTime() - Date.now(), 0),
-        repeat: { every: 30 * 24 * 60 * 60 * 1000 },
+        repeat: { pattern: '0 9 1 * *' },
       },
     );
 
@@ -113,10 +113,10 @@ export class RemindersService {
 
     const preference = await this.prisma.reminderPreference.upsert({
       where: {
-        id: `${userId}:${type}`,
+        userId_type: { userId, type: prismaType },
       },
       update: { isEnabled, sendTime },
-      create: { id: `${userId}:${type}`, userId, type: prismaType, isEnabled, sendTime },
+      create: { userId, type: prismaType, isEnabled, sendTime },
     });
 
     await this.rescheduleForPreference(userId, type);
@@ -187,8 +187,9 @@ export class RemindersService {
   }
 
   private async isEnabled(userId: string, type: ReminderJobType) {
+    const prismaType = type as unknown as ReminderType;
     const pref = await this.prisma.reminderPreference.findUnique({
-      where: { id: `${userId}:${type}` },
+      where: { userId_type: { userId, type: prismaType } },
       select: { isEnabled: true },
     });
 
@@ -196,8 +197,9 @@ export class RemindersService {
   }
 
   private async getSendTime(userId: string, type: ReminderJobType) {
+    const prismaType = type as unknown as ReminderType;
     const pref = await this.prisma.reminderPreference.findUnique({
-      where: { id: `${userId}:${type}` },
+      where: { userId_type: { userId, type: prismaType } },
       select: { sendTime: true },
     });
 

@@ -6,7 +6,7 @@ const WIDGET_DATA_KEY = 'oumoul_widget_data';
  * Widget data provider.
  * Stores prayer times and next prayer info for home screen widgets.
  * On iOS this would use App Groups / WidgetKit, on Android SharedPreferences.
- * For now we persist the data so a native widget module can read it.
+ * This data is automatically synced when prayer times are updated.
  */
 export interface WidgetPrayerData {
   nextPrayer: string;

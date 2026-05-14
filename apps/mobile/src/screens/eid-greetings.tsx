@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { AuthUser } from '@oumoul/api';
+import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -150,9 +151,7 @@ export function EidGreetingsScreen({ user, onBack }: { user: AuthUser; onBack: (
     <View style={[st.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={onBack} style={st.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={palette.text} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={st.headerTitle}>Cartes de vœux</Text>
         <View style={{ width: 36 }} />
       </View>
