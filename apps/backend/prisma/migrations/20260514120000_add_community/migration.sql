@@ -84,9 +84,6 @@ ALTER TABLE `CommunityLike` ADD CONSTRAINT `CommunityLike_postId_fkey` FOREIGN K
 ALTER TABLE `CommunityLike` ADD CONSTRAINT `CommunityLike_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `CommunityChallenge` ADD CONSTRAINT `CommunityChallenge_challengeId_fkey` FOREIGN KEY (`id`) REFERENCES `CommunityChallenge`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `ChallengeParticipant` ADD CONSTRAINT `ChallengeParticipant_challengeId_fkey` FOREIGN KEY (`challengeId`) REFERENCES `CommunityChallenge`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
