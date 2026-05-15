@@ -33,9 +33,9 @@ export function AISystemScreen({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     setLoading(true);
-    aiApi.getRecommendations()
+    aiApi.analyze('focused')
       .then((data) => setResult(data))
-      .catch(() => setError('Analyse indisponible hors connexion.'))
+      .catch(() => setError('Impossible de contacter le serveur IA. Vérifiez votre connexion.'))
       .finally(() => setLoading(false));
   }, []);
 

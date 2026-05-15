@@ -8,7 +8,7 @@ import { CalculationMethodOption as CalculationMethodEnum, HighLatitudeRuleOptio
 import { useLocationContext } from "../context/location-context";
 import { useTheme } from "../context/theme-context";
 import { setupDailyReminders, cancelDailyReminders } from "../notifications/daily-reminders";
-import { scheduleAdhanReminder, cancelReminder, syncPushTokenWithBackend } from "../push-notifications";
+import { cancelReminder, cancelRemindersByPrefix } from "../push-notifications";
 import * as Notifications from "expo-notifications";
 
 type StoredPrayerSettings = {
@@ -260,34 +260,35 @@ export function PrayerSettingsScreen({ user: _user, onBack }: { user: AuthUser; 
   }, []);
 
   const toggleAdhan = useCallback(async (prayer: AdhanPrayer) => {
-    const id = `adhan-${prayer}`;
     const isEnabled = adhanEnabled[prayer];
     setAdhanLoading(true);
+    setError(null);
     try {
       if (isEnabled) {
-        await cancelReminder(id);
+        // Cancel any scheduled adhan for this prayer
+        await cancelRemindersByPrefix(`adhan-${prayer}`);
       } else {
-        const synced = await syncPushTokenWithBackend();
-        if (!synced) {
-          setError('Active les notifications dans les réglages système.');
-          return;
+        // Request permission — actual scheduling happens in dashboard when prayer times are known
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          const { status: newStatus } = await Notifications.requestPermissionsAsync();
+          if (newStatus !== 'granted') {
+            setError('Active les notifications dans les réglages système.');
+            setAdhanLoading(false);
+            return;
+          }
         }
-        // Use saved prayer times if available — otherwise schedule at a placeholder time
-        // The actual time will be rescheduled when the dashboard loads prayer times
-        await scheduleAdhanReminder(prayer, 0, 0);
       }
-      setAdhanEnabled((prev) => {
-        const next = { ...prev, [prayer]: !isEnabled };
-        const stored: Record<string, boolean> = {
-          AdhanFajr: next.Fajr,
-          AdhanDhuhr: next.Dhuhr,
-          AdhanAsr: next.Asr,
-          AdhanMaghrib: next.Maghrib,
-          AdhanIsha: next.Isha,
-        };
-        SecureStore.setItemAsync(ADHAN_STORAGE_KEY, JSON.stringify(stored)).catch(() => {});
-        return next;
-      });
+      const next = { ...adhanEnabled, [prayer]: !isEnabled };
+      setAdhanEnabled(next);
+      const stored: Record<string, boolean> = {
+        AdhanFajr: next.Fajr,
+        AdhanDhuhr: next.Dhuhr,
+        AdhanAsr: next.Asr,
+        AdhanMaghrib: next.Maghrib,
+        AdhanIsha: next.Isha,
+      };
+      await SecureStore.setItemAsync(ADHAN_STORAGE_KEY, JSON.stringify(stored));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur notification');
     } finally {
