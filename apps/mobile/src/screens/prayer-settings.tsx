@@ -156,6 +156,7 @@ function _ProField({
 }
 
 const ADHAN_STORAGE_KEY = 'oumoul.localReminders';
+const DAILY_NOTIF_KEY = 'oumoul.dailyNotifications';
 
 const ADHAN_PRAYERS = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
 type AdhanPrayer = typeof ADHAN_PRAYERS[number];
@@ -239,6 +240,13 @@ export function PrayerSettingsScreen({ user: _user, onBack }: { user: AuthUser; 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Load persisted dailyNotifications
+  useEffect(() => {
+    SecureStore.getItemAsync(DAILY_NOTIF_KEY).then((raw) => {
+      if (raw === 'true') setDailyNotifications(true);
+    }).catch(() => {});
+  }, []);
 
   // Load persisted adhan toggles
   useEffect(() => {
@@ -339,9 +347,11 @@ export function PrayerSettingsScreen({ user: _user, onBack }: { user: AuthUser; 
       if (dailyNotifications) {
         await cancelDailyReminders();
         setDailyNotifications(false);
+        await SecureStore.setItemAsync(DAILY_NOTIF_KEY, 'false');
       } else {
         await setupDailyReminders();
         setDailyNotifications(true);
+        await SecureStore.setItemAsync(DAILY_NOTIF_KEY, 'true');
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur de notification";

@@ -784,28 +784,6 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
 
       </ScrollView>
 
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={handleNavigateToTasbih}
-        accessibilityRole="button"
-        accessibilityLabel="Ouvrir Tasbih"
-        style={[
-          s.tasbihFab,
-          {
-            backgroundColor: palette.primary,
-            bottom: Math.max(16, insets.bottom + 12),
-          },
-        ]}
-      >
-        <Ionicons name="radio-button-on" size={26} color="#fff" />
-        {tasbihLive && (
-          <View style={s.tasbihBadge}>
-            <Text style={s.tasbihBadgeText}>
-              {tasbihLive.count}/{tasbihLive.target}
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
     </View>
   );
 }

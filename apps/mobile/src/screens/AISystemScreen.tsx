@@ -7,6 +7,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/theme-context";
 import { aiApi } from '../api';
 
+const FALLBACK_RESULT: AIAnalysisResult = {
+  overallScore: 50,
+  context: { prayerOnTimePercent: 0, prayerStreakDays: 0, hifzTotal: 0, dhikrSessionsLast7Days: 0, fastingDaysThisRamadan: 0, imaneProgramCompletionPercent: 0 },
+  recommendations: [
+    { id: 'r1', type: 'prayer', title: 'Prière à l\'heure', description: 'Essaie de prier chaque salat dès le début de son temps. Commence par Fajr !', timeSuggestion: 'Chaque jour', priority: 'high', basedOn: 'Conseil général' },
+    { id: 'r2', type: 'quran', title: 'Lecture du Coran', description: 'Lis au moins 1 page de Coran par jour. La régularité vaut mieux que la quantité.', timeSuggestion: 'Après Fajr', priority: 'medium', basedOn: 'Conseil général' },
+    { id: 'r3', type: 'dhikr', title: 'Dhikr du matin et du soir', description: 'Récite Subhanallah, Alhamdulillah, Allahu Akbar 33 fois chacun après chaque prière.', timeSuggestion: 'Après Fajr et Asr', priority: 'medium', basedOn: 'Conseil général' },
+    { id: 'r4', type: 'general', title: 'Invocation quotidienne', description: 'Lis les Adhkar du matin et du soir — ils protègent et augmentent la foi.', timeSuggestion: 'Matin et soir', priority: 'low', basedOn: 'Conseil général' },
+  ],
+};
+
 type Mood = "focused" | "relaxed" | "tired" | "energetic";
 
 export function AISystemScreen({ onBack }: { onBack: () => void }) {
@@ -17,6 +28,7 @@ export function AISystemScreen({ onBack }: { onBack: () => void }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [mood, setMoodState] = useState<Mood>("focused");
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   const runAnalysis = useCallback(async (selectedMood: Mood) => {
     setAnalyzing(true);
@@ -24,18 +36,21 @@ export function AISystemScreen({ onBack }: { onBack: () => void }) {
     try {
       const data = await aiApi.analyze(selectedMood);
       setResult(data);
+      setIsOffline(false);
     } catch {
-      setError('Impossible de contacter le serveur. Vérifiez votre connexion.');
+      // Keep existing result, just show soft warning
+      if (!result) setResult(FALLBACK_RESULT);
+      setIsOffline(true);
     } finally {
       setAnalyzing(false);
     }
-  }, []);
+  }, [result]);
 
   useEffect(() => {
     setLoading(true);
     aiApi.analyze('focused')
-      .then((data) => setResult(data))
-      .catch(() => setError('Impossible de contacter le serveur IA. Vérifiez votre connexion.'))
+      .then((data) => { setResult(data); setIsOffline(false); })
+      .catch(() => { setResult(FALLBACK_RESULT); setIsOffline(true); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -88,11 +103,11 @@ export function AISystemScreen({ onBack }: { onBack: () => void }) {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Error */}
-        {error && !result && (
-          <View style={[styles.errorCard, { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' }]}>
-            <Ionicons name="warning-outline" size={20} color="#C62828" />
-            <Text style={[styles.errorText, { color: '#C62828', marginLeft: 8, flex: 1 }]}>{error}</Text>
+        {/* Offline soft banner */}
+        {isOffline && (
+          <View style={[styles.errorCard, { backgroundColor: '#FFF8E1', borderColor: '#FFE082' }]}>
+            <Ionicons name="cloud-offline-outline" size={18} color="#F9A825" />
+            <Text style={[styles.errorText, { color: '#F57F17', marginLeft: 8, flex: 1 }]}>Mode hors ligne — conseils généraux affichés. Connectez-vous pour une analyse personnalisée.</Text>
           </View>
         )}
 
