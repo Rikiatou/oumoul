@@ -1,4 +1,9 @@
-import { ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
@@ -50,7 +55,8 @@ export class AuthService {
       await this.sendVerificationCode(user);
 
       return {
-        message: 'Account created. Please check your email for the verification code.',
+        message:
+          'Account created. Please check your email for the verification code.',
         user: {
           email: user.email,
           firstName: user.firstName,
@@ -59,7 +65,10 @@ export class AuthService {
         },
       };
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('Email already registered');
       }
 
@@ -69,20 +78,27 @@ export class AuthService {
 
   async login(payload: LoginAuthDto) {
     const normalizedEmail = payload.email.toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const passwordMatches = await bcrypt.compare(payload.password, user.passwordHash);
+    const passwordMatches = await bcrypt.compare(
+      payload.password,
+      user.passwordHash,
+    );
 
     if (!passwordMatches) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     if (!user.emailVerifiedAt) {
-      throw new ForbiddenException('Email not verified. Please check your inbox for the verification code.');
+      throw new ForbiddenException(
+        'Email not verified. Please check your inbox for the verification code.',
+      );
     }
 
     return this.buildAuthResponse(user);
@@ -107,6 +123,11 @@ export class AuthService {
     return this.buildAuthResponse(tokenRecord.user);
   }
 
+  async deleteAccount(userId: string) {
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { success: true };
+  }
+
   async updatePushToken(userId: string, pushToken: string, platform?: string) {
     await this.prisma.user.update({
       where: { id: userId },
@@ -121,7 +142,9 @@ export class AuthService {
 
   async verifyEmail(payload: VerifyEmailDto) {
     const normalizedEmail = payload.email.toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
 
     if (!user) {
       throw new UnauthorizedException('Invalid email');
@@ -136,9 +159,15 @@ export class AuthService {
       where: { tokenHash: codeHash },
     });
 
-    if (!tokenRecord || tokenRecord.userId !== user.id || tokenRecord.expiresAt.getTime() <= Date.now()) {
+    if (
+      !tokenRecord ||
+      tokenRecord.userId !== user.id ||
+      tokenRecord.expiresAt.getTime() <= Date.now()
+    ) {
       if (tokenRecord) {
-        await this.prisma.emailVerificationToken.delete({ where: { id: tokenRecord.id } });
+        await this.prisma.emailVerificationToken.delete({
+          where: { id: tokenRecord.id },
+        });
       }
       throw new UnauthorizedException('Invalid or expired verification code');
     }
@@ -158,13 +187,17 @@ export class AuthService {
 
   async resendVerification(payload: ResendVerificationDto) {
     const normalizedEmail = payload.email.toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
 
     if (!user || user.emailVerifiedAt) {
       return { success: true };
     }
 
-    await this.prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } });
+    await this.prisma.emailVerificationToken.deleteMany({
+      where: { userId: user.id },
+    });
     await this.sendVerificationCode(user);
 
     return { success: true };
@@ -183,7 +216,9 @@ export class AuthService {
 
     const token = randomBytes(48).toString('hex');
     const tokenHash = this.hashToken(token);
-    const ttlMinutes = Number(this.configService.get('PASSWORD_RESET_TOKEN_TTL_MINUTES') ?? 30);
+    const ttlMinutes = Number(
+      this.configService.get('PASSWORD_RESET_TOKEN_TTL_MINUTES') ?? 30,
+    );
     const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
     await this.prisma.passwordResetToken.create({
@@ -194,10 +229,15 @@ export class AuthService {
       },
     });
 
-    const appBaseUrl = this.configService.getOrThrow<string>('WEB_APP_BASE_URL');
+    const appBaseUrl =
+      this.configService.getOrThrow<string>('WEB_APP_BASE_URL');
     const resetUrl = `${appBaseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
 
-    await this.emailService.sendPasswordResetEmail(user.email, user.firstName, resetUrl);
+    await this.emailService.sendPasswordResetEmail(
+      user.email,
+      user.firstName,
+      resetUrl,
+    );
 
     return { success: true };
   }
@@ -236,10 +276,14 @@ export class AuthService {
   private async sendVerificationCode(user: User) {
     const code = String(randomInt(100000, 999999));
     const codeHash = this.hashToken(code);
-    const ttlMinutes = Number(this.configService.get('EMAIL_VERIFICATION_TTL_MINUTES') ?? 30);
+    const ttlMinutes = Number(
+      this.configService.get('EMAIL_VERIFICATION_TTL_MINUTES') ?? 30,
+    );
     const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
-    await this.prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } });
+    await this.prisma.emailVerificationToken.deleteMany({
+      where: { userId: user.id },
+    });
     await this.prisma.emailVerificationToken.create({
       data: {
         tokenHash: codeHash,
@@ -248,11 +292,17 @@ export class AuthService {
       },
     });
 
-    await this.emailService.sendVerificationEmail(user.email, user.firstName, code);
+    await this.emailService.sendVerificationEmail(
+      user.email,
+      user.firstName,
+      code,
+    );
   }
 
   private async hashPassword(plain: string) {
-    const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS') ?? 10);
+    const saltRounds = Number(
+      this.configService.get('BCRYPT_SALT_ROUNDS') ?? 10,
+    );
     return bcrypt.hash(plain, saltRounds);
   }
 
@@ -287,7 +337,9 @@ export class AuthService {
 
     const refreshToken = randomBytes(48).toString('hex');
     const refreshTokenHash = this.hashToken(refreshToken);
-    const ttlDays = Number(this.configService.get('REFRESH_TOKEN_TTL_DAYS') ?? 30);
+    const ttlDays = Number(
+      this.configService.get('REFRESH_TOKEN_TTL_DAYS') ?? 30,
+    );
     const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
 
     await this.prisma.refreshToken.create({

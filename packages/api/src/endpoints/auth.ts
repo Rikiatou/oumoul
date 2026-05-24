@@ -1,5 +1,5 @@
-import { apiRoutes } from '@oumoul/config';
-import { HttpClient } from '../http-client';
+import { apiRoutes } from "@oumoul/config";
+import { HttpClient } from "../http-client";
 import type {
   AuthResponse,
   ForgotPasswordPayload,
@@ -10,7 +10,7 @@ import type {
   ResendVerificationPayload,
   SuccessResponse,
   VerifyEmailPayload,
-} from '../types';
+} from "../types";
 
 export function createAuthApi(client: HttpClient) {
   const base = `${apiRoutes.backend.auth}`;
@@ -18,35 +18,35 @@ export function createAuthApi(client: HttpClient) {
   return {
     register(payload: RegisterPayload) {
       return client.request<RegisterResponse>(`${base}/register`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(payload),
         skipAuth: true,
       });
     },
     verifyEmail(payload: VerifyEmailPayload) {
       return client.request<AuthResponse>(`${base}/verify-email`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(payload),
         skipAuth: true,
       });
     },
     resendVerification(payload: ResendVerificationPayload) {
       return client.request<SuccessResponse>(`${base}/resend-verification`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(payload),
         skipAuth: true,
       });
     },
     login(payload: LoginPayload) {
       return client.request<AuthResponse>(`${base}/login`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(payload),
         skipAuth: true,
       });
     },
     refresh(refreshToken: string) {
       return client.request<AuthResponse>(`${base}/refresh`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({ refreshToken }),
         skipAuth: true,
         refreshOnFail: false,
@@ -54,16 +54,21 @@ export function createAuthApi(client: HttpClient) {
     },
     forgotPassword(payload: ForgotPasswordPayload) {
       return client.request<SuccessResponse>(`${base}/forgot-password`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(payload),
         skipAuth: true,
       });
     },
     resetPassword(payload: ResetPasswordPayload) {
       return client.request<SuccessResponse>(`${base}/reset-password`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(payload),
         skipAuth: true,
+      });
+    },
+    deleteAccount() {
+      return client.request<SuccessResponse>(`${base}/account`, {
+        method: "DELETE",
       });
     },
   } as const;

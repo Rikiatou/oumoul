@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -10,7 +10,10 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../common/decorators/current-user.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -56,7 +59,21 @@ export class AuthController {
   @Post('push-token')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  registerPushToken(@CurrentUser() user: AuthenticatedUser, @Body() payload: UpdatePushTokenDto) {
-    return this.authService.updatePushToken(user.userId, payload.pushToken, payload.platform);
+  registerPushToken(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() payload: UpdatePushTokenDto,
+  ) {
+    return this.authService.updatePushToken(
+      user.userId,
+      payload.pushToken,
+      payload.platform,
+    );
+  }
+
+  @Delete('account')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  deleteAccount(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.deleteAccount(user.userId);
   }
 }

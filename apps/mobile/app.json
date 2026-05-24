@@ -12,9 +12,7 @@
       [
         "expo-notifications",
         {
-          "sounds": [
-            "./assets/adhan.wav"
-          ]
+          "sounds": ["./assets/adhan.wav"]
         }
       ],
       [
@@ -34,12 +32,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.oumoul.spiritual.ai",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "audio",
-          "location",
-          "fetch"
-        ],
-        "ITSAppUsesNonExemptEncryption": false
+        "UIBackgroundModes": ["audio", "fetch"],
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "Oumoul utilise le microphone pour le correcteur de récitation du Coran. Ton audio est analysé en temps réel pour vérifier ta prononciation et n'est jamais enregistré ni partagé."
       }
     },
     "android": {
