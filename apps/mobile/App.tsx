@@ -1,8 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
 import { StatusBar } from "expo-status-bar";
-import React, { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  Component,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useFonts } from "expo-font";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,13 +26,19 @@ import {
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { appMetadata } from "@oumoul/config";
-import { colors } from "@oumoul/ui";
+import { colors as _colors } from "@oumoul/ui";
 import type { AuthUser, RegisterPayload } from "@oumoul/api";
 import { useAuth, AuthProvider } from "./src/context/auth-context";
-import { LocationProvider, useLocationContext } from "./src/context/location-context";
+import {
+  LocationProvider,
+  useLocationContext,
+} from "./src/context/location-context";
 import { ThemeProvider, useTheme } from "./src/context/theme-context";
 import { palette } from "./src/theme";
 import * as SecureStore from "expo-secure-store";
@@ -100,7 +115,10 @@ const C = {
 function translateError(msg: string): string {
   const m = msg.toLowerCase();
   // Password validation errors
-  if (m.includes("password") && (m.includes("longer") || m.includes("short") || m.includes("least")))
+  if (
+    m.includes("password") &&
+    (m.includes("longer") || m.includes("short") || m.includes("least"))
+  )
     return "Le mot de passe doit contenir au moins 8 caractères.";
   if (m.includes("password") && m.includes("minuscule"))
     return "Le mot de passe doit contenir au moins une lettre minuscule.";
@@ -109,25 +127,53 @@ function translateError(msg: string): string {
   if (m.includes("password") && m.includes("chiffre"))
     return "Le mot de passe doit contenir au moins un chiffre.";
   // Email errors
-  if (m.includes("email already") || m.includes("conflict") || m.includes("already exists") || m.includes("déjà utilisé"))
+  if (
+    m.includes("email already") ||
+    m.includes("conflict") ||
+    m.includes("already exists") ||
+    m.includes("déjà utilisé")
+  )
     return "Cet email est déjà utilisé.";
   if (m.includes("invalid") && m.includes("email"))
     return "Adresse email invalide.";
   // Auth errors
-  if (m.includes("invalid credentials") || m.includes("unauthorized") || m.includes("identifiants") || m.includes("incorrect") || m.includes("wrong password") || m.includes("401"))
+  if (
+    m.includes("invalid credentials") ||
+    m.includes("unauthorized") ||
+    m.includes("identifiants") ||
+    m.includes("incorrect") ||
+    m.includes("wrong password") ||
+    m.includes("401")
+  )
     return "Email ou mot de passe incorrect.";
-  if (m.includes("not verified") || m.includes("non vérifié") || m.includes("verify") || m.includes("403"))
+  if (
+    m.includes("not verified") ||
+    m.includes("non vérifié") ||
+    m.includes("verify") ||
+    m.includes("403")
+  )
     return "Email non vérifié. Vérifie ta boîte mail.";
-  if (m.includes("not found") || m.includes("404") || m.includes("no account") || m.includes("introuvable"))
+  if (
+    m.includes("not found") ||
+    m.includes("404") ||
+    m.includes("no account") ||
+    m.includes("introuvable")
+  )
     return "Aucun compte trouvé avec cet email.";
   // Rate limiting and network errors
   if (m.includes("too many") || m.includes("rate limit") || m.includes("429"))
     return "Trop de tentatives. Réessaie dans quelques minutes.";
-  if (m.includes("network") || m.includes("fetch") || m.includes("failed") || m.includes("load") || m.includes("connect") || m.includes("timeout"))
+  if (
+    m.includes("network") ||
+    m.includes("fetch") ||
+    m.includes("failed") ||
+    m.includes("load") ||
+    m.includes("connect") ||
+    m.includes("timeout")
+  )
     return "Erreur réseau. Vérifie ta connexion internet.";
   // Other errors
-  if (m.includes("expired"))
-    return "Code expiré. Demande un nouveau code.";
+  if (m.includes("expired")) return "Code expiré. Demande un nouveau code.";
   if (m.includes("server") || m.includes("500") || m.includes("internal"))
     return "Erreur serveur. Réessaie dans quelques instants.";
   return "Une erreur est survenue. Réessaie.";
@@ -143,7 +189,14 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <ThemeProvider>
-          <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: C.bg,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <ActivityIndicator size="large" color={C.primaryDark} />
           </View>
         </ThemeProvider>
@@ -165,7 +218,10 @@ export default function App() {
   );
 }
 
-class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
   state: { error: Error | null } = { error: null };
 
   static getDerivedStateFromError(error: Error) {
@@ -175,9 +231,20 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
   render() {
     if (this.state.error) {
       return (
-        <View style={{ flex: 1, backgroundColor: C.bg, padding: 24, justifyContent: "center" }}>
-          <Text style={{ color: C.error, fontWeight: "700", fontSize: 18 }}>Erreur application</Text>
-          <Text style={{ color: C.text, marginTop: 12, lineHeight: 22 }}>{this.state.error.message}</Text>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: C.bg,
+            padding: 24,
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: C.error, fontWeight: "700", fontSize: 18 }}>
+            Erreur application
+          </Text>
+          <Text style={{ color: C.text, marginTop: 12, lineHeight: 22 }}>
+            {this.state.error.message}
+          </Text>
         </View>
       );
     }
@@ -188,9 +255,17 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
 const NOTIF_SETUP_KEY = "oumoul_notif_setup_done";
 
 function RootSwitch() {
-  const { user, loading, pendingVerificationEmail, authToast, clearAuthToast } = useAuth();
+  const {
+    user,
+    loading,
+    pendingVerificationEmail: _pendingVerificationEmail,
+    authToast,
+    clearAuthToast,
+  } = useAuth();
   useRTL(user?.locale);
-  const [welcomeStep, setWelcomeStep] = useState<"slides" | "landing" | "done">("slides");
+  const [welcomeStep, setWelcomeStep] = useState<"slides" | "landing" | "done">(
+    "slides",
+  );
   const [showOnboarding, setShowOnboarding] = useState(false);
   // Whether user has ever logged in before (skip welcome/auth on return)
   const [hasEverLoggedIn, setHasEverLoggedIn] = useState(false);
@@ -199,9 +274,12 @@ function RootSwitch() {
 
   // On mount: check if a cached session exists → skip welcome slides
   useEffect(() => {
-    SecureStore.getItemAsync("oumoul_cached_user").then((val: string | null) => {
-      if (val) setHasEverLoggedIn(true);
-    }).catch(() => {}).finally(() => setSessionChecked(true));
+    SecureStore.getItemAsync("oumoul_cached_user")
+      .then((val: string | null) => {
+        if (val) setHasEverLoggedIn(true);
+      })
+      .catch(() => {})
+      .finally(() => setSessionChecked(true));
   }, []);
 
   // Auto-setup daily reminders: request permission on first launch, reschedule on every launch
@@ -233,9 +311,11 @@ function RootSwitch() {
   // Check if user has seen onboarding
   useEffect(() => {
     if (user) {
-      SecureStore.getItemAsync("oumoul_onboarding_done").then((val: string | null) => {
-        if (!val) setShowOnboarding(true);
-      }).catch(() => {});
+      SecureStore.getItemAsync("oumoul_onboarding_done")
+        .then((val: string | null) => {
+          if (!val) setShowOnboarding(true);
+        })
+        .catch(() => {});
     }
   }, [user]);
 
@@ -259,9 +339,18 @@ function RootSwitch() {
     // Wait for both auth context and session check before rendering
     if (loading || !sessionChecked) {
       return (
-        <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: C.bg,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <ActivityIndicator size="large" color={C.primaryDark} />
-          <Text style={{ color: C.textSoft, marginTop: 12, fontSize: 14 }}>Chargement...</Text>
+          <Text style={{ color: C.textSoft, marginTop: 12, fontSize: 14 }}>
+            Chargement...
+          </Text>
         </View>
       );
     }
@@ -278,9 +367,18 @@ function RootSwitch() {
     // Already handled in auth-context by restoring cachedUser — this is a fallback loading state
     if (hasEverLoggedIn) {
       return (
-        <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: C.bg,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <ActivityIndicator size="large" color={C.primaryDark} />
-          <Text style={{ color: C.textSoft, marginTop: 12, fontSize: 14 }}>Reconnexion...</Text>
+          <Text style={{ color: C.textSoft, marginTop: 12, fontSize: 14 }}>
+            Reconnexion...
+          </Text>
         </View>
       );
     }
@@ -291,11 +389,21 @@ function RootSwitch() {
     }
 
     if (welcomeStep === "landing") {
-      return <WelcomeLandingScreen onGetStarted={() => setWelcomeStep("done")} />;
+      return (
+        <WelcomeLandingScreen onGetStarted={() => setWelcomeStep("done")} />
+      );
     }
 
     return <AuthFlow />;
-  }, [finishOnboarding, hasEverLoggedIn, loading, sessionChecked, showOnboarding, user, welcomeStep]);
+  }, [
+    finishOnboarding,
+    hasEverLoggedIn,
+    loading,
+    sessionChecked,
+    showOnboarding,
+    user,
+    welcomeStep,
+  ]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -305,16 +413,18 @@ function RootSwitch() {
           activeOpacity={0.9}
           onPress={() => clearAuthToast()}
           style={{
-            position: 'absolute',
+            position: "absolute",
             left: 20,
             right: 20,
             bottom: 16,
-            backgroundColor: '#1A2332',
+            backgroundColor: "#1A2332",
             borderRadius: 12,
             padding: 14,
           }}
         >
-          <Text style={{ color: '#fff', fontSize: 13, textAlign: 'center' }}>{authToast}</Text>
+          <Text style={{ color: "#fff", fontSize: 13, textAlign: "center" }}>
+            {authToast}
+          </Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -327,56 +437,56 @@ function MainApp({ user }: { user: AuthUser }) {
   const bottomInset = insets.bottom;
   return (
     <LocationProvider>
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: p.tabBar,
-            borderTopColor: p.border,
-            borderTopWidth: 1,
-            height: Platform.OS === "ios" ? 88 : 60 + bottomInset,
-            paddingBottom: Platform.OS === "ios" ? 28 : bottomInset + 6,
-            paddingTop: 8,
-            elevation: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-          },
-          tabBarActiveTintColor: p.primaryDark,
-          tabBarInactiveTintColor: p.tabInactive,
-          tabBarLabelStyle: { fontSize: 10, fontWeight: "600", marginTop: 2 },
-          tabBarIcon: ({ color, size }) => {
-            const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
-              Accueil: "home",
-              "Prière": "time",
-              Coran: "book",
-              Apprendre: "school",
-              Plus: "grid-outline",
-            };
-            const name = icons[route.name] ?? "ellipse";
-            return <Ionicons name={name} size={size - 2} color={color} />;
-          },
-        })}
-      >
-        <Tab.Screen name="Accueil">
-          {() => <HomeStack user={user} />}
-        </Tab.Screen>
-        <Tab.Screen name="Prière">
-          {() => <PrayerStack user={user} />}
-        </Tab.Screen>
-        <Tab.Screen name="Coran">
-          {() => <QuranStack user={user} />}
-        </Tab.Screen>
-        <Tab.Screen name="Apprendre">
-          {() => <LearnStack user={user} />}
-        </Tab.Screen>
-        <Tab.Screen name="Plus">
-          {() => <SettingsStack user={user} />}
-        </Tab.Screen>
-      </Tab.Navigator>
-    </NavigationContainer>
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={({ route }) => ({
+            headerShown: false,
+            tabBarStyle: {
+              backgroundColor: p.tabBar,
+              borderTopColor: p.border,
+              borderTopWidth: 1,
+              height: Platform.OS === "ios" ? 88 : 60 + bottomInset,
+              paddingBottom: Platform.OS === "ios" ? 28 : bottomInset + 6,
+              paddingTop: 8,
+              elevation: 8,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+            },
+            tabBarActiveTintColor: p.primaryDark,
+            tabBarInactiveTintColor: p.tabInactive,
+            tabBarLabelStyle: { fontSize: 10, fontWeight: "600", marginTop: 2 },
+            tabBarIcon: ({ color, size }) => {
+              const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+                Accueil: "home",
+                Prière: "time",
+                Coran: "book",
+                Apprendre: "school",
+                Plus: "grid-outline",
+              };
+              const name = icons[route.name] ?? "ellipse";
+              return <Ionicons name={name} size={size - 2} color={color} />;
+            },
+          })}
+        >
+          <Tab.Screen name="Accueil">
+            {() => <HomeStack user={user} />}
+          </Tab.Screen>
+          <Tab.Screen name="Prière">
+            {() => <PrayerStack user={user} />}
+          </Tab.Screen>
+          <Tab.Screen name="Coran">
+            {() => <QuranStack user={user} />}
+          </Tab.Screen>
+          <Tab.Screen name="Apprendre">
+            {() => <LearnStack user={user} />}
+          </Tab.Screen>
+          <Tab.Screen name="Plus">
+            {() => <SettingsStack user={user} />}
+          </Tab.Screen>
+        </Tab.Navigator>
+      </NavigationContainer>
     </LocationProvider>
   );
 }
@@ -387,8 +497,16 @@ function HomeStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="HomeScreen">
         {(props) => <HomeScreen {...props} user={user} />}
       </Stack.Screen>
-      <Stack.Screen name="ImaneCycle" options={{ animation: "slide_from_right" }}>
-        {(props) => <ImaneCycleScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="ImaneCycle"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <ImaneCycleScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -399,28 +517,77 @@ function PrayerStack({ user }: { user: AuthUser }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="PrayerHub">
-        {(props) => <PrayerHubScreen navigation={props.navigation} user={user} />}
+        {(props) => (
+          <PrayerHubScreen navigation={props.navigation} user={user} />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="PrayerSettings" options={{ animation: "slide_from_right" }}>
-        {(props) => <PrayerSettingsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="PrayerSettings"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <PrayerSettingsScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="PrayerTracking" options={{ animation: "slide_from_right" }}>
-        {(props) => <PrayerTrackingScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="PrayerTracking"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <PrayerTrackingScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="Qibla" options={{ animation: "slide_from_right" }}>
-        {(props) => <QiblaScreen user={user} onBack={() => props.navigation.goBack()} />}
+        {(props) => (
+          <QiblaScreen user={user} onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="MosqueFinder" options={{ animation: "slide_from_right" }}>
-        {(props) => <MosqueFinderScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="MosqueFinder"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <MosqueFinderScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="TravelCompanion" options={{ animation: "slide_from_right" }}>
-        {(props) => <TravelCompanionScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="TravelCompanion"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <TravelCompanionScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="ZakatCalculator" options={{ animation: "slide_from_right" }}>
-        {(props) => <ZakatCalculatorScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="ZakatCalculator"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <ZakatCalculatorScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="HalalMap" options={{ animation: "slide_from_right" }}>
-        {(props) => <HalalMapScreen user={user} onBack={() => props.navigation.goBack()} />}
+        {(props) => (
+          <HalalMapScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -431,69 +598,183 @@ function LearnStack({ user }: { user: AuthUser }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="LearnHub">
-        {(props) => <LearnHubScreen navigation={props.navigation} user={user} />}
+        {(props) => (
+          <LearnHubScreen navigation={props.navigation} user={user} />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="HadithDaily" options={{ animation: "slide_from_right" }}>
-        {(props) => <HadithDailyScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="HadithDaily"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <HadithDailyScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="AllahNames" options={{ animation: "slide_from_right" }}>
-        {(props) => <AllahNamesScreen user={user} onBack={() => props.navigation.goBack()} initialNameId={(props.route.params as any)?.initialNameId} />}
+      <Stack.Screen
+        name="AllahNames"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <AllahNamesScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+            initialNameId={(props.route.params as any)?.initialNameId}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="Tasbih" options={{ animation: "slide_from_right" }}>
-        {(props) => <TasbihScreen user={user} onBack={() => props.navigation.goBack()} />}
+        {(props) => (
+          <TasbihScreen user={user} onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="DhikrMain" options={{ animation: "slide_from_right" }}>
-        {(props) => <DhikrScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="DhikrMain"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <DhikrScreen user={user} onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
       <Stack.Screen name="Dua" options={{ animation: "slide_from_right" }}>
-        {(props) => <DuaScreen user={user} onBack={() => props.navigation.goBack()} />}
+        {(props) => (
+          <DuaScreen user={user} onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="IhsanMode" options={{ animation: "slide_from_right" }}>
-        {(props) => <IhsanModeScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="IhsanMode"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <IhsanModeScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="Gamification" options={{ animation: "slide_from_right" }}>
-        {(props) => <GamificationScreen onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="Gamification"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <GamificationScreen onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
       <Stack.Screen name="AISystem" options={{ animation: "slide_from_right" }}>
         {(props) => <AISystemScreen onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="Community" options={{ animation: "slide_from_right" }}>
-        {(props) => <CommunityScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="Community"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <CommunityScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="ImaneRamadan" options={{ animation: "slide_from_right" }}>
-        {(props) => <ImaneRamadanScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="ImaneRamadan"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <ImaneRamadanScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="RamadanCatchup" options={{ animation: "slide_from_right" }}>
-        {(props) => <RamadanCatchupScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="RamadanCatchup"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <RamadanCatchupScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="ImaneProgram" options={{ animation: "slide_from_right" }}>
-        {(props) => <ImaneProgramScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="ImaneProgram"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <ImaneProgramScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="EidGreetings" options={{ animation: "slide_from_right" }}>
-        {(props) => <EidGreetingsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="EidGreetings"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <EidGreetingsScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="ShareCard" options={{ animation: "slide_from_right" }}>
-        {(props) => <ShareCardScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="ShareCard"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <ShareCardScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="ShareSystem" options={{ animation: "slide_from_right" }}>
-        {(props) => <ShareSystemScreen onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="ShareSystem"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <ShareSystemScreen onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="KidsModule" options={{ animation: "slide_from_right" }}>
-        {(props) => <KidsModuleScreen onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="KidsModule"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <KidsModuleScreen onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
       <Stack.Screen name="Hifz" options={{ animation: "slide_from_right" }}>
-        {(props) => <HifzScreen user={user} onBack={() => props.navigation.goBack()} />}
+        {(props) => (
+          <HifzScreen user={user} onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="MoodGuidance" options={{ animation: "slide_from_right" }}>
-        {(props) => <MoodGuidanceScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="MoodGuidance"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <MoodGuidanceScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="FeminineHub" options={{ animation: "slide_from_right" }}>
+      <Stack.Screen
+        name="FeminineHub"
+        options={{ animation: "slide_from_right" }}
+      >
         {(props) => (
           <FeminineHubScreen
             onBack={() => props.navigation.goBack()}
             onOpenCycle={() => {
               props.navigation.goBack();
-              props.navigation.getParent()?.navigate('Accueil', { screen: 'ImaneCycle' });
+              props.navigation
+                .getParent()
+                ?.navigate("Accueil", { screen: "ImaneCycle" });
             }}
           />
         )}
@@ -507,33 +788,72 @@ function SettingsStack({ user }: { user: AuthUser }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="SettingsHub">
-        {(props) => <SettingsScreen navigation={props.navigation} user={user} />}
+        {(props) => (
+          <SettingsScreen navigation={props.navigation} user={user} />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="PrayerSettingsMore" options={{ animation: "slide_from_right" }}>
-        {(props) => <PrayerSettingsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="PrayerSettingsMore"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <PrayerSettingsScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="HijriCalendar" options={{ animation: "slide_from_right" }}>
-        {(props) => <HijriCalendarScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="HijriCalendar"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <HijriCalendarScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="GlobalSearch" options={{ animation: "slide_from_right" }}>
-        {(props) => <GlobalSearchScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
-          const parentNav = props.navigation.getParent();
-          if (screen === '__CORAN_TAB__') parentNav?.navigate('Coran');
-          else if (screen === 'ImaneRamadan') parentNav?.navigate('Apprendre', { screen: 'ImaneRamadan' });
-          else if (screen === 'ImaneCycle') parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
-          else if (screen === 'AISystem') parentNav?.navigate('Apprendre', { screen: 'AISystem' });
-          else (props.navigation as any).navigate(screen);
-        }} />}
+      <Stack.Screen
+        name="GlobalSearch"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <GlobalSearchScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+            onNavigate={(screen: string) => {
+              const parentNav = props.navigation.getParent();
+              if (screen === "__CORAN_TAB__") parentNav?.navigate("Coran");
+              else if (screen === "ImaneRamadan")
+                parentNav?.navigate("Apprendre", { screen: "ImaneRamadan" });
+              else if (screen === "ImaneCycle")
+                parentNav?.navigate("Accueil", { screen: "ImaneCycle" });
+              else if (screen === "AISystem")
+                parentNav?.navigate("Apprendre", { screen: "AISystem" });
+              else (props.navigation as any).navigate(screen);
+            }}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="AppGuide" options={{ animation: "slide_from_right" }}>
-        {(props) => <AppGuideScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
-          const parentNav = props.navigation.getParent();
-          if (screen === '__CORAN_TAB__') parentNav?.navigate('Coran');
-          else if (screen === 'ImaneRamadan') parentNav?.navigate('Apprendre', { screen: 'ImaneRamadan' });
-          else if (screen === 'Gamification') parentNav?.navigate('Apprendre', { screen: 'Gamification' });
-          else if (screen === 'AISystem') parentNav?.navigate('Apprendre', { screen: 'AISystem' });
-          else (props.navigation as any).navigate(screen);
-        }} />}
+        {(props) => (
+          <AppGuideScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+            onNavigate={(screen: string) => {
+              const parentNav = props.navigation.getParent();
+              if (screen === "__CORAN_TAB__") parentNav?.navigate("Coran");
+              else if (screen === "ImaneRamadan")
+                parentNav?.navigate("Apprendre", { screen: "ImaneRamadan" });
+              else if (screen === "Gamification")
+                parentNav?.navigate("Apprendre", { screen: "Gamification" });
+              else if (screen === "AISystem")
+                parentNav?.navigate("Apprendre", { screen: "AISystem" });
+              else (props.navigation as any).navigate(screen);
+            }}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="DarkMode" options={{ animation: "slide_from_right" }}>
         {(props) => <DarkModeScreen onBack={() => props.navigation.goBack()} />}
@@ -547,14 +867,39 @@ function SettingsStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="Terms" options={{ animation: "slide_from_right" }}>
         {(props) => <TermsScreen onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
+      <Stack.Screen
+        name="QuranWords"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <QuranWordsScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+            initialWordId={(props.route.params as any)?.initialWordId}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="RecitationChecker" options={{ animation: "slide_from_right" }}>
-        {(props) => <RecitationCheckerScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="RecitationChecker"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <RecitationCheckerScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="QuranAudio"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <QuranAudioScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -568,10 +913,17 @@ function QuranStack({ user }: { user: AuthUser }) {
           <ImaneQuranScreen
             user={user}
             onBack={() => props.navigation.goBack()}
-            onOpenTafsir={(surahId, ayah, locale) => props.navigation.navigate('Tafsir' as never, ({ surahId, ayah, locale, autoLoad: true } as never))}
-            onOpenAudio={() => props.navigation.navigate('QuranAudio' as never)}
-            onOpenWords={() => props.navigation.navigate('QuranWords' as never)}
-            onOpenRecitation={() => props.navigation.navigate('RecitationChecker' as never)}
+            onOpenTafsir={(surahId, ayah, locale) =>
+              props.navigation.navigate(
+                "Tafsir" as never,
+                { surahId, ayah, locale, autoLoad: true } as never,
+              )
+            }
+            onOpenAudio={() => props.navigation.navigate("QuranAudio" as never)}
+            onOpenWords={() => props.navigation.navigate("QuranWords" as never)}
+            onOpenRecitation={() =>
+              props.navigation.navigate("RecitationChecker" as never)
+            }
           />
         )}
       </Stack.Screen>
@@ -584,17 +936,44 @@ function QuranStack({ user }: { user: AuthUser }) {
           />
         )}
       </Stack.Screen>
-      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="QuranAudio"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <QuranAudioScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
+      <Stack.Screen
+        name="QuranWords"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <QuranWordsScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+            initialWordId={(props.route.params as any)?.initialWordId}
+          />
+        )}
       </Stack.Screen>
-      <Stack.Screen name="RecitationChecker" options={{ animation: "slide_from_right" }}>
-        {(props) => <RecitationCheckerScreen user={user} onBack={() => props.navigation.goBack()} />}
+      <Stack.Screen
+        name="RecitationChecker"
+        options={{ animation: "slide_from_right" }}
+      >
+        {(props) => (
+          <RecitationCheckerScreen
+            user={user}
+            onBack={() => props.navigation.goBack()}
+          />
+        )}
       </Stack.Screen>
       <Stack.Screen name="Hifz" options={{ animation: "slide_from_right" }}>
-        {(props) => <HifzScreen user={user} onBack={() => props.navigation.goBack()} />}
+        {(props) => (
+          <HifzScreen user={user} onBack={() => props.navigation.goBack()} />
+        )}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -605,32 +984,100 @@ function PrayerHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
   const insets = useSafeAreaInsets();
   const { palette: p } = useTheme();
 
-  type HubItem = { key: string; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap; screen: string; color: string };
+  type HubItem = {
+    key: string;
+    label: string;
+    sub: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    screen: string;
+    color: string;
+  };
   const items: HubItem[] = [
-    { key: "tracking", label: "Suivi des prières", sub: "Enregistre tes 5 prières", icon: "checkmark-circle", screen: "PrayerTracking", color: "#1A7F64" },
-    { key: "qibla", label: "Direction Qibla", sub: "Boussole vers La Mecque", icon: "compass", screen: "Qibla", color: "#2563EB" },
-    { key: "mosque", label: "Mosquées à proximité", sub: "Trouver une mosquée", icon: "business", screen: "MosqueFinder", color: "#7C3AED" },
-    { key: "halal", label: "Carte Halal", sub: "Restaurants & lieux halal", icon: "map", screen: "HalalMap", color: "#D97706" },
-    { key: "travel", label: "Compagnon de voyage", sub: "Musafir, Qasr & Jam", icon: "airplane", screen: "TravelCompanion", color: "#0891B2" },
-    { key: "zakat", label: "Calculateur Zakat", sub: "Calcule ta Zakat", icon: "calculator", screen: "ZakatCalculator", color: "#059669" },
-    { key: "settings", label: "Réglages prière", sub: "Horaires & notifications Adhan", icon: "settings", screen: "PrayerSettings", color: "#6B7280" },
+    {
+      key: "tracking",
+      label: "Suivi des prières",
+      sub: "Enregistre tes 5 prières",
+      icon: "checkmark-circle",
+      screen: "PrayerTracking",
+      color: "#1A7F64",
+    },
+    {
+      key: "qibla",
+      label: "Direction Qibla",
+      sub: "Boussole vers La Mecque",
+      icon: "compass",
+      screen: "Qibla",
+      color: "#2563EB",
+    },
+    {
+      key: "mosque",
+      label: "Mosquées à proximité",
+      sub: "Trouver une mosquée",
+      icon: "business",
+      screen: "MosqueFinder",
+      color: "#7C3AED",
+    },
+    {
+      key: "halal",
+      label: "Carte Halal",
+      sub: "Restaurants & lieux halal",
+      icon: "map",
+      screen: "HalalMap",
+      color: "#D97706",
+    },
+    {
+      key: "travel",
+      label: "Compagnon de voyage",
+      sub: "Musafir, Qasr & Jam",
+      icon: "airplane",
+      screen: "TravelCompanion",
+      color: "#0891B2",
+    },
+    {
+      key: "zakat",
+      label: "Calculateur Zakat",
+      sub: "Calcule ta Zakat",
+      icon: "calculator",
+      screen: "ZakatCalculator",
+      color: "#059669",
+    },
+    {
+      key: "settings",
+      label: "Réglages prière",
+      sub: "Horaires & notifications Adhan",
+      icon: "settings",
+      screen: "PrayerSettings",
+      color: "#6B7280",
+    },
   ];
 
   return (
     <View style={[s.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>🕌 Prière</Text>
-        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>Horaires, suivi et direction de la Qibla</Text>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>
+          🕌 Prière
+        </Text>
+        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>
+          Horaires, suivi et direction de la Qibla
+        </Text>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
         {items.map((item) => (
           <TouchableOpacity
             key={item.key}
-            style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]}
+            style={[
+              s.hubCard,
+              { backgroundColor: p.card, borderColor: p.border },
+            ]}
             onPress={() => navigation.navigate(item.screen)}
             activeOpacity={0.75}
           >
-            <View style={[s.hubIconWrap, { backgroundColor: item.color + "18" }]}>
+            <View
+              style={[s.hubIconWrap, { backgroundColor: item.color + "18" }]}
+            >
               <Ionicons name={item.icon} size={24} color={item.color} />
             </View>
             <View style={{ flex: 1 }}>
@@ -650,58 +1097,184 @@ function LearnHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
   const insets = useSafeAreaInsets();
   const { palette: p } = useTheme();
 
-  type HubItem = { key: string; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap; screen: string; color: string };
+  type HubItem = {
+    key: string;
+    label: string;
+    sub: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    screen: string;
+    color: string;
+  };
   const sections: Array<{ title: string; items: HubItem[] }> = [
     {
       title: "📿 Spiritualité quotidienne",
       items: [
-        { key: "dhikr", label: "Dhikr & Tasbih", sub: "Invocations et compteur", icon: "radio", screen: "DhikrMain", color: "#1A7F64" },
-        { key: "dua", label: "Du'as & Invocations", sub: "Par situation et contexte", icon: "hand-left", screen: "Dua", color: "#7C3AED" },
-        { key: "tasbih", label: "Tasbih numérique", sub: "Compteur de dhikr", icon: "repeat", screen: "Tasbih", color: "#0891B2" },
-        { key: "ihsan", label: "Mode Ihsan", sub: "Score spirituel journalier", icon: "star", screen: "IhsanMode", color: "#D97706" },
+        {
+          key: "dhikr",
+          label: "Dhikr & Tasbih",
+          sub: "Invocations et compteur",
+          icon: "radio",
+          screen: "DhikrMain",
+          color: "#1A7F64",
+        },
+        {
+          key: "dua",
+          label: "Du'as & Invocations",
+          sub: "Par situation et contexte",
+          icon: "hand-left",
+          screen: "Dua",
+          color: "#7C3AED",
+        },
+        {
+          key: "tasbih",
+          label: "Tasbih numérique",
+          sub: "Compteur de dhikr",
+          icon: "repeat",
+          screen: "Tasbih",
+          color: "#0891B2",
+        },
+        {
+          key: "ihsan",
+          label: "Mode Ihsan",
+          sub: "Score spirituel journalier",
+          icon: "star",
+          screen: "IhsanMode",
+          color: "#D97706",
+        },
       ],
     },
     {
       title: "📚 Connaissance islamique",
       items: [
-        { key: "hadith", label: "Hadith du jour", sub: "Un hadith authentique chaque jour", icon: "book", screen: "HadithDaily", color: "#1A7F64" },
-        { key: "allahNames", label: "99 Noms d'Allah", sub: "Mémorise les attributs divins", icon: "heart", screen: "AllahNames", color: "#EC4899" },
-        { key: "ai", label: "Assistant IA islamique", sub: "Répond à tes questions", icon: "sparkles", screen: "AISystem", color: "#6366F1" },
+        {
+          key: "hadith",
+          label: "Hadith du jour",
+          sub: "Un hadith authentique chaque jour",
+          icon: "book",
+          screen: "HadithDaily",
+          color: "#1A7F64",
+        },
+        {
+          key: "allahNames",
+          label: "99 Noms d'Allah",
+          sub: "Mémorise les attributs divins",
+          icon: "heart",
+          screen: "AllahNames",
+          color: "#EC4899",
+        },
+        {
+          key: "ai",
+          label: "Assistant IA islamique",
+          sub: "Répond à tes questions",
+          icon: "sparkles",
+          screen: "AISystem",
+          color: "#6366F1",
+        },
       ],
     },
     {
       title: "🌙 Ramadan & Calendrier",
       items: [
-        { key: "ramadan", label: "Ramadan", sub: "Suivi du jeûne et suhoor", icon: "moon", screen: "ImaneRamadan", color: "#1A7F64" },
-        { key: "prog", label: "Programme Imane", sub: "Plan spirituel personnalisé", icon: "checkbox", screen: "ImaneProgram", color: "#2563EB" },
-        { key: "eid", label: "Cartes de vœux Aïd", sub: "Partager la joie de l'Aïd", icon: "gift", screen: "EidGreetings", color: "#D97706" },
+        {
+          key: "ramadan",
+          label: "Ramadan",
+          sub: "Suivi du jeûne et suhoor",
+          icon: "moon",
+          screen: "ImaneRamadan",
+          color: "#1A7F64",
+        },
+        {
+          key: "prog",
+          label: "Programme Imane",
+          sub: "Plan spirituel personnalisé",
+          icon: "checkbox",
+          screen: "ImaneProgram",
+          color: "#2563EB",
+        },
+        {
+          key: "eid",
+          label: "Cartes de vœux Aïd",
+          sub: "Partager la joie de l'Aïd",
+          icon: "gift",
+          screen: "EidGreetings",
+          color: "#D97706",
+        },
       ],
     },
     {
       title: "📜 Hifz & Coran",
       items: [
-        { key: "hifz", label: "Hifz — Mémorisation", sub: "Répétition espacée intelligente", icon: "library", screen: "Hifz", color: "#2563EB" },
-        { key: "mood", label: "Guidance selon ton humeur", sub: "Versets & du'as selon ton état", icon: "heart-half", screen: "MoodGuidance", color: "#EC4899" },
+        {
+          key: "hifz",
+          label: "Hifz — Mémorisation",
+          sub: "Répétition espacée intelligente",
+          icon: "library",
+          screen: "Hifz",
+          color: "#2563EB",
+        },
+        {
+          key: "mood",
+          label: "Guidance selon ton humeur",
+          sub: "Versets & du'as selon ton état",
+          icon: "heart-half",
+          screen: "MoodGuidance",
+          color: "#EC4899",
+        },
       ],
     },
     {
       title: "🌸 Espace Sœurs",
       items: [
-        { key: "feminine", label: "Espace Sœurs", sub: "Cycle, fiqh féminin & du'as", icon: "flower", screen: "FeminineHub", color: "#EC4899" },
+        {
+          key: "feminine",
+          label: "Espace Sœurs",
+          sub: "Cycle, fiqh féminin & du'as",
+          icon: "flower",
+          screen: "FeminineHub",
+          color: "#EC4899",
+        },
       ],
     },
     {
       title: "👶 Enfants",
       items: [
-        { key: "kids", label: "Module Enfants", sub: "Alphabet arabe, prophètes, du'as", icon: "happy", screen: "KidsModule", color: "#EC4899" },
+        {
+          key: "kids",
+          label: "Module Enfants",
+          sub: "Alphabet arabe, prophètes, du'as",
+          icon: "happy",
+          screen: "KidsModule",
+          color: "#EC4899",
+        },
       ],
     },
     {
       title: "🏆 Progression & Communauté",
       items: [
-        { key: "gamification", label: "Mes récompenses", sub: "XP, badges et achievements", icon: "trophy", screen: "Gamification", color: "#D97706" },
-        { key: "community", label: "Communauté", sub: "Posts, défis et partages", icon: "people", screen: "Community", color: "#EC4899" },
-        { key: "sharecard", label: "Partager une citation", sub: "Génère une carte islamique", icon: "share-social", screen: "ShareCard", color: "#6366F1" },
+        {
+          key: "gamification",
+          label: "Mes récompenses",
+          sub: "XP, badges et achievements",
+          icon: "trophy",
+          screen: "Gamification",
+          color: "#D97706",
+        },
+        {
+          key: "community",
+          label: "Communauté",
+          sub: "Posts, défis et partages",
+          icon: "people",
+          screen: "Community",
+          color: "#EC4899",
+        },
+        {
+          key: "sharecard",
+          label: "Partager une citation",
+          sub: "Génère une carte islamique",
+          icon: "share-social",
+          screen: "ShareCard",
+          color: "#6366F1",
+        },
       ],
     },
   ];
@@ -709,28 +1282,53 @@ function LearnHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
   return (
     <View style={[s.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>📚 Apprendre</Text>
-        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>Spiritualité, connaissance et progression</Text>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>
+          📚 Apprendre
+        </Text>
+        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>
+          Spiritualité, connaissance et progression
+        </Text>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
         {sections.map((section) => (
           <View key={section.title}>
-            <Text style={[s.sectionTitle, { color: p.text, marginTop: 16 }]}>{section.title}</Text>
+            <Text style={[s.sectionTitle, { color: p.text, marginTop: 16 }]}>
+              {section.title}
+            </Text>
             {section.items.map((item) => (
               <TouchableOpacity
                 key={item.key}
-                style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]}
+                style={[
+                  s.hubCard,
+                  { backgroundColor: p.card, borderColor: p.border },
+                ]}
                 onPress={() => navigation.navigate(item.screen)}
                 activeOpacity={0.75}
               >
-                <View style={[s.hubIconWrap, { backgroundColor: item.color + "18" }]}>
+                <View
+                  style={[
+                    s.hubIconWrap,
+                    { backgroundColor: item.color + "18" },
+                  ]}
+                >
                   <Ionicons name={item.icon} size={24} color={item.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.hubLabel, { color: p.text }]}>{item.label}</Text>
-                  <Text style={[s.hubSub, { color: p.textSoft }]}>{item.sub}</Text>
+                  <Text style={[s.hubLabel, { color: p.text }]}>
+                    {item.label}
+                  </Text>
+                  <Text style={[s.hubSub, { color: p.textSoft }]}>
+                    {item.sub}
+                  </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={p.tabInactive} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={p.tabInactive}
+                />
               </TouchableOpacity>
             ))}
           </View>
@@ -741,61 +1339,183 @@ function LearnHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
 }
 
 // ─── Settings Screen (Plus) ───────────────────────────────────────────────────
-function SettingsScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
+function SettingsScreen({
+  navigation,
+  user,
+}: {
+  navigation: any;
+  user: AuthUser;
+}) {
   const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
+  const { logout, deleteAccount } = useAuth();
+  const [deleting, setDeleting] = useState(false);
   const { location: detectedLoc } = useLocationContext();
   const { isDark, toggleTheme, palette: p } = useTheme();
 
-  const cityLabel = detectedLoc.city && detectedLoc.country
-    ? `${detectedLoc.city}, ${detectedLoc.country}`
-    : detectedLoc.city ?? "GPS actif";
+  const cityLabel =
+    detectedLoc.city && detectedLoc.country
+      ? `${detectedLoc.city}, ${detectedLoc.country}`
+      : (detectedLoc.city ?? "GPS actif");
 
-  type SettingItem = { key: string; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap; screen: string };
+  type SettingItem = {
+    key: string;
+    label: string;
+    sub: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    screen: string;
+  };
   const settingsItems: SettingItem[] = [
-    { key: "prayer", label: "Réglages prière", sub: "Méthode de calcul & Adhan", icon: "time-outline", screen: "PrayerSettingsMore" },
-    { key: "calendar", label: "Calendrier Hijri", sub: "Dates islamiques", icon: "calendar-outline", screen: "HijriCalendar" },
-    { key: "search", label: "Recherche globale", sub: "Chercher dans toute l'app", icon: "search-outline", screen: "GlobalSearch" },
-    { key: "guide", label: "Guide de l'app", sub: "Découvrir toutes les fonctions", icon: "help-circle-outline", screen: "AppGuide" },
-    { key: "darkmode", label: "Thème & Apparence", sub: "Clair, sombre, couleurs", icon: "color-palette-outline", screen: "DarkMode" },
+    {
+      key: "prayer",
+      label: "Réglages prière",
+      sub: "Méthode de calcul & Adhan",
+      icon: "time-outline",
+      screen: "PrayerSettingsMore",
+    },
+    {
+      key: "calendar",
+      label: "Calendrier Hijri",
+      sub: "Dates islamiques",
+      icon: "calendar-outline",
+      screen: "HijriCalendar",
+    },
+    {
+      key: "search",
+      label: "Recherche globale",
+      sub: "Chercher dans toute l'app",
+      icon: "search-outline",
+      screen: "GlobalSearch",
+    },
+    {
+      key: "guide",
+      label: "Guide de l'app",
+      sub: "Découvrir toutes les fonctions",
+      icon: "help-circle-outline",
+      screen: "AppGuide",
+    },
+    {
+      key: "darkmode",
+      label: "Thème & Apparence",
+      sub: "Clair, sombre, couleurs",
+      icon: "color-palette-outline",
+      screen: "DarkMode",
+    },
   ];
   const legalItems: SettingItem[] = [
-    { key: "about", label: "À propos", sub: appMetadata.name, icon: "information-circle-outline", screen: "About" },
-    { key: "privacy", label: "Confidentialité", sub: "Politique de confidentialité", icon: "lock-closed-outline", screen: "Privacy" },
-    { key: "terms", label: "Conditions d'utilisation", sub: "CGU de l'application", icon: "document-text-outline", screen: "Terms" },
+    {
+      key: "about",
+      label: "À propos",
+      sub: appMetadata.name,
+      icon: "information-circle-outline",
+      screen: "About",
+    },
+    {
+      key: "privacy",
+      label: "Confidentialité",
+      sub: "Politique de confidentialité",
+      icon: "lock-closed-outline",
+      screen: "Privacy",
+    },
+    {
+      key: "terms",
+      label: "Conditions d'utilisation",
+      sub: "CGU de l'application",
+      icon: "document-text-outline",
+      screen: "Terms",
+    },
   ];
 
   return (
     <View style={[s.screen, { paddingTop: insets.top, backgroundColor: p.bg }]}>
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>⚙️ Réglages</Text>
-        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>{user.email}</Text>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: p.text }}>
+          ⚙️ Réglages
+        </Text>
+        <Text style={{ fontSize: 13, color: p.textSoft, marginTop: 4 }}>
+          {user.email}
+        </Text>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Location */}
-        <View style={[s.hubCard, { backgroundColor: "rgba(26,127,100,0.06)", borderColor: p.border, marginTop: 8 }]}>
-          <View style={[s.hubIconWrap, { backgroundColor: "rgba(26,127,100,0.12)" }]}>
+        <View
+          style={[
+            s.hubCard,
+            {
+              backgroundColor: "rgba(26,127,100,0.06)",
+              borderColor: p.border,
+              marginTop: 8,
+            },
+          ]}
+        >
+          <View
+            style={[
+              s.hubIconWrap,
+              { backgroundColor: "rgba(26,127,100,0.12)" },
+            ]}
+          >
             <Ionicons name="location" size={24} color={p.primaryDark} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[s.hubLabel, { color: p.text }]}>{cityLabel}</Text>
-            <Text style={[s.hubSub, { color: p.textSoft }]}>Position GPS automatique</Text>
+            <Text style={[s.hubSub, { color: p.textSoft }]}>
+              Position GPS automatique
+            </Text>
           </View>
         </View>
 
         {/* Dark mode toggle */}
-        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>Apparence</Text>
-        <View style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]}>
-          <View style={[s.hubIconWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(26,127,100,0.08)" }]}>
-            <Ionicons name={isDark ? "moon" : "sunny"} size={24} color={p.primaryDark} />
+        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>
+          Apparence
+        </Text>
+        <View
+          style={[
+            s.hubCard,
+            { backgroundColor: p.card, borderColor: p.border },
+          ]}
+        >
+          <View
+            style={[
+              s.hubIconWrap,
+              {
+                backgroundColor: isDark
+                  ? "rgba(255,255,255,0.1)"
+                  : "rgba(26,127,100,0.08)",
+              },
+            ]}
+          >
+            <Ionicons
+              name={isDark ? "moon" : "sunny"}
+              size={24}
+              color={p.primaryDark}
+            />
           </View>
-          <Text style={[s.hubLabel, { flex: 1, color: p.text }]}>Mode sombre</Text>
-          <Switch value={isDark} onValueChange={toggleTheme} trackColor={{ false: "#E0E0E0", true: p.primaryDark }} thumbColor="#fff" />
+          <Text style={[s.hubLabel, { flex: 1, color: p.text }]}>
+            Mode sombre
+          </Text>
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: "#E0E0E0", true: p.primaryDark }}
+            thumbColor="#fff"
+          />
         </View>
 
-        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>Paramètres</Text>
+        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>
+          Paramètres
+        </Text>
         {settingsItems.map((item) => (
-          <TouchableOpacity key={item.key} style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.75}>
+          <TouchableOpacity
+            key={item.key}
+            style={[
+              s.hubCard,
+              { backgroundColor: p.card, borderColor: p.border },
+            ]}
+            onPress={() => navigation.navigate(item.screen)}
+            activeOpacity={0.75}
+          >
             <View style={[s.hubIconWrap, { backgroundColor: p.accentLight }]}>
               <Ionicons name={item.icon} size={24} color={p.primaryDark} />
             </View>
@@ -807,9 +1527,19 @@ function SettingsScreen({ navigation, user }: { navigation: any; user: AuthUser 
           </TouchableOpacity>
         ))}
 
-        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>Légal</Text>
+        <Text style={[s.sectionTitle, { color: p.text, marginTop: 20 }]}>
+          Légal
+        </Text>
         {legalItems.map((item) => (
-          <TouchableOpacity key={item.key} style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.75}>
+          <TouchableOpacity
+            key={item.key}
+            style={[
+              s.hubCard,
+              { backgroundColor: p.card, borderColor: p.border },
+            ]}
+            onPress={() => navigation.navigate(item.screen)}
+            activeOpacity={0.75}
+          >
             <View style={[s.hubIconWrap, { backgroundColor: p.accentLight }]}>
               <Ionicons name={item.icon} size={24} color={p.primaryDark} />
             </View>
@@ -821,7 +1551,14 @@ function SettingsScreen({ navigation, user }: { navigation: any; user: AuthUser 
           </TouchableOpacity>
         ))}
 
-        <TouchableOpacity style={[s.hubCard, { marginTop: 24, borderColor: "#FFCDD2", backgroundColor: p.card }]} onPress={() => void logout()} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={[
+            s.hubCard,
+            { marginTop: 24, borderColor: "#FFCDD2", backgroundColor: p.card },
+          ]}
+          onPress={() => void logout()}
+          activeOpacity={0.7}
+        >
           <View style={[s.hubIconWrap, { backgroundColor: "#FFEBEE" }]}>
             <Ionicons name="log-out-outline" size={24} color={p.error} />
           </View>
@@ -830,24 +1567,96 @@ function SettingsScreen({ navigation, user }: { navigation: any; user: AuthUser 
             <Text style={[s.hubSub, { color: p.textSoft }]}>{user.email}</Text>
           </View>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            s.hubCard,
+            {
+              marginTop: 12,
+              borderColor: "#D32F2F",
+              backgroundColor: "#FFEBEE",
+            },
+          ]}
+          activeOpacity={0.7}
+          disabled={deleting}
+          onPress={() => {
+            Alert.alert(
+              "Supprimer le compte",
+              "Es-tu sûre de vouloir supprimer ton compte ? Toutes tes données (prières, jeûnes, dhikr, programmes, etc.) seront définitivement supprimées. Cette action est irréversible.",
+              [
+                { text: "Annuler", style: "cancel" },
+                {
+                  text: "Supprimer",
+                  style: "destructive",
+                  onPress: () => {
+                    setDeleting(true);
+                    deleteAccount()
+                      .catch(() => {
+                        Alert.alert(
+                          "Erreur",
+                          "Impossible de supprimer le compte. Réessaie plus tard.",
+                        );
+                      })
+                      .finally(() => setDeleting(false));
+                  },
+                },
+              ],
+            );
+          }}
+        >
+          <View style={[s.hubIconWrap, { backgroundColor: "#FFCDD2" }]}>
+            {deleting ? (
+              <ActivityIndicator size="small" color="#D32F2F" />
+            ) : (
+              <Ionicons name="trash-outline" size={24} color="#D32F2F" />
+            )}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.hubLabel, { color: "#D32F2F" }]}>
+              Supprimer mon compte
+            </Text>
+            <Text style={[s.hubSub, { color: p.textSoft }]}>
+              Suppression définitive de toutes les données
+            </Text>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
 function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
-  return <ModernDashboard user={user} locale="fr" onSearch={() => navigation.getParent()?.navigate("Plus", { screen: "SettingsHub", params: { openSearch: true } })} />;
+  return (
+    <ModernDashboard
+      user={user}
+      locale="fr"
+      onSearch={() =>
+        navigation
+          .getParent()
+          ?.navigate("Plus", {
+            screen: "SettingsHub",
+            params: { openSearch: true },
+          })
+      }
+    />
+  );
 }
 
 function AuthFlow() {
-  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">(
+    "login",
+  );
 
   if (mode === "forgot") return <ForgotPasswordScreen onSwitch={setMode} />;
   if (mode === "reset") return <ResetPasswordScreen onSwitch={setMode} />;
-  return mode === "login" ? <LoginScreen onSwitch={setMode} /> : <RegisterScreen onSwitch={setMode} />;
+  return mode === "login" ? (
+    <LoginScreen onSwitch={setMode} />
+  ) : (
+    <RegisterScreen onSwitch={setMode} />
+  );
 }
 
-function VerifyEmailScreen({ email }: { email: string }) {
+function _VerifyEmailScreen({ email }: { email: string }) {
   const { verifyEmail, resendVerification, logout, loading } = useAuth();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -868,13 +1677,23 @@ function VerifyEmailScreen({ email }: { email: string }) {
       await resendVerification(email);
       setResent(true);
       setTimeout(() => setResent(false), 5000);
-    } catch {}
+    } catch {
+      /* resend best-effort */
+    }
   }, [resendVerification, email]);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: C.bg }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: 24,
+          paddingTop: insets.top + 40,
+          paddingBottom: insets.bottom + 24,
+        }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -892,7 +1711,9 @@ function VerifyEmailScreen({ email }: { email: string }) {
             <Text style={{ fontWeight: "700", color: C.text }}>{email}</Text>
           </Text>
 
-          {error ? <Text style={[auth.error, { marginTop: 16 }]}>{error}</Text> : null}
+          {error ? (
+            <Text style={[auth.error, { marginTop: 16 }]}>{error}</Text>
+          ) : null}
 
           <AuthInput
             placeholder="Code à 6 chiffres"
@@ -904,23 +1725,38 @@ function VerifyEmailScreen({ email }: { email: string }) {
           />
 
           <TouchableOpacity
-            style={[auth.btn, (loading || code.trim().length !== 6) && { opacity: 0.6 }]}
+            style={[
+              auth.btn,
+              (loading || code.trim().length !== 6) && { opacity: 0.6 },
+            ]}
             disabled={loading || code.trim().length !== 6}
             onPress={() => void handleVerify()}
           >
-            <Text style={auth.btnText}>{loading ? "Vérification..." : "Vérifier"}</Text>
+            <Text style={auth.btnText}>
+              {loading ? "Vérification..." : "Vérifier"}
+            </Text>
           </TouchableOpacity>
 
           <View style={{ marginTop: 20, alignItems: "center", gap: 12 }}>
             {resent ? (
-              <Text style={{ color: C.primaryDark, fontWeight: "600", fontSize: 14 }}>Code renvoyé !</Text>
+              <Text
+                style={{
+                  color: C.primaryDark,
+                  fontWeight: "600",
+                  fontSize: 14,
+                }}
+              >
+                Code renvoyé !
+              </Text>
             ) : (
               <TouchableOpacity onPress={() => void handleResend()}>
                 <Text style={auth.link}>Renvoyer le code</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={() => void logout()}>
-              <Text style={[auth.link, { color: C.textSoft }]}>Retour à la connexion</Text>
+              <Text style={[auth.link, { color: C.textSoft }]}>
+                Retour à la connexion
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -929,7 +1765,11 @@ function VerifyEmailScreen({ email }: { email: string }) {
   );
 }
 
-function LoginScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "forgot" | "reset") => void }) {
+function LoginScreen({
+  onSwitch,
+}: {
+  onSwitch: (next: "login" | "register" | "forgot" | "reset") => void;
+}) {
   const { login, loading } = useAuth();
   const [form, updateField] = useForm({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
@@ -945,34 +1785,86 @@ function LoginScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "fo
   }, [login, form]);
 
   return (
-    <AuthLayout title="Connexion" subtitle="Accède à ton espace spirituel" mode="login" onSwitch={onSwitch}>
+    <AuthLayout
+      title="Connexion"
+      subtitle="Accède à ton espace spirituel"
+      mode="login"
+      onSwitch={onSwitch}
+    >
       {error ? (
-        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
-          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
-          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        <View
+          style={[
+            auth.errorBox,
+            { backgroundColor: "#fee2e2", borderLeftColor: "#ef4444" },
+          ]}
+        >
+          <Ionicons
+            name="alert-circle"
+            size={16}
+            color="#ef4444"
+            style={{ marginRight: 8 }}
+          />
+          <Text style={[auth.error, { color: "#991b1b", flex: 1 }]}>
+            {error}
+          </Text>
         </View>
       ) : null}
-      <AuthInput placeholder="Email" value={form.email} onChangeText={(v) => updateField("email", v)} keyboardType="email-address" autoCapitalize="none" />
-      <PasswordInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} />
-      <TouchableOpacity style={{ alignSelf: "flex-end", marginTop: 8 }} onPress={() => onSwitch("forgot")}>
+      <AuthInput
+        placeholder="Email"
+        value={form.email}
+        onChangeText={(v) => updateField("email", v)}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <PasswordInput
+        placeholder="Mot de passe"
+        value={form.password}
+        onChangeText={(v) => updateField("password", v)}
+      />
+      <TouchableOpacity
+        style={{ alignSelf: "flex-end", marginTop: 8 }}
+        onPress={() => onSwitch("forgot")}
+      >
         <Text style={auth.link}>Mot de passe oublié ?</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[auth.btn, loading && { opacity: 0.6 }]} disabled={loading} onPress={() => void handleSubmit()}>
-        <Text style={auth.btnText}>{loading ? "Connexion..." : "Se connecter"}</Text>
+      <TouchableOpacity
+        style={[auth.btn, loading && { opacity: 0.6 }]}
+        disabled={loading}
+        onPress={() => void handleSubmit()}
+      >
+        <Text style={auth.btnText}>
+          {loading ? "Connexion..." : "Se connecter"}
+        </Text>
       </TouchableOpacity>
     </AuthLayout>
   );
 }
 
-function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "forgot" | "reset") => void }) {
+function RegisterScreen({
+  onSwitch,
+}: {
+  onSwitch: (next: "login" | "register" | "forgot" | "reset") => void;
+}) {
   const { register, loading } = useAuth();
-  const [form, updateField] = useForm<RegisterPayload>({ firstName: "", lastName: "", email: "", password: "", locale: "fr" });
+  const [form, updateField] = useForm<RegisterPayload>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    locale: "fr",
+  });
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = useCallback(async () => {
     setError(null);
     try {
-      await register({ firstName: form.firstName.trim(), lastName: form.lastName.trim(), email: form.email.trim(), password: form.password, locale: form.locale });
+      await register({
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        locale: form.locale,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(translateError(msg) || "Erreur d'inscription");
@@ -980,29 +1872,88 @@ function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | 
   }, [register, form]);
 
   return (
-    <AuthLayout title="Inscription" subtitle="Commence ton parcours spirituel" mode="register" onSwitch={onSwitch}>
+    <AuthLayout
+      title="Inscription"
+      subtitle="Commence ton parcours spirituel"
+      mode="register"
+      onSwitch={onSwitch}
+    >
       {error ? (
-        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
-          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
-          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        <View
+          style={[
+            auth.errorBox,
+            { backgroundColor: "#fee2e2", borderLeftColor: "#ef4444" },
+          ]}
+        >
+          <Ionicons
+            name="alert-circle"
+            size={16}
+            color="#ef4444"
+            style={{ marginRight: 8 }}
+          />
+          <Text style={[auth.error, { color: "#991b1b", flex: 1 }]}>
+            {error}
+          </Text>
         </View>
       ) : null}
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <AuthInput placeholder="Prénom" value={form.firstName} onChangeText={(v) => updateField("firstName", v)} />
+          <AuthInput
+            placeholder="Prénom"
+            value={form.firstName}
+            onChangeText={(v) => updateField("firstName", v)}
+          />
         </View>
         <View style={{ flex: 1 }}>
-          <AuthInput placeholder="Nom" value={form.lastName} onChangeText={(v) => updateField("lastName", v)} />
+          <AuthInput
+            placeholder="Nom"
+            value={form.lastName}
+            onChangeText={(v) => updateField("lastName", v)}
+          />
         </View>
       </View>
-      <AuthInput placeholder="Email" value={form.email} onChangeText={(v) => updateField("email", v)} keyboardType="email-address" autoCapitalize="none" />
-      <PasswordInput placeholder="Mot de passe" value={form.password} onChangeText={(v) => updateField("password", v)} />
-      <View style={{ backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, marginTop: 8 }}>
-        <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 4, fontWeight: '600' }}>Le mot de passe doit contenir :</Text>
-        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 8 caractères</Text>
-        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 lettre majuscule (A-Z)</Text>
-        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 lettre minuscule (a-z)</Text>
-        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 chiffre (0-9)</Text>
+      <AuthInput
+        placeholder="Email"
+        value={form.email}
+        onChangeText={(v) => updateField("email", v)}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <PasswordInput
+        placeholder="Mot de passe"
+        value={form.password}
+        onChangeText={(v) => updateField("password", v)}
+      />
+      <View
+        style={{
+          backgroundColor: "#f8fafc",
+          padding: 12,
+          borderRadius: 8,
+          marginTop: 8,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 12,
+            color: "#64748b",
+            marginBottom: 4,
+            fontWeight: "600",
+          }}
+        >
+          Le mot de passe doit contenir :
+        </Text>
+        <Text style={{ fontSize: 11, color: "#94a3b8" }}>
+          • Au moins 8 caractères
+        </Text>
+        <Text style={{ fontSize: 11, color: "#94a3b8" }}>
+          • Au moins 1 lettre majuscule (A-Z)
+        </Text>
+        <Text style={{ fontSize: 11, color: "#94a3b8" }}>
+          • Au moins 1 lettre minuscule (a-z)
+        </Text>
+        <Text style={{ fontSize: 11, color: "#94a3b8" }}>
+          • Au moins 1 chiffre (0-9)
+        </Text>
       </View>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
         {locales.map((opt) => {
@@ -1010,22 +1961,40 @@ function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | 
           return (
             <TouchableOpacity
               key={opt.value}
-              style={[auth.langChip, active && { backgroundColor: C.primaryDark, borderColor: C.primaryDark }]}
+              style={[
+                auth.langChip,
+                active && {
+                  backgroundColor: C.primaryDark,
+                  borderColor: C.primaryDark,
+                },
+              ]}
               onPress={() => updateField("locale", opt.value)}
             >
-              <Text style={[auth.langText, active && { color: "#FFF" }]}>{opt.label}</Text>
+              <Text style={[auth.langText, active && { color: "#FFF" }]}>
+                {opt.label}
+              </Text>
             </TouchableOpacity>
           );
         })}
       </View>
-      <TouchableOpacity style={[auth.btn, loading && { opacity: 0.6 }]} disabled={loading} onPress={() => void handleSubmit()}>
-        <Text style={auth.btnText}>{loading ? "Inscription..." : "Créer mon compte"}</Text>
+      <TouchableOpacity
+        style={[auth.btn, loading && { opacity: 0.6 }]}
+        disabled={loading}
+        onPress={() => void handleSubmit()}
+      >
+        <Text style={auth.btnText}>
+          {loading ? "Inscription..." : "Créer mon compte"}
+        </Text>
       </TouchableOpacity>
     </AuthLayout>
   );
 }
 
-function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "forgot" | "reset") => void }) {
+function ForgotPasswordScreen({
+  onSwitch,
+}: {
+  onSwitch: (next: "login" | "register" | "forgot" | "reset") => void;
+}) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1046,12 +2015,25 @@ function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "regist
   }, [email]);
 
   return (
-    <AuthLayout title="Mot de passe oublié" subtitle="Entre ton email pour recevoir un lien" mode="login" onSwitch={onSwitch}>
+    <AuthLayout
+      title="Mot de passe oublié"
+      subtitle="Entre ton email pour recevoir un lien"
+      mode="login"
+      onSwitch={onSwitch}
+    >
       {error ? <Text style={auth.error}>{error}</Text> : null}
-      <AuthInput placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <AuthInput
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
       {done ? (
         <View style={{ marginTop: 16, gap: 12 }}>
-          <Text style={{ color: C.text, lineHeight: 22 }}>Si un compte existe, un lien a été généré.</Text>
+          <Text style={{ color: C.text, lineHeight: 22 }}>
+            Si un compte existe, un lien a été généré.
+          </Text>
           <TouchableOpacity onPress={() => onSwitch("reset")}>
             <Text style={auth.link}>J'ai un token / lien</Text>
           </TouchableOpacity>
@@ -1061,10 +2043,17 @@ function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "regist
         </View>
       ) : (
         <View style={{ marginTop: 16, gap: 12 }}>
-          <TouchableOpacity style={[auth.btn, loading && { opacity: 0.6 }]} disabled={loading} onPress={() => void handleSubmit()}>
+          <TouchableOpacity
+            style={[auth.btn, loading && { opacity: 0.6 }]}
+            disabled={loading}
+            onPress={() => void handleSubmit()}
+          >
             <Text style={auth.btnText}>{loading ? "Envoi..." : "Envoyer"}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignSelf: "center" }} onPress={() => onSwitch("login")}>
+          <TouchableOpacity
+            style={{ alignSelf: "center" }}
+            onPress={() => onSwitch("login")}
+          >
             <Text style={auth.link}>Retour</Text>
           </TouchableOpacity>
         </View>
@@ -1073,7 +2062,11 @@ function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "regist
   );
 }
 
-function ResetPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "forgot" | "reset") => void }) {
+function ResetPasswordScreen({
+  onSwitch,
+}: {
+  onSwitch: (next: "login" | "register" | "forgot" | "reset") => void;
+}) {
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1096,30 +2089,83 @@ function ResetPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "registe
   }, [onSwitch, password, token]);
 
   return (
-    <AuthLayout title="Nouveau mot de passe" subtitle="Colle le token et choisis un nouveau mot de passe" mode="login" onSwitch={onSwitch}>
+    <AuthLayout
+      title="Nouveau mot de passe"
+      subtitle="Colle le token et choisis un nouveau mot de passe"
+      mode="login"
+      onSwitch={onSwitch}
+    >
       {error ? (
-        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
-          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
-          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        <View
+          style={[
+            auth.errorBox,
+            { backgroundColor: "#fee2e2", borderLeftColor: "#ef4444" },
+          ]}
+        >
+          <Ionicons
+            name="alert-circle"
+            size={16}
+            color="#ef4444"
+            style={{ marginRight: 8 }}
+          />
+          <Text style={[auth.error, { color: "#991b1b", flex: 1 }]}>
+            {error}
+          </Text>
         </View>
       ) : null}
-      <AuthInput placeholder="Token" value={token} onChangeText={setToken} autoCapitalize="none" />
-      <PasswordInput placeholder="Nouveau mot de passe" value={password} onChangeText={setPassword} />
+      <AuthInput
+        placeholder="Token"
+        value={token}
+        onChangeText={setToken}
+        autoCapitalize="none"
+      />
+      <PasswordInput
+        placeholder="Nouveau mot de passe"
+        value={password}
+        onChangeText={setPassword}
+      />
       {done ? (
-        <View style={[{ backgroundColor: '#dcfce7', borderLeftColor: '#22c55e', padding: 12, borderRadius: 8, marginTop: 16 }]}>
-          <Ionicons name="checkmark-circle" size={16} color="#22c55e" style={{ marginRight: 8 }} />
-          <Text style={{ color: '#166534', fontWeight: '600' }}>Mot de passe mis à jour avec succès !</Text>
+        <View
+          style={[
+            {
+              backgroundColor: "#dcfce7",
+              borderLeftColor: "#22c55e",
+              padding: 12,
+              borderRadius: 8,
+              marginTop: 16,
+            },
+          ]}
+        >
+          <Ionicons
+            name="checkmark-circle"
+            size={16}
+            color="#22c55e"
+            style={{ marginRight: 8 }}
+          />
+          <Text style={{ color: "#166534", fontWeight: "600" }}>
+            Mot de passe mis à jour avec succès !
+          </Text>
         </View>
       ) : (
         <View style={{ marginTop: 16, gap: 12 }}>
           <TouchableOpacity
-            style={[auth.btn, (loading || !token.trim() || password.length < 8) && { opacity: 0.6 }]}
+            style={[
+              auth.btn,
+              (loading || !token.trim() || password.length < 8) && {
+                opacity: 0.6,
+              },
+            ]}
             disabled={loading || !token.trim() || password.length < 8}
             onPress={() => void handleSubmit()}
           >
-            <Text style={auth.btnText}>{loading ? "Validation..." : "Mettre à jour"}</Text>
+            <Text style={auth.btnText}>
+              {loading ? "Validation..." : "Mettre à jour"}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignSelf: "center" }} onPress={() => onSwitch("login")}>
+          <TouchableOpacity
+            style={{ alignSelf: "center" }}
+            onPress={() => onSwitch("login")}
+          >
             <Text style={auth.link}>Retour</Text>
           </TouchableOpacity>
         </View>
@@ -1138,10 +2184,12 @@ function AuthInput(props: React.ComponentProps<typeof TextInput>) {
   );
 }
 
-function PasswordInput(props: Omit<React.ComponentProps<typeof TextInput>, 'secureTextEntry'>) {
+function PasswordInput(
+  props: Omit<React.ComponentProps<typeof TextInput>, "secureTextEntry">,
+) {
   const [showPassword, setShowPassword] = useState(false);
   return (
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: "relative" }}>
       <TextInput
         {...props}
         secureTextEntry={!showPassword}
@@ -1149,20 +2197,20 @@ function PasswordInput(props: Omit<React.ComponentProps<typeof TextInput>, 'secu
         style={[auth.input, { paddingRight: 50 }]}
       />
       <TouchableOpacity
-        style={{ 
-          position: 'absolute', 
-          right: 16, 
-          top: 0, 
-          bottom: 0, 
-          justifyContent: 'center',
-          alignItems: 'center'
+        style={{
+          position: "absolute",
+          right: 16,
+          top: 0,
+          bottom: 0,
+          justifyContent: "center",
+          alignItems: "center",
         }}
         onPress={() => setShowPassword(!showPassword)}
       >
-        <Ionicons 
-          name={showPassword ? 'eye-off' : 'eye'} 
-          size={20} 
-          color={C.tabInactive} 
+        <Ionicons
+          name={showPassword ? "eye-off" : "eye"}
+          size={20}
+          color={C.tabInactive}
         />
       </TouchableOpacity>
     </View>
@@ -1185,26 +2233,55 @@ function AuthLayout({
   const insets = useSafeAreaInsets();
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: C.bg }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: 24,
+          paddingTop: insets.top + 40,
+          paddingBottom: insets.bottom + 24,
+        }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={{ alignItems: "center", marginBottom: 32 }}>
           <View style={auth.loginImageContainer}>
-            <Image source={require("./assets/loginimage.png")} style={auth.loginImage} resizeMode="cover" />
+            <Image
+              source={require("./assets/loginimage.png")}
+              style={auth.loginImage}
+              resizeMode="cover"
+            />
           </View>
           <Text style={auth.appName}>{appMetadata.name}</Text>
         </View>
 
         <View style={auth.card}>
           <View style={auth.tabRow}>
-            <TouchableOpacity style={[auth.tab, mode === "login" && auth.tabActive]} onPress={() => onSwitch("login")}>
-              <Text style={[auth.tabText, mode === "login" && auth.tabTextActive]}>Connexion</Text>
+            <TouchableOpacity
+              style={[auth.tab, mode === "login" && auth.tabActive]}
+              onPress={() => onSwitch("login")}
+            >
+              <Text
+                style={[auth.tabText, mode === "login" && auth.tabTextActive]}
+              >
+                Connexion
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[auth.tab, mode === "register" && auth.tabActive]} onPress={() => onSwitch("register")}>
-              <Text style={[auth.tabText, mode === "register" && auth.tabTextActive]}>Inscription</Text>
+            <TouchableOpacity
+              style={[auth.tab, mode === "register" && auth.tabActive]}
+              onPress={() => onSwitch("register")}
+            >
+              <Text
+                style={[
+                  auth.tabText,
+                  mode === "register" && auth.tabTextActive,
+                ]}
+              >
+                Inscription
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -1226,7 +2303,12 @@ const locales: Array<{ value: RegisterPayload["locale"]; label: string }> = [
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: C.text, marginBottom: 16 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: C.text,
+    marginBottom: 16,
+  },
   listItem: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,24 +1,47 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { AuthResponse, AuthUser, SessionTokens, RegisterPayload, RegisterResponse, Locale } from '@oumoul/api';
-import * as SecureStore from 'expo-secure-store';
-import { authApi, tokenStore } from '../api';
-import { syncPushTokenWithBackend } from '../push-notifications';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type {
+  AuthResponse,
+  AuthUser,
+  SessionTokens,
+  RegisterPayload,
+  Locale,
+} from "@oumoul/api";
+import * as SecureStore from "expo-secure-store";
+import { authApi, tokenStore } from "../api";
+import { syncPushTokenWithBackend } from "../push-notifications";
 
-const CACHED_USER_KEY = 'oumoul_cached_user';
+const CACHED_USER_KEY = "oumoul_cached_user";
 
 async function saveUserCache(user: AuthUser) {
-  try { await SecureStore.setItemAsync(CACHED_USER_KEY, JSON.stringify(user)); } catch {}
+  try {
+    await SecureStore.setItemAsync(CACHED_USER_KEY, JSON.stringify(user));
+  } catch {
+    /* persist best-effort */
+  }
 }
 
 async function loadUserCache(): Promise<AuthUser | null> {
   try {
     const raw = await SecureStore.getItemAsync(CACHED_USER_KEY);
     return raw ? (JSON.parse(raw) as AuthUser) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 async function clearUserCache() {
-  try { await SecureStore.deleteItemAsync(CACHED_USER_KEY); } catch {}
+  try {
+    await SecureStore.deleteItemAsync(CACHED_USER_KEY);
+  } catch {
+    /* clear best-effort */
+  }
 }
 
 interface AuthState {
@@ -35,6 +58,7 @@ interface AuthContextValue extends AuthState {
   verifyEmail(email: string, code: string): Promise<void>;
   resendVerification(email: string): Promise<void>;
   logout(): Promise<void>;
+  deleteAccount(): Promise<void>;
   refresh(): Promise<void>;
   clearAuthToast(): void;
 }
@@ -52,47 +76,65 @@ const initialState: AuthState = {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState);
 
-  const applyAuthResponse = useCallback(async (response: AuthResponse, authToast?: string | null) => {
-    const tokens: SessionTokens = {
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-    };
-    await tokenStore.setTokens(tokens);
-    // Persist user locally so next launch skips auth
-    await saveUserCache(response.user);
-    setState({ user: response.user, tokens, loading: false, pendingVerificationEmail: null, authToast: authToast ?? null });
+  const applyAuthResponse = useCallback(
+    async (response: AuthResponse, authToast?: string | null) => {
+      const tokens: SessionTokens = {
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      };
+      await tokenStore.setTokens(tokens);
+      // Persist user locally so next launch skips auth
+      await saveUserCache(response.user);
+      setState({
+        user: response.user,
+        tokens,
+        loading: false,
+        pendingVerificationEmail: null,
+        authToast: authToast ?? null,
+      });
 
-    // Déclenche l'enregistrement du pushToken Expo côté backend, sans bloquer l'auth
-    void syncPushTokenWithBackend();
-  }, []);
+      // Déclenche l'enregistrement du pushToken Expo côté backend, sans bloquer l'auth
+      void syncPushTokenWithBackend();
+    },
+    [],
+  );
 
-  const login = useCallback(async (email: string, password: string) => {
-    setState((prev) => ({ ...prev, loading: true }));
-    try {
-      const response = await authApi.login({ email, password });
-      await applyAuthResponse(response, '✅ Connexion réussie');
-    } catch (error) {
-      const status = (error as any)?.status;
-      const msg = error instanceof Error ? error.message.toLowerCase() : '';
-      const isUnverified =
-        status === 403 ||
-        msg.includes('not verified') ||
-        msg.includes('non vérifié') ||
-        msg.includes('email_not_verified');
-      if (isUnverified) {
-        // Don't block on email verification — try to refresh/proceed anyway
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          pendingVerificationEmail: null,
-          authToast: '⚠️ Vérifie ton email pour activer le backup.',
-        }));
-      } else {
-        setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null, authToast: null });
+  const login = useCallback(
+    async (email: string, password: string) => {
+      setState((prev) => ({ ...prev, loading: true }));
+      try {
+        const response = await authApi.login({ email, password });
+        await applyAuthResponse(response, "✅ Connexion réussie");
+      } catch (error) {
+        const status = (error as Record<string, unknown>)?.status;
+        const msg = error instanceof Error ? error.message.toLowerCase() : "";
+        const isUnverified =
+          status === 403 ||
+          msg.includes("not verified") ||
+          msg.includes("non vérifié") ||
+          msg.includes("email_not_verified");
+        if (isUnverified) {
+          // Don't block on email verification — try to refresh/proceed anyway
+          setState((prev) => ({
+            ...prev,
+            loading: false,
+            pendingVerificationEmail: null,
+            authToast: "⚠️ Vérifie ton email pour activer le backup.",
+          }));
+        } else {
+          setState({
+            user: null,
+            tokens: null,
+            loading: false,
+            pendingVerificationEmail: null,
+            authToast: null,
+          });
+        }
+        throw error;
       }
-      throw error;
-    }
-  }, [applyAuthResponse]);
+    },
+    [applyAuthResponse],
+  );
 
   const register = useCallback(
     async (payload: RegisterPayload) => {
@@ -104,19 +146,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         // Auto-login immediately after registration — no email verification wall
         try {
-          const response = await authApi.login({ email: payload.email, password: payload.password });
-          await applyAuthResponse(response, '✅ Bienvenue ! Compte créé avec succès.');
+          const response = await authApi.login({
+            email: payload.email,
+            password: payload.password,
+          });
+          await applyAuthResponse(
+            response,
+            "✅ Bienvenue ! Compte créé avec succès.",
+          );
         } catch {
           // Login failed after register (e.g. server requires verification) — still let user in
           setState((prev) => ({
             ...prev,
             loading: false,
             pendingVerificationEmail: null,
-            authToast: '✅ Compte créé ! Tu peux maintenant te connecter.',
+            authToast: "✅ Compte créé ! Tu peux maintenant te connecter.",
           }));
         }
       } catch (error) {
-        setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null, authToast: null });
+        setState({
+          user: null,
+          tokens: null,
+          loading: false,
+          pendingVerificationEmail: null,
+          authToast: null,
+        });
         throw error;
       }
     },
@@ -128,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => ({ ...prev, loading: true }));
       try {
         const response = await authApi.verifyEmail({ email, code });
-        await applyAuthResponse(response, '✅ Email vérifié. Bienvenue !');
+        await applyAuthResponse(response, "✅ Email vérifié. Bienvenue !");
         setState((prev) => ({ ...prev, pendingVerificationEmail: null }));
       } catch (error) {
         setState((prev) => ({ ...prev, loading: false }));
@@ -142,17 +196,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, authToast: null }));
   }, []);
 
-  const resendVerification = useCallback(
-    async (email: string) => {
-      await authApi.resendVerification({ email });
-    },
-    [],
-  );
+  const resendVerification = useCallback(async (email: string) => {
+    await authApi.resendVerification({ email });
+  }, []);
 
   const logout = useCallback(async () => {
     await tokenStore.clearTokens();
     await clearUserCache();
-    setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null, authToast: null });
+    setState({
+      user: null,
+      tokens: null,
+      loading: false,
+      pendingVerificationEmail: null,
+      authToast: null,
+    });
+  }, []);
+
+  const deleteAccount = useCallback(async () => {
+    await authApi.deleteAccount();
+    await tokenStore.clearTokens();
+    await clearUserCache();
+    setState({
+      user: null,
+      tokens: null,
+      loading: false,
+      pendingVerificationEmail: null,
+      authToast: null,
+    });
   }, []);
 
   const refresh = useCallback(async () => {
@@ -164,7 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await authApi.refresh(tokens.refreshToken);
       await applyAuthResponse(response);
-    } catch (error) {
+    } catch (_error) {
       await logout();
     }
   }, [applyAuthResponse, logout]);
@@ -176,7 +246,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const stored = await tokenStore.getTokens();
         if (!stored) {
           if (mounted) {
-            setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null, authToast: null });
+            setState({
+              user: null,
+              tokens: null,
+              loading: false,
+              pendingVerificationEmail: null,
+              authToast: null,
+            });
           }
           return;
         }
@@ -191,7 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await applyAuthResponse(response);
         } catch (refreshError) {
           if (!mounted) return;
-          const status = (refreshError as any)?.status;
+          const status = (refreshError as Record<string, unknown>)?.status;
           // Only logout if token is explicitly invalid (401), not on network errors
           if (status === 401 || status === 403) {
             await logout();
@@ -200,15 +276,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const cachedUser = await loadUserCache();
             if (!mounted) return;
             if (cachedUser) {
-              setState({ user: cachedUser, tokens: stored, loading: false, pendingVerificationEmail: null, authToast: null });
+              setState({
+                user: cachedUser,
+                tokens: stored,
+                loading: false,
+                pendingVerificationEmail: null,
+                authToast: null,
+              });
             } else {
-              setState({ user: null, tokens: stored, loading: false, pendingVerificationEmail: null, authToast: null });
+              setState({
+                user: null,
+                tokens: stored,
+                loading: false,
+                pendingVerificationEmail: null,
+                authToast: null,
+              });
             }
           }
         }
-      } catch (error) {
+      } catch (_error) {
         if (!mounted) return;
-        setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null, authToast: null });
+        setState({
+          user: null,
+          tokens: null,
+          loading: false,
+          pendingVerificationEmail: null,
+          authToast: null,
+        });
       }
     })();
     return () => {
@@ -224,10 +318,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       verifyEmail,
       resendVerification,
       logout,
+      deleteAccount,
       refresh,
       clearAuthToast,
     }),
-    [state, login, register, verifyEmail, resendVerification, logout, refresh, clearAuthToast],
+    [
+      state,
+      login,
+      register,
+      verifyEmail,
+      resendVerification,
+      logout,
+      deleteAccount,
+      refresh,
+      clearAuthToast,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -236,13 +341,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return ctx;
 }
 
 function normalizeLocale(locale?: string): Locale | undefined {
   if (!locale) return undefined;
-  const allowed: Locale[] = ['fr', 'en', 'ar'];
+  const allowed: Locale[] = ["fr", "en", "ar"];
   return allowed.includes(locale as Locale) ? (locale as Locale) : undefined;
 }
