@@ -9,6 +9,8 @@ import { httpClient } from "../api";
 import { t, Locale } from "../i18n";
 import { useLocationContext } from "../context/location-context";
 import { useTheme } from "../context/theme-context";
+import { BackButton } from "../components/BackButton";
+import { HelpTip } from "../components/HelpTip";
 
 export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const locale = (user.locale as Locale | undefined) ?? "fr";
@@ -125,11 +127,16 @@ export function QiblaScreen({ user, onBack }: { user: AuthUser; onBack: () => vo
     <View style={[qb.screen, { paddingTop: insets.top, backgroundColor: qb_c.bg }]}>
       {/* Top bar */}
       <View style={[qb.topBar, { borderBottomColor: qb_c.border }]}>
-        <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="chevron-back" size={24} color={qb_c.accent} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={[qb.topTitle, { color: qb_c.text }]}>{t(locale, "qibla.title", "Qibla")}</Text>
-        <Ionicons name="compass-outline" size={20} color={qb_c.muted} />
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <HelpTip screenName="Qibla" tips={[
+            { icon: 'compass', title: 'Boussole en temps réel', description: 'Tiens ton téléphone à plat pour voir la flèche verte pointer vers la Kaaba.' },
+            { icon: 'location', title: 'Position GPS', description: 'La direction est calculée automatiquement selon ta position.' },
+            { icon: 'refresh', title: 'Actualiser', description: 'Appuie sur Actualiser pour recalculer la direction si tu t\'es déplacé.' },
+          ]} />
+          <Ionicons name="compass-outline" size={20} color={qb_c.muted} />
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>

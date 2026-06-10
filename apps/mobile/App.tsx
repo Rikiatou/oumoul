@@ -36,7 +36,7 @@ import { ImaneProgramScreen } from "./src/screens/imane-program";
 import { ImaneCycleScreen } from "./src/screens/imane-cycle";
 import { ImaneRamadanScreen } from "./src/screens/imane-ramadan";
 import { RamadanCatchupScreen } from "./src/screens/ramadan-catchup";
-import { DhikrScreen } from "./src/screens/dhikr";
+import { DhikrScreen } from "./src/screens/DhikrMain";
 import { QiblaScreen } from "./src/screens/qibla";
 import { HijriCalendarScreen } from "./src/screens/hijri-calendar";
 import { PrayerSettingsScreen } from "./src/screens/prayer-settings";

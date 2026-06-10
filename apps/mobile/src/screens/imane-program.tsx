@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { AuthUser, ImaneProgramItems, ImaneProgramDayResponse } from '@oumoul/api';
@@ -7,6 +7,8 @@ import { imaneProgramApi } from '../api';
 import { palette } from '../theme';
 import * as SecureStore from 'expo-secure-store';
 import { scheduleImaneProgramReminder, cancelReminder } from '../push-notifications';
+import { BackButton } from '../components/BackButton';
+import { HelpTip } from '../components/HelpTip';
 
 const DAILY_ITEMS: Array<{
   id: keyof ImaneProgramItems;
@@ -32,6 +34,7 @@ const MOTIVATIONAL = [
 ];
 
 const IMANE_REMINDER_KEY = 'oumoul.imaneProgramReminder';
+const IMANE_REMINDER_TIME_KEY = 'oumoul.imaneProgramReminderTime';
 
 export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: () => void }) {
   const [selectedDateIso, setSelectedDateIso] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -41,6 +44,9 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
   const [error, setError] = useState<string | null>(null);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderToast, setReminderToast] = useState<string | null>(null);
+  const [reminderHour, setReminderHour] = useState('20');
+  const [reminderMinute, setReminderMinute] = useState('0');
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const completedCount = useMemo(() => {
     if (!day) return 0;
@@ -99,6 +105,13 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
     SecureStore.getItemAsync(IMANE_REMINDER_KEY).then((v) => {
       if (v === 'true') setReminderEnabled(true);
     }).catch(() => {});
+    SecureStore.getItemAsync(IMANE_REMINDER_TIME_KEY).then((v) => {
+      if (v) {
+        const [h, m] = v.split(':');
+        setReminderHour(h);
+        setReminderMinute(m);
+      }
+    }).catch(() => {});
   }, []);
 
   const toggleReminder = useCallback(async () => {
@@ -109,16 +122,32 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
         setReminderEnabled(false);
         setReminderToast('Rappel désactivé');
       } else {
-        await scheduleImaneProgramReminder(20, 0);
+        const hour = parseInt(reminderHour, 10);
+        const minute = parseInt(reminderMinute, 10);
+        
+        // Validate inputs
+        if (isNaN(hour) || hour < 0 || hour > 23) {
+          setReminderToast('Heure invalide (0-23)');
+          setTimeout(() => setReminderToast(null), 3000);
+          return;
+        }
+        if (isNaN(minute) || minute < 0 || minute > 59) {
+          setReminderToast('Minutes invalides (0-59)');
+          setTimeout(() => setReminderToast(null), 3000);
+          return;
+        }
+        
+        await scheduleImaneProgramReminder(hour, minute);
         await SecureStore.setItemAsync(IMANE_REMINDER_KEY, 'true');
+        await SecureStore.setItemAsync(IMANE_REMINDER_TIME_KEY, `${reminderHour}:${reminderMinute}`);
         setReminderEnabled(true);
-        setReminderToast('✅ Rappel activé chaque jour à 20h00');
+        setReminderToast(`✅ Rappel activé chaque jour à ${reminderHour}h${reminderMinute}`);
       }
     } catch (e) {
       setReminderToast(e instanceof Error ? e.message : 'Erreur notification');
     }
     setTimeout(() => setReminderToast(null), 3000);
-  }, [reminderEnabled]);
+  }, [reminderEnabled, reminderHour, reminderMinute]);
 
   const toggleItem = useCallback(
     async (key: keyof ImaneProgramItems) => {
@@ -146,12 +175,19 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
     <View style={[ip.screen, { paddingTop: insets.top }]}>
       {/* Top bar */}
       <View style={ip.topBar}>
-        <TouchableOpacity onPress={onBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="chevron-back" size={24} color={ip_c.accent} />
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={ip.topTitle}>Programme Imane</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="notifications-outline" size={16} color={reminderEnabled ? ip_c.accent : ip_c.muted} />
+          <HelpTip screenName="Programme Imâne" tips={[
+            { icon: 'list', title: '5 actions quotidiennes', description: 'Coran, dhikr, duas, sadaqa et gratitude pour ton imâne.' },
+            { icon: 'calendar', title: 'Suivi journalier', description: 'Coche les actions accomplies chaque jour pour suivre ta progression.' },
+            { icon: 'notifications', title: 'Rappel quotidien', description: 'Active le rappel et choisis ton heure préférée.' },
+            { icon: 'stats-chart', title: 'Motivation', description: 'Des messages d\'encouragement pour te soutenir dans tes efforts.' },
+          ]} />
+          <TouchableOpacity onPress={() => setShowTimePicker(!showTimePicker)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 12, color: reminderEnabled ? ip_c.accent : ip_c.muted }}>{reminderHour}h{reminderMinute}</Text>
+            <Ionicons name="notifications-outline" size={16} color={reminderEnabled ? ip_c.accent : ip_c.muted} />
+          </TouchableOpacity>
           <Switch
             value={reminderEnabled}
             onValueChange={() => void toggleReminder()}
@@ -166,6 +202,39 @@ export function ImaneProgramScreen({ user, onBack }: { user: AuthUser; onBack: (
           <Text style={ip.toastText}>{reminderToast}</Text>
         </View>
       ) : null}
+
+      {showTimePicker && (
+        <View style={{ backgroundColor: palette.card, padding: 16, marginHorizontal: 20, borderRadius: 12, marginBottom: 16 }}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text, marginBottom: 12 }}>Heure du rappel</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TextInput
+              style={{ flex: 1, backgroundColor: '#f5f5f5', padding: 12, borderRadius: 8, fontSize: 16, color: palette.text }}
+              placeholder="Heure (0-23)"
+              placeholderTextColor={palette.muted}
+              value={reminderHour}
+              onChangeText={setReminderHour}
+              keyboardType="numeric"
+              maxLength={2}
+            />
+            <Text style={{ fontSize: 18, color: palette.text }}>:</Text>
+            <TextInput
+              style={{ flex: 1, backgroundColor: '#f5f5f5', padding: 12, borderRadius: 8, fontSize: 16, color: palette.text }}
+              placeholder="Minutes (0-59)"
+              placeholderTextColor={palette.muted}
+              value={reminderMinute}
+              onChangeText={setReminderMinute}
+              keyboardType="numeric"
+              maxLength={2}
+            />
+          </View>
+          <TouchableOpacity
+            style={{ marginTop: 12, backgroundColor: palette.primaryDark, padding: 12, borderRadius: 8, alignItems: 'center' }}
+            onPress={() => setShowTimePicker(false)}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Fermer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         {/* Day selector */}

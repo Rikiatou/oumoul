@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, memo, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -20,7 +20,7 @@ const NAMES_PROGRESS_KEY = 'oumoul_allah_names_progress';
 
 type ViewMode = 'grid' | 'list' | 'quiz';
 
-export function AllahNamesScreen({ user, onBack, initialNameId }: { user: AuthUser; onBack: () => void; initialNameId?: number }) {
+export const AllahNamesScreen = memo(function AllahNamesScreen({ user, onBack, initialNameId }: { user: AuthUser; onBack: () => void; initialNameId?: number }) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(initialNameId ? 'list' : 'grid');
@@ -232,6 +232,13 @@ export function AllahNamesScreen({ user, onBack, initialNameId }: { user: AuthUs
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
               columnWrapperStyle={{ gap: 8, marginBottom: 8 }}
               onScrollToIndexFailed={() => {}}
+              ListEmptyComponent={
+                <View style={st.emptyContainer}>
+                  <Ionicons name="search" size={48} color={palette.muted} />
+                  <Text style={st.emptyTitle}>Aucun résultat</Text>
+                  <Text style={st.emptyText}>Essaie une autre recherche</Text>
+                </View>
+              }
               renderItem={({ item }) => {
                 const isMemo = memorized.has(item.id);
                 return (
@@ -257,6 +264,13 @@ export function AllahNamesScreen({ user, onBack, initialNameId }: { user: AuthUs
               keyExtractor={(item) => item.id.toString()}
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
               onScrollToIndexFailed={() => {}}
+              ListEmptyComponent={
+                <View style={st.emptyContainer}>
+                  <Ionicons name="search" size={48} color={palette.muted} />
+                  <Text style={st.emptyTitle}>Aucun résultat</Text>
+                  <Text style={st.emptyText}>Essaie une autre recherche</Text>
+                </View>
+              }
               renderItem={({ item }) => {
                 const isMemo = memorized.has(item.id);
                 const isExpanded = expandedId === item.id;
@@ -300,7 +314,7 @@ export function AllahNamesScreen({ user, onBack, initialNameId }: { user: AuthUs
       )}
     </View>
   );
-}
+});
 
 const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: palette.bg },
@@ -333,7 +347,10 @@ const st = StyleSheet.create({
   listBenefit: { fontSize: 13, color: palette.text, lineHeight: 20, marginBottom: 10 },
   memoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#F5F5F5', alignSelf: 'flex-start' },
   memoBtnActive: { backgroundColor: palette.primaryDark },
-  memoBtnText: { fontSize: 12, fontWeight: '600', color: palette.primaryDark },
+  memoBtnText: { fontSize: 12, fontWeight: '600', color: palette.text },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: palette.text, marginTop: 12 },
+  emptyText: { fontSize: 13, color: palette.textSoft, marginTop: 4 },
   quizContainer: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
   quizProgress: { fontSize: 14, color: palette.textSoft, textAlign: 'center', fontWeight: '600' },
   quizScore: { fontSize: 13, color: palette.primaryDark, textAlign: 'center', fontWeight: '700', marginTop: 4 },

@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
         {done ? (
           <div style={{ display: "grid", gap: spacing.sm }}>
             <p style={{ fontSize: 14, color: "rgba(0,0,0,0.8)", textAlign: "center" }}>
-              Si un compte existe pour cet email, un lien de réinitialisation a été généré.
+              Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.
             </p>
             <p style={{ fontSize: 13, color: "rgba(0,0,0,0.65)", textAlign: "center" }}>
               En dev, le lien est affiché dans les logs du backend.

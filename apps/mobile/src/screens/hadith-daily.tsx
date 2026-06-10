@@ -123,6 +123,114 @@ const OFFLINE_HADITHS: Array<{ topic: string; hadith: HadithItem }> = [
       reference: 'Sahih al-Bukhari 6502',
     },
   },
+  {
+    topic: 'charity',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '1445',
+      text: 'الْمُسْلِمُ أَخُو الْمُسْلِمِ لاَ يَظْلِمُهُ وَلاَ يَخْذُلُهُ\n\nLe musulman est le frère du musulman, il ne l\'opprime pas et ne l\'abandonne pas.',
+      reference: 'Sahih Muslim 2162',
+    },
+  },
+  {
+    topic: 'patience',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '6404',
+      text: 'إِنَّمَا الصَّبْرُ عِنْدَ الصَّدْمَةِ الأُولَى\n\nLa patience véritable est au moment du premier choc.',
+      reference: 'Sahih al-Bukhari 6404',
+    },
+  },
+  {
+    topic: 'knowledge',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '73',
+      text: 'مَنْ يُرِدِ اللَّهُ بِهِ خَيْرًا يُفَقِّهْهُ فِي الدِّينِ\n\nQuiconque Allah veut du bien, Il lui donne la compréhension de la religion.',
+      reference: 'Sahih al-Bukhari 71',
+    },
+  },
+  {
+    topic: 'family',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '5999',
+      text: 'خَيْرُكُمْ مَنْ خَيْرُ لِأَهْلِهِ وَأَنَا خَيْرُكُمْ لِأَهْلِي\n\nLe meilleur d\'entre vous est celui qui est le meilleur pour sa famille.',
+      reference: 'Tirmidhi 3895',
+    },
+  },
+  {
+    topic: 'manners',
+    hadith: {
+      collection: 'Sahih Muslim',
+      hadithNumber: '223',
+      text: 'الْمُؤْمِنُ الْقَوِيُّ خَيْرٌ وَأَحَبُّ إِلَى اللَّهِ مِنَ الْمُؤْمِنِ الضَّعِيفِ\n\nLe croyant fort est meilleur et plus aimé d\'Allah que le croyant faible.',
+      reference: 'Sahih Muslim 2664',
+    },
+  },
+  {
+    topic: 'faith',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '50',
+      text: 'لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لِلَّهِ وَلِرَسُولِهِ\n\nAucun de vous ne croira vraiment tant qu\'il n\'aimera pas pour Allah et Son Messager.',
+      reference: 'Sahih al-Bukhari 15',
+    },
+  },
+  {
+    topic: 'prayer',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '698',
+      text: 'صَلُّوا كَمَا رَأَيْتُمُونِي أُصَلِّي\n\nPriez comme vous m\'avez vu prier.',
+      reference: 'Sahih al-Bukhari 7316',
+    },
+  },
+  {
+    topic: 'charity',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '1440',
+      text: 'تَصَدَّقُوا فَإِنَّهُ يَأْتِي عَلَيْكُمْ زَمَانٌ لاَ يَغْنِي فِيهِ الرَّجُلُ بِمَالِهِ\n\nFaites l\'aumône, car viendra un temps où l\'argent ne suffira pas à l\'homme.',
+      reference: 'Sahih al-Bukhari 1414',
+    },
+  },
+  {
+    topic: 'patience',
+    hadith: {
+      collection: 'Sahih Muslim',
+      hadithNumber: '254',
+      text: 'إِنَّ اللَّهَ مَعَ الصَّابِرِينَ\n\nAllah est avec ceux qui patientent.',
+      reference: 'Coran 2:153',
+    },
+  },
+  {
+    topic: 'knowledge',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '59',
+      text: 'مَنْ سَلَكَ طَرِيقًا يَطْلُبُ فِيهِ عِلْمًا سَهَّلَ اللَّهُ لَهُ بِهِ طَرِيقًا إِلَى الْجَنَّةِ\n\nCelui qui suit un chemin pour y chercher la science, Allah lui facilitera un chemin vers le Paradis.',
+      reference: 'Sahih Muslim 2699',
+    },
+  },
+  {
+    topic: 'family',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '5351',
+      text: 'رَحِمَ اللَّهُ رَجُلاً قَامَ مِنَ اللَّيْلِ فَصَلَّى وَأَيْقَظَ امْرَأَتَهُ فَصَلَّتْ\n\nQu\'Allah fasse miséricorde à l\'homme qui se lève la nuit pour prier et réveille son épouse pour qu\'elle prie.',
+      reference: 'Abu Dawud 1308',
+    },
+  },
+  {
+    topic: 'manners',
+    hadith: {
+      collection: 'Sahih al-Bukhari',
+      hadithNumber: '6094',
+      text: 'لاَ يَفْرَكْ مُؤْمِنٌ مُؤْمِنَةً إِنْ كَرِهَ مِنْهَا خُلُقًا رَضِيَ مِنْهَا آخَرَ\n\nUn croyant ne doit pas détester une croyante: s\'il déteste un trait de son caractère, il en appréciera un autre.',
+      reference: 'Sahih Muslim 1469',
+    },
+  },
 ];
 
 function getDailyHadith(): { topic: string; hadith: HadithItem } {

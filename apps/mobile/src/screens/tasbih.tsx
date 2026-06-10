@@ -17,6 +17,7 @@ import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { HelpTip } from '../components/HelpTip';
 import { awardEvent } from '../gamification/gamification-events';
+import { FlatList } from 'react-native';
 
 const TASBIH_SESSIONS_KEY = 'oumoul_tasbih_sessions';
 const TASBIH_CUSTOM_KEY = 'oumoul_tasbih_custom';
@@ -68,6 +69,7 @@ export function TasbihScreen({ user: _user, onBack }: { user: AuthUser; onBack: 
   const [customDhikrs, setCustomDhikrs] = useState<CustomDhikrLocal[]>([]);
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Load persisted data on mount
   useEffect(() => {
@@ -134,6 +136,25 @@ export function TasbihScreen({ user: _user, onBack }: { user: AuthUser; onBack: 
     () => todaySessions.reduce((sum, s) => sum + s.count, 0),
     [todaySessions]
   );
+
+  const filteredPresets = useMemo(() => {
+    if (!searchQuery.trim()) return PRESETS;
+    const q = searchQuery.toLowerCase();
+    return PRESETS.filter(
+      (p) =>
+        p.transliteration.toLowerCase().includes(q) ||
+        p.translation.toLowerCase().includes(q) ||
+        p.arabic.includes(q)
+    );
+  }, [searchQuery]);
+
+  const filteredCustomDhikrs = useMemo(() => {
+    if (!searchQuery.trim()) return customDhikrs;
+    const q = searchQuery.toLowerCase();
+    return customDhikrs.filter(
+      (c) => c.text.toLowerCase().includes(q) || c.translation.toLowerCase().includes(q)
+    );
+  }, [searchQuery, customDhikrs]);
 
   const handleTap = useCallback(() => {
     const next = count + 1;
@@ -270,11 +291,11 @@ export function TasbihScreen({ user: _user, onBack }: { user: AuthUser; onBack: 
 
           {/* Controls */}
           <View style={st.controlsRow}>
-            <TouchableOpacity style={st.controlBtn} onPress={resetCounter}>
+            <TouchableOpacity style={st.controlBtn} onPress={resetCounter} accessibilityLabel="Réinitialiser le compteur" accessibilityRole="button">
               <Ionicons name="refresh" size={20} color={palette.textSoft} />
               <Text style={st.controlLabel}>Réinitialiser</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={st.controlBtn} onPress={() => setSelectedPreset(null)}>
+            <TouchableOpacity style={st.controlBtn} onPress={() => setSelectedPreset(null)} accessibilityLabel="Changer de dhikr" accessibilityRole="button">
               <Ionicons name="list" size={20} color={palette.textSoft} />
               <Text style={st.controlLabel}>Changer</Text>
             </TouchableOpacity>
@@ -304,9 +325,26 @@ export function TasbihScreen({ user: _user, onBack }: { user: AuthUser; onBack: 
             </View>
           </View>
 
+          {/* Search */}
+          <View style={st.searchBox}>
+            <Ionicons name="search" size={16} color={palette.textSoft} />
+            <TextInput
+              style={st.searchInput}
+              placeholder="Rechercher un dhikr..."
+              placeholderTextColor={palette.muted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={16} color={palette.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
+
           <Text style={st.sectionTitle}>Adhkar prédéfinis</Text>
           {PRESETS.map((p) => (
-            <TouchableOpacity key={p.id} style={st.presetRow} onPress={() => selectPreset(p)} activeOpacity={0.7}>
+            <TouchableOpacity key={p.id} style={st.presetRow} onPress={() => selectPreset(p)} activeOpacity={0.7} accessibilityLabel={`Sélectionner ${p.transliteration}, ${p.translation}`} accessibilityRole="button">
               <View style={{ flex: 1 }}>
                 <Text style={st.presetArabic}>{p.arabic}</Text>
                 <Text style={st.presetTranslit}>{p.transliteration}</Text>
@@ -321,7 +359,7 @@ export function TasbihScreen({ user: _user, onBack }: { user: AuthUser; onBack: 
           {/* Custom Dhikrs */}
           <View style={st.customHeader}>
             <Text style={st.sectionTitle}>Dhikr personnalisés</Text>
-            <TouchableOpacity onPress={() => setShowAddCustom(!showAddCustom)}>
+            <TouchableOpacity onPress={() => setShowAddCustom(!showAddCustom)} accessibilityLabel={showAddCustom ? 'Fermer le formulaire d\'ajout' : 'Ajouter un dhikr personnalisé'} accessibilityRole="button">
               <Ionicons name={showAddCustom ? 'close' : 'add-circle'} size={24} color={palette.primaryDark} />
             </TouchableOpacity>
           </View>
@@ -332,18 +370,19 @@ export function TasbihScreen({ user: _user, onBack }: { user: AuthUser; onBack: 
               <TextInput style={st.input} placeholder="Traduction (optionnel)" placeholderTextColor={palette.muted} value={customTranslation} onChangeText={setCustomTranslation} />
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TextInput style={[st.input, { flex: 1 }]} placeholder="Objectif" placeholderTextColor={palette.muted} value={customTarget} onChangeText={setCustomTarget} keyboardType="numeric" />
-                <TouchableOpacity style={st.addBtn} onPress={addCustomDhikr}>
+                <TouchableOpacity style={st.addBtn} onPress={addCustomDhikr} accessibilityLabel="Ajouter ce dhikr personnalisé" accessibilityRole="button">
                   <Text style={st.addBtnText}>Ajouter</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          {customDhikrs.map((c) => (
+          {filteredCustomDhikrs.map((c) => (
             <TouchableOpacity
               key={c.id}
               style={st.presetRow}
               onPress={() => selectPreset({ id: c.id, arabic: c.text, transliteration: '', translation: c.translation, target: c.target })}
+              accessibilityLabel={`Sélectionner ${c.text}`} accessibilityRole="button"
             >
               <View style={{ flex: 1 }}>
                 <Text style={st.presetArabic}>{c.text}</Text>
@@ -369,6 +408,8 @@ const st = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: palette.text },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.card, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: palette.border, marginBottom: 16, gap: 8 },
+  searchInput: { flex: 1, fontSize: 14, color: palette.text },
   counterContainer: { flex: 1, alignItems: 'center', paddingHorizontal: 20, paddingTop: 10 },
   miniStatsRow: { flexDirection: 'row', gap: 16, marginBottom: 20 },
   miniStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },

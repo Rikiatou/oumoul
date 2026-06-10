@@ -9,12 +9,12 @@ export class EmailService {
   private readonly senderName: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.apiKey = this.configService.get<string>('BREVO_API_KEY');
-    this.senderEmail = this.configService.get<string>('EMAIL_FROM_ADDRESS') ?? 'kabrakeng@gmail.com';
+    this.apiKey = this.configService.get<string>('RESEND_API_KEY') ?? this.configService.get<string>('BREVO_API_KEY');
+    this.senderEmail = this.configService.get<string>('EMAIL_FROM_ADDRESS') ?? 'onboarding@resend.dev';
     this.senderName = this.configService.get<string>('EMAIL_FROM_NAME') ?? 'NISSA IMANE TRACKER';
 
     if (!this.apiKey) {
-      this.logger.warn('BREVO_API_KEY not set – emails will only be logged');
+      this.logger.warn('RESEND_API_KEY not set – emails will only be logged');
     }
   }
 
@@ -23,28 +23,27 @@ export class EmailService {
       return false;
     }
 
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'accept': 'application/json',
-        'api-key': this.apiKey,
-        'content-type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: this.senderName, email: this.senderEmail },
-        to: [{ email: to }],
+        from: `${this.senderName} <${this.senderEmail}>`,
+        to: [to],
         subject,
-        htmlContent: html,
+        html,
       }),
     });
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(`Brevo ${response.status}: ${body}`);
+      throw new Error(`Resend ${response.status}: ${body}`);
     }
 
     const data = await response.json();
-    this.logger.log(`Email sent to ${to} (messageId: ${data.messageId})`);
+    this.logger.log(`Email sent to ${to} (id: ${data.id})`);
     return true;
   }
 

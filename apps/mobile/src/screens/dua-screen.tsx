@@ -16,6 +16,7 @@ import type { AuthUser } from '@oumoul/api';
 import { BackButton } from '../components/BackButton';
 import { palette } from '../theme';
 import { awardEvent } from '../gamification/gamification-events';
+import { HelpTip } from '../components/HelpTip';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -200,6 +201,41 @@ const DUAS: Dua[] = [
     translation: 'Notre Seigneur, nous avons été injustes envers nous-mêmes et si Tu ne nous pardonnes pas et ne nous fais pas miséricorde, nous serons assurément du nombre des perdants.',
     source: 'Coran 7:23',
   },
+  {
+    id: '23', category: 'protection', situation: 'Protection pour les enfants',
+    arabic: 'أُعِيذُكُمَا بِكَلِمَاتِ اللَّهِ التَّامَّةِ مِنْ كُلِّ شَيْطَانٍ وَهَامَّةٍ وَمِنْ كُلِّ عَيْنٍ لَامَّةٍ',
+    transliteration: 'U\'īdhukumā bi kalimātillāhi-t-tāmmati min kulli shayṭānin wa hāmmatin wa min kulli \'aynin lāmmatin',
+    translation: 'Je vous protège par les paroles parfaites d\'Allah contre tout démon et tout animal venimeux, et contre tout mauvais œil.',
+    source: 'Bukhari 3371',
+  },
+  {
+    id: '24', category: 'travail', situation: 'Stress et anxiété',
+    arabic: 'اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ الْهَمِّ وَالْحُزْنِ، وَأَعُوذُ بِكَ مِنْ الْعَجْزِ وَالْكَسَلِ',
+    transliteration: 'Allāhumma innī a\'ūdhu bika mina-l-hammi wa-l-ḥuzni, wa a\'ūdhu bika mina-l-\'ajzi wa-l-kasali',
+    translation: 'Ô Allah, je cherche refuge auprès de Toi contre l\'inquiétude et la tristesse, et je cherche refuge auprès de Toi contre la faiblesse et la paresse.',
+    source: 'Bukhari 6369',
+  },
+  {
+    id: '25', category: 'famille', situation: 'Pour le mariage',
+    arabic: 'رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ',
+    transliteration: 'Rabbanā hab lanā min azwājinā wa dhurriyyātinā qurrata a\'yunin',
+    translation: 'Notre Seigneur, donne-nous, en nos épouses et nos descendants, la joie des yeux.',
+    source: 'Coran 25:74',
+  },
+  {
+    id: '26', category: 'general', situation: 'Confiance en Allah',
+    arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
+    transliteration: 'Ḥasbunallāhu wa ni\'ma-l-wakīl',
+    translation: 'Allah nous suffit, quel excellent garant!',
+    source: 'Coran 3:173',
+  },
+  {
+    id: '27', category: 'maladie', situation: 'Guerison du cœur',
+    arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْهُدَى وَالتُّقَى وَالْعَفَافَ وَالْغِنَى',
+    transliteration: 'Allāhumma innī as\'aluka-l-hudā wa-t-tuqā wa-l-\'afāfa wa-l-ghinā',
+    translation: 'Ô Allah, je Te demande la guidance, la piété, la chasteté et la richesse de l\'âme.',
+    source: 'Muslim 2725',
+  },
 ];
 
 const FAVORITES_KEY = 'oumoul_dua_favorites';
@@ -256,12 +292,20 @@ export function DuaScreen({ user, onBack }: { user: AuthUser; onBack: () => void
       <View style={d.header}>
         <BackButton onPress={onBack} />
         <Text style={d.headerTitle}>Du'as & Invocations</Text>
-        <TouchableOpacity
-          style={[d.favToggle, showFavOnly && { backgroundColor: '#FFC107' }]}
-          onPress={() => setShowFavOnly((v) => !v)}
-        >
-          <Ionicons name={showFavOnly ? 'star' : 'star-outline'} size={18} color={showFavOnly ? '#fff' : palette.textSoft} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <HelpTip screenName="Du'as" tips={[
+            { icon: 'book', title: '22 invocations', description: 'Collection de duas pour différentes situations de la vie quotidienne.' },
+            { icon: 'search', title: 'Recherche', description: 'Trouve facilement une invocation par mot-clé ou catégorie.' },
+            { icon: 'star', title: 'Favoris', description: 'Marque tes duas préférées pour y accéder rapidement.' },
+            { icon: 'share-social', title: 'Partage', description: 'Partage les duas avec tes proches.' },
+          ]} />
+          <TouchableOpacity
+            style={[d.favToggle, showFavOnly && { backgroundColor: '#FFC107' }]}
+            onPress={() => setShowFavOnly((v) => !v)}
+          >
+            <Ionicons name={showFavOnly ? 'star' : 'star-outline'} size={18} color={showFavOnly ? '#fff' : palette.textSoft} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search */}
@@ -310,7 +354,9 @@ export function DuaScreen({ user, onBack }: { user: AuthUser; onBack: () => void
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
         ListEmptyComponent={
           <View style={d.emptyBox}>
-            <Text style={d.emptyText}>Aucune invocation trouvée</Text>
+            <Ionicons name="book-outline" size={48} color={palette.muted} />
+            <Text style={d.emptyTitle}>Aucune invocation trouvée</Text>
+            <Text style={d.emptyText}>Essaie une autre recherche ou catégorie</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -380,6 +426,7 @@ const d = StyleSheet.create({
   transliteration: { fontSize: 13, fontStyle: 'italic', color: palette.textSoft, marginTop: 10, lineHeight: 20 },
   divider: { height: 1, backgroundColor: palette.border, marginVertical: 10 },
   translation: { fontSize: 14, color: palette.text, lineHeight: 22 },
-  emptyBox: { alignItems: 'center', paddingTop: 60 },
-  emptyText: { fontSize: 14, color: palette.muted },
+  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: palette.text, marginTop: 12 },
+  emptyText: { fontSize: 13, color: palette.textSoft, marginTop: 4 },
 });

@@ -59,6 +59,8 @@ export function ZakatCalculatorScreen({ user: _user, onBack }: { user: AuthUser;
   const [assets, setAssets] = useState<Record<string, string>>({});
   const [debts, setDebts] = useState('');
   const [showResult, setShowResult] = useState(false);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [customPrices, setCustomPrices] = useState<Record<string, string>>({});
 
   const updateAsset = useCallback((id: string, value: string) => {
     setAssets((prev) => ({ ...prev, [id]: value }));
@@ -74,7 +76,8 @@ export function ZakatCalculatorScreen({ user: _user, onBack }: { user: AuthUser;
     const totalAssets = Object.values(assets).reduce((sum, v) => sum + parseNum(v), 0);
     const totalDebts = parseNum(debts);
     const netWealth = Math.max(0, totalAssets - totalDebts);
-    const goldPrice = GOLD_PRICE_PER_GRAM[currency.code] ?? 75;
+    const customPrice = customPrices[currency.code] ? parseNum(customPrices[currency.code]) : null;
+    const goldPrice = customPrice ?? GOLD_PRICE_PER_GRAM[currency.code] ?? 75;
     const nisab = GOLD_NISAB_GRAMS * goldPrice;
     const isAboveNisab = netWealth >= nisab;
     const zakatDue = isAboveNisab ? netWealth * ZAKAT_RATE : 0;
@@ -87,8 +90,9 @@ export function ZakatCalculatorScreen({ user: _user, onBack }: { user: AuthUser;
       isAboveNisab,
       zakatDue,
       goldPrice,
+      isCustomPrice: !!customPrice,
     };
-  }, [assets, debts, currency]);
+  }, [assets, debts, currency, customPrices]);
 
   const formatAmount = (n: number) => {
     return `${n.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} ${currency.symbol}`;
@@ -145,9 +149,17 @@ export function ZakatCalculatorScreen({ user: _user, onBack }: { user: AuthUser;
 
         {/* Nisab Info */}
         <View style={st.nisabCard}>
-          <Text style={st.nisabLabel}>Nisab actuel ({currency.symbol})</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={st.nisabLabel}>Nisab actuel ({currency.symbol})</Text>
+            <TouchableOpacity onPress={() => setShowPriceModal(true)} style={st.updatePriceBtn}>
+              <Ionicons name="refresh" size={16} color={palette.primaryDark} />
+            </TouchableOpacity>
+          </View>
           <Text style={st.nisabValue}>{formatAmount(calculation.nisab)}</Text>
-          <Text style={st.nisabSub}>Basé sur 85g d'or à ~{formatAmount(calculation.goldPrice)}/g</Text>
+          <Text style={st.nisabSub}>
+            Basé sur 85g d'or à ~{formatAmount(calculation.goldPrice)}/g
+            {calculation.isCustomPrice && ' (prix personnalisé)'}
+          </Text>
         </View>
 
         {/* Asset Inputs */}
@@ -246,6 +258,45 @@ export function ZakatCalculatorScreen({ user: _user, onBack }: { user: AuthUser;
           </View>
         )}
       </ScrollView>
+
+      {/* Gold Price Update Modal */}
+      {showPriceModal && (
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Mettre à jour le prix de l'or</Text>
+              <TouchableOpacity onPress={() => setShowPriceModal(false)}>
+                <Ionicons name="close" size={24} color={palette.text} />
+              </TouchableOpacity>
+            </View>
+            <Text style={st.modalDesc}>
+              Entre le prix actuel de l'or par gramme en {currency.label}. Le prix par défaut est {GOLD_PRICE_PER_GRAM[currency.code]} {currency.symbol}/g.
+            </Text>
+            <TextInput
+              style={st.modalInput}
+              placeholder={`Prix en ${currency.symbol}`}
+              placeholderTextColor={palette.muted}
+              value={customPrices[currency.code] ?? ''}
+              onChangeText={(v) => setCustomPrices((prev) => ({ ...prev, [currency.code]: v }))}
+              keyboardType="numeric"
+            />
+            <View style={st.modalActions}>
+              <TouchableOpacity
+                style={[st.modalBtn, { backgroundColor: palette.card }]}
+                onPress={() => setCustomPrices((prev) => { const next = { ...prev }; delete next[currency.code]; return next; })}
+              >
+                <Text style={[st.modalBtnText, { color: palette.text }]}>Réinitialiser</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[st.modalBtn, { backgroundColor: palette.primaryDark }]}
+                onPress={() => setShowPriceModal(false)}
+              >
+                <Text style={st.modalBtnText}>Appliquer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -269,6 +320,16 @@ const st = StyleSheet.create({
   nisabLabel: { fontSize: 12, color: palette.textSoft, fontWeight: '500' },
   nisabValue: { fontSize: 22, fontWeight: '800', color: palette.primaryDark, marginTop: 4 },
   nisabSub: { fontSize: 11, color: palette.muted, marginTop: 4 },
+  updatePriceBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: palette.accentLight, alignItems: 'center', justifyContent: 'center' },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  modalContent: { backgroundColor: palette.card, borderRadius: 16, padding: 20, width: '100%', maxWidth: 400 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: palette.text },
+  modalDesc: { fontSize: 13, color: palette.textSoft, lineHeight: 20, marginBottom: 16 },
+  modalInput: { backgroundColor: palette.inputBg, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: palette.text, borderWidth: 1, borderColor: palette.inputBorder, marginBottom: 16 },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  modalBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  modalBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: palette.text, marginBottom: 12 },
   inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.card, borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: palette.border },
   inputIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.accentLight, alignItems: 'center', justifyContent: 'center', marginRight: 10 },

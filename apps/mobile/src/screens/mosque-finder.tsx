@@ -100,9 +100,13 @@ export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; on
   const [mosques, setMosques] = useState<MosqueLocal[]>([]);
   const [loadingMosques, setLoadingMosques] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [manualLat, setManualLat] = useState('');
+  const [manualLng, setManualLng] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [usingManualLocation, setUsingManualLocation] = useState(false);
 
-  const userLat = detectedLoc.latitude ?? 4.0511;
-  const userLng = detectedLoc.longitude ?? 9.7679;
+  const userLat = usingManualLocation ? parseFloat(manualLat) || 4.0511 : (detectedLoc.latitude ?? 4.0511);
+  const userLng = usingManualLocation ? parseFloat(manualLng) || 9.7679 : (detectedLoc.longitude ?? 9.7679);
 
   const loadMosques = useCallback(async (lat: number, lng: number) => {
     setLoadingMosques(true);
@@ -207,11 +211,61 @@ export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; on
           {locLoading ? 'Détection GPS...' : `${detectedLoc.city ?? 'Position détectée'} · ${filteredMosques.length} mosquée(s)`}
         </Text>
         {!loadingMosques && userLat && userLng && (
-          <TouchableOpacity onPress={() => void loadMosques(userLat as number, userLng as number)} style={{ marginLeft: 8 }}>
+          <TouchableOpacity onPress={() => void loadMosques(userLat as number, userLng as number)} style={{ marginLeft: 8 }} accessibilityLabel="Actualiser la liste des mosquées" accessibilityRole="button">
             <Ionicons name="refresh" size={14} color={palette.primaryDark} />
           </TouchableOpacity>
         )}
+        <TouchableOpacity onPress={() => setShowManualInput(!showManualInput)} style={{ marginLeft: 8 }} accessibilityLabel={showManualInput ? 'Fermer la saisie manuelle' : 'Entrer les coordonnées manuellement'} accessibilityRole="button">
+          <Ionicons name="create" size={14} color={palette.primaryDark} />
+        </TouchableOpacity>
       </View>
+
+      {/* Manual Location Input */}
+      {showManualInput && (
+        <View style={st.manualLocCard}>
+          <Text style={st.manualLocTitle}>Entrer les coordonnées manuellement</Text>
+          <View style={st.manualLocRow}>
+            <TextInput
+              style={st.manualLocInput}
+              placeholder="Latitude (ex: 4.0511)"
+              placeholderTextColor={palette.muted}
+              value={manualLat}
+              onChangeText={setManualLat}
+              keyboardType="numeric"
+            />
+            <TextInput
+              style={st.manualLocInput}
+              placeholder="Longitude (ex: 9.7679)"
+              placeholderTextColor={palette.muted}
+              value={manualLng}
+              onChangeText={setManualLng}
+              keyboardType="numeric"
+            />
+          </View>
+          <View style={st.manualLocActions}>
+            <TouchableOpacity
+              style={[st.manualLocBtn, { backgroundColor: palette.card }]}
+              onPress={() => { setShowManualInput(false); setUsingManualLocation(false); }}
+              accessibilityLabel="Annuler" accessibilityRole="button"
+            >
+              <Text style={[st.manualLocBtnText, { color: palette.text }]}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[st.manualLocBtn, { backgroundColor: palette.primaryDark }]}
+              onPress={() => {
+                if (manualLat && manualLng) {
+                  setUsingManualLocation(true);
+                  setShowManualInput(false);
+                  void loadMosques(parseFloat(manualLat), parseFloat(manualLng));
+                }
+              }}
+              accessibilityLabel="Utiliser ces coordonnées" accessibilityRole="button"
+            >
+              <Text style={st.manualLocBtnText}>Utiliser</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Loading overlay */}
       {loadingMosques && (
@@ -226,7 +280,7 @@ export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; on
         <View style={st.errorBox}>
           <Ionicons name="warning-outline" size={32} color={palette.muted} />
           <Text style={st.errorText}>{error}</Text>
-          <TouchableOpacity style={st.retryBtn} onPress={() => { if (userLat && userLng) void loadMosques(userLat as number, userLng as number); }}>
+          <TouchableOpacity style={st.retryBtn} onPress={() => { if (userLat && userLng) void loadMosques(userLat as number, userLng as number); }} accessibilityLabel="Réessayer de charger les mosquées" accessibilityRole="button">
             <Text style={st.retryBtnText}>Réessayer</Text>
           </TouchableOpacity>
         </View>
@@ -235,7 +289,7 @@ export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; on
       {/* Mosque Detail */}
       {selectedMosque ? (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-          <TouchableOpacity style={st.backToList} onPress={() => setSelectedMosque(null)}>
+          <TouchableOpacity style={st.backToList} onPress={() => setSelectedMosque(null)} accessibilityLabel="Retour à la liste des mosquées" accessibilityRole="button">
             <Ionicons name="arrow-back" size={16} color={palette.primaryDark} />
             <Text style={st.backToListText}>Retour à la liste</Text>
           </TouchableOpacity>
@@ -254,6 +308,7 @@ export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; on
               <TouchableOpacity
                 style={st.actionBtn}
                 onPress={() => openMaps(selectedMosque.latitude, selectedMosque.longitude, selectedMosque.name)}
+                accessibilityLabel="Obtenir l'itinéraire vers cette mosquée" accessibilityRole="button"
               >
                 <Ionicons name="navigate" size={18} color="#fff" />
                 <Text style={st.actionBtnText}>Itinéraire</Text>
@@ -262,6 +317,7 @@ export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; on
                 <TouchableOpacity
                   style={[st.actionBtn, { backgroundColor: '#388E3C' }]}
                   onPress={() => Linking.openURL(`tel:${selectedMosque.phone}`).catch(() => {})}
+                  accessibilityLabel={`Appeler la mosquée au ${selectedMosque.phone}`} accessibilityRole="button"
                 >
                   <Ionicons name="call" size={18} color="#fff" />
                   <Text style={st.actionBtnText}>Appeler</Text>
@@ -314,6 +370,15 @@ export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; on
           data={filteredMosques}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          ListEmptyComponent={
+            !loadingMosques && !error ? (
+              <View style={st.emptyBox}>
+                <Ionicons name="location-outline" size={48} color={palette.muted} />
+                <Text style={st.emptyTitle}>Aucune mosquée trouvée</Text>
+                <Text style={st.emptyText}>Essaie d'ajuster ta recherche ou tes filtres</Text>
+              </View>
+            ) : null
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={st.mosqueRow}
@@ -371,6 +436,13 @@ const st = StyleSheet.create({
   filterChipTextActive: { color: '#fff' },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, marginBottom: 12 },
   locText: { fontSize: 12, color: palette.textSoft, fontWeight: '500' },
+  manualLocCard: { backgroundColor: palette.card, borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: palette.border, marginHorizontal: 20 },
+  manualLocTitle: { fontSize: 14, fontWeight: '700', color: palette.text, marginBottom: 12 },
+  manualLocRow: { flexDirection: 'row', gap: 10 },
+  manualLocInput: { flex: 1, backgroundColor: palette.inputBg, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: palette.text, borderWidth: 1, borderColor: palette.inputBorder },
+  manualLocActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  manualLocBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  manualLocBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   mosqueRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.card, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: palette.border },
   mosqueIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.accentLight, alignItems: 'center', justifyContent: 'center' },
   mosqueName: { fontSize: 15, fontWeight: '700', color: palette.text },
@@ -382,8 +454,10 @@ const st = StyleSheet.create({
   facilitiesRow: { flexDirection: 'row', gap: 6 },
   distanceBadge: { backgroundColor: palette.accentLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   distanceText: { fontSize: 11, fontWeight: '700', color: palette.primaryDark },
+  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: palette.text, marginTop: 12 },
+  emptyText: { fontSize: 13, color: palette.textSoft, marginTop: 4 },
   emptyContainer: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 14, color: palette.muted },
   backToList: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   backToListText: { fontSize: 14, color: palette.primaryDark, fontWeight: '600' },
   detailCard: { backgroundColor: palette.card, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: palette.border },

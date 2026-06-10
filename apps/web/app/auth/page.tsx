@@ -45,6 +45,7 @@ export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [form, setForm] = useState<FormState>(initialForm);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isRegister = mode === "register";
@@ -66,6 +67,7 @@ export default function AuthPage() {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setError(null);
+      setSuccess(null);
       setLoading(true);
       try {
         const payload = {
@@ -78,12 +80,16 @@ export default function AuthPage() {
 
         if (isRegister) {
           await register(payload);
+          setSuccess("Compte créé avec succès ! Vérifiez votre email pour le code de confirmation.");
         } else {
           await login(payload.email, payload.password);
+          setSuccess("Connexion réussie !");
         }
 
         const redirect = searchParams.get("redirect");
-        router.replace(redirect ? decodeURIComponent(redirect) : "/dashboard");
+        setTimeout(() => {
+          router.replace(redirect ? decodeURIComponent(redirect) : "/dashboard");
+        }, 1500);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Une erreur est survenue";
         setError(message);
@@ -234,6 +240,16 @@ export default function AuthPage() {
             Inscription
           </button>
         </div>
+        {success && (
+          <p style={{ color: "#1a7f64", fontSize: 13, textAlign: "center", backgroundColor: "#e8f5e9", padding: "12px", borderRadius: 8 }}>
+            {success}
+          </p>
+        )}
+        {error && (
+          <p style={{ color: "#D32F2F", fontSize: 13, textAlign: "center", backgroundColor: "#ffebee", padding: "12px", borderRadius: 8 }}>
+            {error}
+          </p>
+        )}
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: spacing.md }}>
           {isRegister && (
             <div style={{ display: "grid", gap: spacing.sm }}>
@@ -317,11 +333,6 @@ export default function AuthPage() {
                 <option value="ar">العربية</option>
               </select>
             </label>
-          )}
-          {error && (
-            <p style={{ color: "#D32F2F", fontSize: 13 }}>
-              {error}
-            </p>
           )}
           <button
             type="submit"
