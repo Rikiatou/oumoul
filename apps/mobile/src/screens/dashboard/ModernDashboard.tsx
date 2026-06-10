@@ -529,11 +529,11 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
 
   // Navigation handlers
   const handleNavigateToPrayers = () => {
-    navigation.navigate('Plus', { screen: 'PrayerTracking' });
+    navigation.navigate('Prière', { screen: 'PrayerTracking' });
   };
 
   const handleNavigateToDhikr = () => {
-    navigation.navigate('Dhikr');
+    navigation.navigate('Apprendre', { screen: 'DhikrMain' });
   };
 
   const handleNavigateToQuran = () => {
@@ -545,19 +545,19 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   };
 
   const handleNavigateToQuranAudio = () => {
-    navigation.navigate('Plus', { screen: 'QuranAudio' });
+    navigation.navigate('Coran', { screen: 'QuranAudio' });
   };
 
   const handleNavigateToMosque = () => {
-    navigation.navigate('Plus', { screen: 'MosqueFinder' });
+    navigation.navigate('Prière', { screen: 'MosqueFinder' });
   };
 
   const handleNavigateToZakat = () => {
-    navigation.navigate('Plus', { screen: 'ZakatCalculator' });
+    navigation.navigate('Prière', { screen: 'ZakatCalculator' });
   };
 
   const handleNavigateToQibla = () => {
-    navigation.navigate('Plus', { screen: 'Qibla' });
+    navigation.navigate('Prière', { screen: 'Qibla' });
   };
 
   const handleNavigateToCalendar = () => {
@@ -565,7 +565,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   };
 
   const handleNavigateToTasbih = () => {
-    navigation.navigate('Plus', { screen: 'Tasbih' });
+    navigation.navigate('Apprendre', { screen: 'Tasbih' });
   };
 
   const locationLabel = detectedLoc.city && detectedLoc.country
@@ -692,7 +692,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
 
       {/* ═══ BLOC 3 : PROGRAMME IMANE ═══ */}
       <View style={s.section}>
-        <TouchableOpacity onPress={() => navigation.navigate('Plus', { screen: 'ImaneProgram' })} activeOpacity={0.9}>
+        <TouchableOpacity onPress={() => navigation.navigate('Apprendre', { screen: 'ImaneProgram' })} activeOpacity={0.9}>
           <ImanProgramCard locale={locale} />
         </TouchableOpacity>
       </View>
@@ -700,13 +700,13 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
       {/* ═══ BLOC 4 : MOT DU CORAN ═══ */}
       <View style={s.section}>
         <Text style={[s.sectionTitle, { color: palette.text }]}>🔤 Mot du Coran du jour</Text>
-        <WordOfDayCard onPress={() => navigation.navigate('Plus', { screen: 'QuranWords', params: { initialWordId: getWordOfDay().id } })} />
+        <WordOfDayCard onPress={() => navigation.navigate('Coran', { screen: 'QuranWords', params: { initialWordId: getWordOfDay().id } })} />
       </View>
 
       {/* ═══ BLOC 4b : NOM D'ALLAH DU JOUR ═══ */}
       <View style={s.section}>
         <Text style={[s.sectionTitle, { color: palette.text }]}>✨ Nom d'Allah du jour</Text>
-        <AllahNameOfDayCard onPress={() => navigation.navigate('Plus', { screen: 'AllahNames', params: { initialNameId: getTodayAllahName().id } })} />
+        <AllahNameOfDayCard onPress={() => navigation.navigate('Apprendre', { screen: 'AllahNames', params: { initialNameId: getTodayAllahName().id } })} />
       </View>
 
       {/* ═══ BLOC 5 : MÉMORISATION & APPRENTISSAGE ═══ */}
@@ -718,7 +718,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
             <Text style={s.memCardTitle}>Lire le Coran</Text>
             <Text style={s.memCardSub}>{quranLastSurah ? `Reprendre ${quranLastSurah}` : 'Commencer maintenant'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.memCard, { backgroundColor: palette.accent }]} onPress={() => navigation.navigate('Plus', { screen: 'QuranWords' })} activeOpacity={0.85}>
+          <TouchableOpacity style={[s.memCard, { backgroundColor: palette.accent }]} onPress={() => navigation.navigate('Coran', { screen: 'QuranWords' })} activeOpacity={0.85}>
             <Ionicons name="language" size={24} color="#fff" />
             <Text style={s.memCardTitle}>Vocabulaire</Text>
             <Text style={s.memCardSub}>Apprendre les mots du Coran</Text>
@@ -728,7 +728,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
             <Text style={s.memCardTitle}>Écouter</Text>
             <Text style={s.memCardSub}>Coran audio par récitateur</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.memCard, { backgroundColor: '#7B1FA2' }]} onPress={() => navigation.navigate('Plus', { screen: 'AllahNames' })} activeOpacity={0.85}>
+          <TouchableOpacity style={[s.memCard, { backgroundColor: '#7B1FA2' }]} onPress={() => navigation.navigate('Apprendre', { screen: 'AllahNames' })} activeOpacity={0.85}>
             <Ionicons name="heart" size={24} color="#fff" />
             <Text style={s.memCardTitle}>99 Noms</Text>
             <Text style={s.memCardSub}>Mémoriser les noms d'Allah</Text>

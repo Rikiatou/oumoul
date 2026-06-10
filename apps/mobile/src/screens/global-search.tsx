@@ -41,7 +41,7 @@ const FEATURE_ITEMS: SearchResult[] = [
   { id: 'f-imane', type: 'feature', title: 'Programme Imane', subtitle: 'Programme de développement spirituel', icon: 'checkbox', screen: 'ImaneProgram' },
   { id: 'f-words', type: 'feature', title: 'Vocabulaire du Coran', subtitle: '400 mots les plus fréquents', icon: 'language', screen: 'QuranWords' },
   { id: 'f-ramadan', type: 'feature', title: 'Ramadan', subtitle: 'Suivi du jeûne et programme', icon: 'moon', screen: 'ImaneRamadan' },
-  { id: 'f-dhikr', type: 'feature', title: 'Dhikr', subtitle: 'Invocations et rappels', icon: 'leaf', screen: 'Dhikr' },
+  { id: 'f-dhikr', type: 'feature', title: 'Dhikr', subtitle: 'Invocations et rappels', icon: 'leaf', screen: 'DhikrMain' },
   { id: 'f-settings', type: 'feature', title: 'Réglages prière', subtitle: 'Méthode de calcul et madhab', icon: 'settings', screen: 'PrayerSettingsMore' },
   { id: 'f-guide', type: 'feature', title: 'Guide de l\'app', subtitle: 'Découvre toutes les fonctionnalités', icon: 'help-circle', screen: 'AppGuide' },
 ];

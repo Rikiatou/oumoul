@@ -1,5 +1,5 @@
 export const appMetadata = {
-  name: "Ramadan Nissa Tracker & Imane",
+  name: "Sirat An-Nour",
   defaultLocale: "fr",
   supportedLocales: ["fr", "en", "ar"],
   currencyFallbacks: ["XAF", "EUR", "USD"],
