@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Nissa Imane Tracker",
+    "name": "Sirat An-Nour",
     "slug": "mobile",
     "owner": "kabrak",
     "version": "2.0.0",
@@ -12,9 +12,7 @@
       [
         "expo-notifications",
         {
-          "sounds": [
-            "./assets/adhan.wav"
-          ]
+          "sounds": ["./assets/adhan.wav"]
         }
       ],
       [
@@ -34,11 +32,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.oumoul.spiritual.ai",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "audio",
-          "location",
-          "fetch"
-        ],
+        "UIBackgroundModes": ["audio", "location", "fetch"],
         "ITSAppUsesNonExemptEncryption": false
       }
     },

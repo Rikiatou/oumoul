@@ -28,3 +28,6 @@ Thumbs.db
 # Env
 .env*
 !.env.example
+
+# Google Play service account key (never commit)
+google-play-service-account.json
