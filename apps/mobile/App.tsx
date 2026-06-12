@@ -366,7 +366,15 @@ function MainApp({ user }: { user: AuthUser }) {
         <Tab.Screen name="Prière">
           {() => <PrayerStack user={user} />}
         </Tab.Screen>
-        <Tab.Screen name="Coran">
+        <Tab.Screen
+          name="Coran"
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.navigate('Coran', { screen: 'ImaneQuran' });
+            },
+          })}
+        >
           {() => <QuranStack user={user} />}
         </Tab.Screen>
         <Tab.Screen
@@ -688,6 +696,7 @@ function LearnHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
     {
       title: "📜 Hifz & Coran",
       items: [
+        { key: "quran", label: "Lire le Coran", sub: "Sourates avec traduction", icon: "book", screen: "__CORAN_TAB__", color: "#1A7F64" },
         { key: "hifz", label: "Hifz — Mémorisation", sub: "Répétition espacée intelligente", icon: "library", screen: "Hifz", color: "#2563EB" },
         { key: "mood", label: "Guidance selon ton humeur", sub: "Versets & du'as selon ton état", icon: "heart-half", screen: "MoodGuidance", color: "#EC4899" },
       ],
@@ -728,7 +737,14 @@ function LearnHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
               <TouchableOpacity
                 key={item.key}
                 style={[s.hubCard, { backgroundColor: p.card, borderColor: p.border }]}
-                onPress={() => navigation.navigate(item.screen)}
+                onPress={() => {
+                  if (item.screen === '__CORAN_TAB__') {
+                    const parentNav = navigation.getParent();
+                    parentNav?.navigate('Coran');
+                    return;
+                  }
+                  navigation.navigate(item.screen);
+                }}
                 activeOpacity={0.75}
               >
                 <View style={[s.hubIconWrap, { backgroundColor: item.color + "18" }]}>
