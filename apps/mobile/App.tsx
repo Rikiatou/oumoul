@@ -369,7 +369,15 @@ function MainApp({ user }: { user: AuthUser }) {
         <Tab.Screen name="Coran">
           {() => <QuranStack user={user} />}
         </Tab.Screen>
-        <Tab.Screen name="Apprendre">
+        <Tab.Screen
+          name="Apprendre"
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.navigate('Apprendre', { screen: 'LearnHub' });
+            },
+          })}
+        >
           {() => <LearnStack user={user} />}
         </Tab.Screen>
         <Tab.Screen name="Plus">
