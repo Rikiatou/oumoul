@@ -239,7 +239,99 @@ const KIDS_DUAS = [
   { title: 'En sortant de chez soi', arabic: 'بِسْمِ اللَّهِ تَوَكَّلْتُ عَلَى اللَّهِ', transliteration: 'Bismillāhi tawakkaltu ʿalallāh', french: 'Au nom d\'Allah, je me confie à Allah', emoji: '🚪' },
 ];
 
-type Tab = 'alphabet' | 'prophets' | 'lessons' | 'duas';
+// ── Islamic Stories ──────────────────────────────────────────────────────────
+const STORIES = [
+  {
+    title: 'La Fourmi de Sulayman ﷤',
+    emoji: '🐜',
+    color: '#D97706',
+    lines: [
+      '🐜 Sulayman ﷤ pouvait parler aux animaux !',
+      '👑 Un jour, il marchait avec son armée et vit une fourmi.',
+      '💬 La fourmi dit : "Ô fourmis, rentrez dans vos maisons, Sulayman et son armée pourraient vous écraser sans le savoir !"',
+      '😊 Sulayman ﷤ sourit et remercia Allah pour ce miracle.',
+      '📖 Leçon : même les plus petites créatures parlent la louange d\'Allah !',
+    ],
+  },
+  {
+    title: 'Le Chameau et le Prophète Salih ﷤',
+    emoji: '🐪',
+    color: '#059669',
+    lines: [
+      '🐪 Le peuple de Thamud voulait un miracle.',
+      '✨ Allah envoya un chameau géant sorti d\'une roche !',
+      '🥛 Le chameau donnait assez de lait pour tout le village.',
+      '⚠️ Mais le peuple était méchant et a tué le chameau.',
+      '🌪️ Allah a puni ce peuple. Leçon : ne tue pas les miracles d\'Allah !',
+    ],
+  },
+  {
+    title: 'L\'Abêille et le Coran',
+    emoji: '🐝',
+    color: '#EC4899',
+    lines: [
+      '🐝 Allah parle des abeilles dans le Coran (Sourate An-Nahl) !',
+      '🍯 Il dit que les abeilles butinent les fleurs.',
+      '🏠 Elles construisent des maisons en cire dans les arbres et les montagnes.',
+      '💛 Le miel est "une guérison pour les hommes".',
+      '📖 Leçon : Allah a mis des secrets dans les plus petites créatures !',
+    ],
+  },
+  {
+    title: 'Le Poisson de Yunus ﷤',
+    emoji: '🐋',
+    color: '#2563EB',
+    lines: [
+      '🌊 Yunus ﷤ était un prophète envoyé par Allah.',
+      '🚢 Il partit sur un bateau, mais il y eut une tempête.',
+      '🐋 Il fut jeté à la mer et un grand poisson (baleine) l\'avala !',
+      '🙏 Dans le ventre du poisson, Yunus pria Allah : "Il n\'y a de dieu que Toi, gloire à Toi !"',
+      '☀️ Allah l\'a sauvé ! Leçon : n\'abandonne jamais, Allah écoute toujours !',
+    ],
+  },
+  {
+    title: 'Le Lion d\'Allah : Hamza ﷨',
+    emoji: '🦁',
+    color: '#DC2626',
+    lines: [
+      '🦁 Hamza était l\'oncle du Prophète Muhammad ﷺ.',
+      '⚔️ Il était très courageux et fort comme un lion.',
+      '🕌 On l\'appelait "Sayyid al-Shuhada" : le Prince des Martyrs.',
+      '🛡️ Il défendait l\'Islam avec bravoure dans les batailles.',
+      '📖 Leçon : sois courageux pour défendre ce qui est juste !',
+    ],
+  },
+];
+
+// ── Animals in Quran ─────────────────────────────────────────────────────────
+const QURAN_ANIMALS = [
+  { name: 'La Fourmi', arabic: 'النملة', emoji: '🐜', mention: 'Coran 27:18', fact: 'Sulayman ﷤ entendit une fourmi parler !' },
+  { name: 'Le Chameau', arabic: 'الناقة', emoji: '🐪', mention: 'Coran 7:73', fact: 'Le chameau miraculeux du peuple de Thamud.' },
+  { name: 'L\'Abeille', arabic: 'النحلة', emoji: '🐝', mention: 'Coran 16:68', fact: 'Allah a révélé une sourate entière sur les abeilles !' },
+  { name: 'Le Poisson', arabic: 'الحوت', emoji: '🐋', mention: 'Coran 37:142', fact: 'Yunus ﷤ fut avalé par un grand poisson.' },
+  { name: 'L\'Éléphant', arabic: 'الفيل', emoji: '🐘', mention: 'Coran 105', fact: 'Une sourate entière raconte l\'année de l\'Éléphant !' },
+  { name: 'La Vache', arabic: 'البقرة', emoji: '🐄', mention: 'Coran 2', fact: 'La plus longue sourate du Coran s\'appelle "La Vache".' },
+  { name: 'Le Mouton', arabic: 'الغنم', emoji: '🐑', mention: 'Coran 6:143', fact: 'Allah parle des moutons et des chèvres.' },
+  { name: 'Le Corbeau', arabic: 'الغراب', emoji: '🐦‍⬛', mention: 'Coran 5:31', fact: 'Un corbeau apprit à Adam comment enterrer son fils.' },
+  { name: 'Le Chien', arabic: 'الكلب', emoji: '🐕', mention: 'Coran 18:18', fact: 'Le chien des Compagnons de la Caverne les protégeait.' },
+  { name: 'La Grenouille', arabic: 'الضفدع', emoji: '🐸', mention: 'Coran 7:133', fact: 'Les grenouilles faisaient partie des plaies d\'Égypte.' },
+  { name: 'Le Pigeon', arabic: 'الحمام', emoji: '🕊️', mention: 'Coran 5:110', fact: 'Issa ﷤ créa des oiseaux d\'argile avec Allah.' },
+  { name: 'Le Ver de terre', arabic: 'الدود', emoji: '🐛', mention: 'Coran 35:28', fact: 'Allah parle des vers de terre comme exemple de création.' },
+];
+
+// ── Prophet Quiz Questions ───────────────────────────────────────────────────
+const PROPHET_QUIZ = [
+  { question: 'Qui a construit l\'arche ?', options: ['Adam', 'Nouh', 'Ibrahim', 'Moussa'], correct: 1 },
+  { question: 'Qui a été jeté dans le feu ?', options: ['Moussa', 'Yunus', 'Ibrahim', 'Adam'], correct: 2 },
+  { question: 'Qui est le dernier prophète ?', options: ['Issa', 'Moussa', 'Muhammad', 'Ibrahim'], correct: 2 },
+  { question: 'Qui a parlé dans le berceau ?', options: ['Muhammad', 'Issa', 'Yunus', 'Sulayman'], correct: 1 },
+  { question: 'Qui a avalé par un poisson ?', options: ['Nouh', 'Yunus', 'Moussa', 'Ibrahim'], correct: 1 },
+  { question: 'Qui a séparé la mer ?', options: ['Ibrahim', 'Nouh', 'Moussa', 'Adam'], correct: 2 },
+  { question: 'Qui est le premier prophète ?', options: ['Adam', 'Nouh', 'Ibrahim', 'Moussa'], correct: 0 },
+  { question: 'Qui parlait aux animaux ?', options: ['Moussa', 'Issa', 'Sulayman', 'Yunus'], correct: 2 },
+];
+
+type Tab = 'alphabet' | 'prophets' | 'lessons' | 'duas' | 'stories' | 'animals' | 'games';
 type Prophet = typeof PROPHETS[0];
 type Lesson = typeof KIDS_LESSONS[0];
 
@@ -256,6 +348,16 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [quizChosen, setQuizChosen] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [selectedStory, setSelectedStory] = useState<typeof STORIES[0] | null>(null);
+  const [selectedAnimal, setSelectedAnimal] = useState<typeof QURAN_ANIMALS[0] | null>(null);
+  const [prophetQuizIdx, setProphetQuizIdx] = useState(0);
+  const [prophetQuizScore, setProphetQuizScore] = useState(0);
+  const [prophetQuizAnswered, setProphetQuizAnswered] = useState(false);
+  const [prophetQuizChosen, setProphetQuizChosen] = useState<number | null>(null);
+  const [memoryCards, setMemoryCards] = useState<Array<{ id: number; letter: string; flipped: boolean; matched: boolean }>>([]);
+  const [memoryFlipped, setMemoryFlipped] = useState<number[]>([]);
+  const [memoryMoves, setMemoryMoves] = useState(0);
+  const [memoryWon, setMemoryWon] = useState(false);
   const starAnim = useRef(new Animated.Value(0)).current;
 
   const playWithFeedback = useCallback((id: string, text: string, lang = 'ar-SA') => {
@@ -273,11 +375,55 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
     ]).start();
   }, [starAnim]);
 
+  // ── Memory game init ──
+  const initMemoryGame = useCallback(() => {
+    const letters = ARABIC_LETTERS.slice(0, 8);
+    const pairs = [...letters, ...letters];
+    const shuffled = pairs.sort(() => Math.random() - 0.5);
+    setMemoryCards(shuffled.map((l, i) => ({ id: i, letter: l.letter, flipped: false, matched: false })));
+    setMemoryFlipped([]);
+    setMemoryMoves(0);
+    setMemoryWon(false);
+  }, []);
+
+  const handleMemoryFlip = useCallback((idx: number) => {
+    if (memoryCards[idx].flipped || memoryCards[idx].matched || memoryFlipped.length >= 2) return;
+    const next = [...memoryCards];
+    next[idx].flipped = true;
+    setMemoryCards(next);
+    const newFlipped = [...memoryFlipped, idx];
+    setMemoryFlipped(newFlipped);
+    if (newFlipped.length === 2) {
+      setMemoryMoves((m) => m + 1);
+      const [a, b] = newFlipped;
+      if (next[a].letter === next[b].letter) {
+        next[a].matched = true;
+        next[b].matched = true;
+        setMemoryCards(next);
+        setMemoryFlipped([]);
+        if (next.every((c) => c.matched)) {
+          setMemoryWon(true);
+          showStarReward();
+        }
+      } else {
+        setTimeout(() => {
+          next[a].flipped = false;
+          next[b].flipped = false;
+          setMemoryCards([...next]);
+          setMemoryFlipped([]);
+        }, 800);
+      }
+    }
+  }, [memoryCards, memoryFlipped]);
+
   const tabs: Array<{ key: Tab; label: string; emoji: string }> = [
     { key: 'alphabet', label: 'Alphabet', emoji: 'ا' },
     { key: 'prophets', label: 'Prophètes', emoji: '🌟' },
     { key: 'lessons', label: 'Islam', emoji: '📚' },
     { key: 'duas', label: 'Du\'as', emoji: '🤲' },
+    { key: 'stories', label: 'Histoires', emoji: '📖' },
+    { key: 'animals', label: 'Animaux', emoji: '🦁' },
+    { key: 'games', label: 'Jeux', emoji: '🎮' },
   ];
 
   // ── Quiz helpers ──
@@ -331,7 +477,19 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
           <TouchableOpacity
             key={tab.key}
             style={[k.tab, activeTab === tab.key && { backgroundColor: p.primaryDark }]}
-            onPress={() => { setActiveTab(tab.key); setSelectedLetter(null); setSelectedProphet(null); setSelectedLesson(null); setQuizMode(false); }}
+            onPress={() => {
+              setActiveTab(tab.key);
+              setSelectedLetter(null);
+              setSelectedProphet(null);
+              setSelectedLesson(null);
+              setSelectedStory(null);
+              setSelectedAnimal(null);
+              setQuizMode(false);
+              setProphetQuizIdx(0);
+              setProphetQuizScore(0);
+              setProphetQuizAnswered(false);
+              setProphetQuizChosen(null);
+            }}
             activeOpacity={0.75}
           >
             <Text style={k.tabEmoji}>{tab.emoji}</Text>
@@ -590,6 +748,208 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
           ))}
         </ScrollView>
       )}
+
+      {/* ── STORIES TAB ── */}
+      {activeTab === 'stories' && !selectedStory && (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          <Text style={[k.sectionTitle, { color: p.text, marginBottom: 12 }]}>Histoires Islamiques</Text>
+          {STORIES.map((story) => (
+            <TouchableOpacity
+              key={story.title}
+              style={[k.prophetCard, { backgroundColor: p.card, borderColor: p.border }]}
+              onPress={() => setSelectedStory(story)}
+              activeOpacity={0.75}
+            >
+              <View style={[k.prophetIcon, { backgroundColor: story.color + '22' }]}>
+                <Text style={k.prophetEmoji}>{story.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[k.prophetName, { color: p.text }]}>{story.title}</Text>
+                <Text style={[k.prophetDesc, { color: p.textSoft }]}>{story.lines[0]}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={p.muted ?? p.textSoft} />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+      {activeTab === 'stories' && selectedStory && (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => setSelectedStory(null)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 6 }}>
+            <Ionicons name="chevron-back" size={18} color={p.primaryDark} />
+            <Text style={[k.backLink, { color: p.primaryDark }]}>Toutes les histoires</Text>
+          </TouchableOpacity>
+          <View style={[k.detailHeader, { backgroundColor: selectedStory.color + '18', borderColor: selectedStory.color + '44' }]}>
+            <Text style={{ fontSize: 56 }}>{selectedStory.emoji}</Text>
+            <Text style={[k.detailName, { color: selectedStory.color, marginTop: 8 }]}>{selectedStory.title}</Text>
+          </View>
+          {selectedStory.lines.map((line, i) => (
+            <View key={i} style={[k.storyItem, { backgroundColor: p.card, borderColor: p.border }]}>
+              <Text style={[k.storyText, { color: p.text }]}>{line}</Text>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* ── ANIMALS TAB ── */}
+      {activeTab === 'animals' && !selectedAnimal && (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          <Text style={[k.sectionTitle, { color: p.text, marginBottom: 12 }]}>Animaux du Coran</Text>
+          <View style={k.alphabetGrid}>
+            {QURAN_ANIMALS.map((animal) => (
+              <TouchableOpacity
+                key={animal.name}
+                style={[k.letterCard, { backgroundColor: p.card, borderColor: p.border }]}
+                onPress={() => setSelectedAnimal(animal)}
+                activeOpacity={0.75}
+              >
+                <Text style={k.letterEmoji}>{animal.emoji}</Text>
+                <Text style={[k.letterBig, { color: p.primaryDark }]}>{animal.arabic}</Text>
+                <Text style={[k.letterName, { color: p.text }]}>{animal.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+      {activeTab === 'animals' && selectedAnimal && (
+        <ScrollView contentContainerStyle={{ padding: 24, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => setSelectedAnimal(null)} style={{ alignSelf: 'flex-start', marginBottom: 16 }}>
+            <Text style={[k.backLink, { color: p.primaryDark }]}>← Retour</Text>
+          </TouchableOpacity>
+          <View style={[k.letterDetail, { backgroundColor: p.card }]}>
+            <Text style={k.detailEmoji}>{selectedAnimal.emoji}</Text>
+            <Text style={[k.detailLetter, { color: p.primaryDark }]}>{selectedAnimal.arabic}</Text>
+            <Text style={[k.detailName, { color: p.text }]}>{selectedAnimal.name}</Text>
+            <Text style={[k.detailTranslit, { color: p.textSoft }]}>{selectedAnimal.mention}</Text>
+            <View style={[k.exampleBox, { backgroundColor: p.bgAlt ?? p.bg, borderColor: p.border }]}>
+              <Text style={[k.exampleArabic, { color: p.text }]}>{selectedAnimal.fact}</Text>
+            </View>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ── GAMES TAB ── */}
+      {activeTab === 'games' && (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          <Text style={[k.sectionTitle, { color: p.text, marginBottom: 12 }]}>Jeux Éducatifs</Text>
+
+          {/* Prophet Quiz */}
+          <View style={[k.statsCard, { backgroundColor: p.card, borderColor: p.border, marginBottom: 20 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <Ionicons name="help-circle" size={28} color="#7C3AED" />
+              <View style={{ flex: 1 }}>
+                <Text style={[k.prophetName, { color: p.text }]}>Quiz des Prophètes</Text>
+                <Text style={[k.prophetDesc, { color: p.textSoft }]}>Teste tes connaissances !</Text>
+              </View>
+            </View>
+            <Text style={[k.quizScore, { color: p.primaryDark, marginBottom: 12 }]}>
+              Score : {prophetQuizScore} / {PROPHET_QUIZ.length}
+            </Text>
+            {prophetQuizIdx < PROPHET_QUIZ.length ? (
+              <>
+                <Text style={[k.prophetName, { color: p.text, marginBottom: 12 }]}>
+                  {prophetQuizIdx + 1}. {PROPHET_QUIZ[prophetQuizIdx].question}
+                </Text>
+                <View style={{ gap: 8 }}>
+                  {PROPHET_QUIZ[prophetQuizIdx].options.map((opt, i) => {
+                    const isCorrect = i === PROPHET_QUIZ[prophetQuizIdx].correct;
+                    const isChosen = i === prophetQuizChosen;
+                    let bg = p.card;
+                    if (prophetQuizAnswered && isCorrect) bg = '#D1FAE5';
+                    if (prophetQuizAnswered && isChosen && !isCorrect) bg = '#FEE2E2';
+                    return (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[k.quizOption, { backgroundColor: bg, borderColor: p.border }]}
+                        onPress={() => {
+                          if (prophetQuizAnswered) return;
+                          setProphetQuizChosen(i);
+                          setProphetQuizAnswered(true);
+                          if (isCorrect) {
+                            setProphetQuizScore((s) => s + 1);
+                            Vibration.vibrate(80);
+                            showStarReward();
+                          } else {
+                            Vibration.vibrate([0, 60, 60, 60]);
+                          }
+                        }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[k.quizOptionText, { color: p.text }]}>{opt}</Text>
+                        {prophetQuizAnswered && isCorrect && <Ionicons name="checkmark-circle" size={20} color="#059669" />}
+                        {prophetQuizAnswered && isChosen && !isCorrect && <Ionicons name="close-circle" size={20} color="#DC2626" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {prophetQuizAnswered && (
+                  <TouchableOpacity
+                    style={[k.nextBtn, { backgroundColor: p.primaryDark, marginTop: 16 }]}
+                    onPress={() => { setProphetQuizIdx((i) => i + 1); setProphetQuizAnswered(false); setProphetQuizChosen(null); }}
+                  >
+                    <Text style={k.nextBtnText}>Suivant →</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                <Text style={{ fontSize: 28 }}>🎉</Text>
+                <Text style={[k.prophetName, { color: p.text, marginTop: 8 }]}>Quiz terminé !</Text>
+                <Text style={[k.prophetDesc, { color: p.textSoft }]}>Tu as {prophetQuizScore} bonnes réponses sur {PROPHET_QUIZ.length}</Text>
+                <TouchableOpacity
+                  style={[k.nextBtn, { backgroundColor: p.primaryDark, marginTop: 16 }]}
+                  onPress={() => { setProphetQuizIdx(0); setProphetQuizScore(0); setProphetQuizAnswered(false); setProphetQuizChosen(null); }}
+                >
+                  <Text style={k.nextBtnText}>Rejouer</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Memory Game */}
+          <View style={[k.statsCard, { backgroundColor: p.card, borderColor: p.border }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <Ionicons name="grid" size={28} color="#EC4899" />
+              <View style={{ flex: 1 }}>
+                <Text style={[k.prophetName, { color: p.text }]}>Mémoire des Lettres</Text>
+                <Text style={[k.prophetDesc, { color: p.textSoft }]}>Trouve les paires !</Text>
+              </View>
+            </View>
+            {memoryCards.length === 0 ? (
+              <TouchableOpacity style={[k.nextBtn, { backgroundColor: '#EC4899' }]} onPress={initMemoryGame}>
+                <Text style={k.nextBtnText}>Commencer le jeu</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <Text style={[k.quizScore, { color: p.primaryDark, marginBottom: 8 }]}>
+                  Coups : {memoryMoves} {memoryWon && '| 🎉 Gagné !'}
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                  {memoryCards.map((card, i) => (
+                    <TouchableOpacity
+                      key={card.id}
+                      style={[k.memoryCard, {
+                        backgroundColor: card.flipped || card.matched ? '#D1FAE5' : p.primaryDark,
+                        borderColor: card.matched ? '#059669' : p.border,
+                      }]}
+                      onPress={() => handleMemoryFlip(i)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[k.memoryCardText, { color: card.flipped || card.matched ? p.primaryDark : '#fff' }]}>
+                        {card.flipped || card.matched ? card.letter : '?'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {memoryWon && (
+                  <TouchableOpacity style={[k.nextBtn, { backgroundColor: '#EC4899', marginTop: 16 }]} onPress={initMemoryGame}>
+                    <Text style={k.nextBtnText}>Rejouer</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -682,6 +1042,14 @@ const k = StyleSheet.create({
   duaTranslit: { fontSize: 13, fontStyle: 'italic', marginBottom: 4 },
   duaFrench: { fontSize: 13 },
   duaPlayBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+
+  // Games
+  statsCard: { margin: 0, borderRadius: 16, padding: 20, borderWidth: 1 },
+  memoryCard: {
+    width: 70, height: 70, borderRadius: 14, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  memoryCardText: { fontSize: 28, fontFamily: 'Amiri-Bold' },
 
   // Audio & hints
   audioBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, marginTop: 16 },
