@@ -9,7 +9,8 @@ import { aiApi } from '../api';
 
 const FALLBACK_RESULT: AIAnalysisResult = {
   overallScore: 50,
-  context: { prayerOnTimePercent: 0, prayerStreakDays: 0, hifzTotal: 0, dhikrSessionsLast7Days: 0, fastingDaysThisRamadan: 0, imaneProgramCompletionPercent: 0 },
+  lastAnalysisAt: new Date().toISOString(),
+  context: { prayerOnTimePercent: 0, prayerStreakDays: 0, hifzTotal: 0, dhikrSessionsLast7Days: 0, fastingDaysThisRamadan: 0, imaneProgramCompletionPercent: 0, prayedLast7Days: 0, hifzDueToday: 0, hifzMastered: 0, mood: 'focused' },
   recommendations: [
     { id: 'r1', type: 'prayer', title: 'Prière à l\'heure', description: 'Essaie de prier chaque salat dès le début de son temps. Commence par Fajr !', timeSuggestion: 'Chaque jour', priority: 'high', basedOn: 'Conseil général' },
     { id: 'r2', type: 'quran', title: 'Lecture du Coran', description: 'Lis au moins 1 page de Coran par jour. La régularité vaut mieux que la quantité.', timeSuggestion: 'Après Fajr', priority: 'medium', basedOn: 'Conseil général' },

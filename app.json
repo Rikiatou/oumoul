@@ -7,6 +7,12 @@
     },
     "android": {
       "package": "com.kabrak.oumoulsapp"
+    },
+    "ios": {
+      "bundleIdentifier": "com.kabrak.oumoulsapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     }
   }
 }

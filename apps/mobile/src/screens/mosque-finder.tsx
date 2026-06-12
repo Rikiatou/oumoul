@@ -409,12 +409,6 @@ export function MosqueFinderScreen({ user: _user, onBack }: { user: AuthUser; on
               </View>
             </TouchableOpacity>
           )}
-          ListEmptyComponent={
-            <View style={st.emptyContainer}>
-              <Ionicons name="business-outline" size={48} color={palette.muted} />
-              <Text style={st.emptyText}>Aucune mosquée trouvée</Text>
-            </View>
-          }
         />
       )}
     </View>
