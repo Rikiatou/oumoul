@@ -19,7 +19,6 @@ model User {
   firstName    String
   lastName     String
   locale       String?
-  phone        String?  @unique
   passwordHash    String
   emailVerifiedAt DateTime?
   createdAt       DateTime @default(now())
