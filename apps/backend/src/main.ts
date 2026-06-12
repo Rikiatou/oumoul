@@ -65,7 +65,7 @@ async function bootstrap() {
   // Swagger docs: only in development
   if (!isProd) {
     const documentConfig = new DocumentBuilder()
-      .setTitle("Oumoul's App API")
+      .setTitle('Sirat An-Nour API')
       .setDescription('REST API powering spiritual companion services')
       .setVersion('0.1.0')
       .addBearerAuth()
