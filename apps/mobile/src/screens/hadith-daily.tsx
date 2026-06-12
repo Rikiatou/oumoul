@@ -293,7 +293,7 @@ export function HadithDailyScreen({ user, onBack }: { user: AuthUser; onBack: ()
   const shareHadith = useCallback(async (hadith: HadithItem) => {
     try {
       await Share.share({
-        message: `${hadith.text}\n\n— ${hadith.reference ?? hadith.collection}\n\nPartagé via Oumoul`,
+        message: `${hadith.text}\n\n— ${hadith.reference ?? hadith.collection}\n\nPartagé via Sirat An-Nour`,
       });
       void awardEvent('hadith_read');
     } catch {}

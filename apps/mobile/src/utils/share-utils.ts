@@ -15,7 +15,7 @@ export async function shareHadith(hadith: {
   source: string;
 }): Promise<void> {
   const content: ShareableContent = {
-    title: "Hadith du jour - Oumoul",
+    title: "Hadith du jour - Sirat An-Nour",
     message: `📖 Hadith du jour
 
 ${hadith.arabic}
@@ -27,7 +27,7 @@ ${hadith.english}
 📚 Source: ${hadith.source}
 
 ---
-Télécharge l'app Oumoul pour plus de hadiths quotidiens !
+Télécharge l'app Sirat An-Nour pour plus de hadiths quotidiens !
 🕌 https://oumoul.app/download`,
     type: 'hadith',
     text: `${hadith.french}\n\n${hadith.arabic}`,
@@ -59,7 +59,7 @@ export async function shareDua(dua: {
   context: string;
 }): Promise<void> {
   const content: ShareableContent = {
-    title: "Doua - Oumoul",
+    title: "Doua - Sirat An-Nour",
     message: `🤲 Doua
 
 ${dua.arabic}
@@ -68,7 +68,7 @@ ${dua.french}
 
 ${dua.english}
 
-🕌 Oumoul - Votre compagnon spirituel
+🕌 Sirat An-Nour - Votre compagnon spirituel
 🕌 https://oumoul.app/download`,
   };
 
@@ -92,14 +92,14 @@ export async function shareQuranVerse(verse: {
   ayah: number;
 }): Promise<void> {
   const content: ShareableContent = {
-    title: "Coran - Oumoul",
+    title: "Coran - Sirat An-Nour",
     message: `📖 Coran (Sourate ${verse.surah}, Verset ${verse.ayah})
 
 ${verse.arabic}
 
 ${verse.french}
 
-🕌 Oumoul - Explorez le Coran quotidiennement
+🕌 Sirat An-Nour - Explorez le Coran quotidiennement
 🕌 https://oumoul.app/download`,
   };
 
@@ -122,14 +122,14 @@ export async function shareAchievement(achievement: {
   points: number;
 }): Promise<void> {
   const content: ShareableContent = {
-    title: "Succès - Oumoul",
+    title: "Succès - Sirat An-Nour",
     message: `🏆 Nouveau succès débloqué !
 
 ${achievement.title}
 ${achievement.description}
 🎯 ${achievement.points} points
 
-🕌 Rejoignez-moi sur Oumoul !
+🕌 Rejoignez-moi sur Sirat An-Nour !
 🕌 https://oumoul.app/download`,
   };
 
@@ -152,14 +152,14 @@ export async function shareProgress(progress: {
   tasksCompleted: number;
 }): Promise<void> {
   const content: ShareableContent = {
-    title: "Ma progression - Oumoul",
+    title: "Ma progression - Sirat An-Nour",
     message: `🌟 Ma progression spirituelle
 
 🔥 Streak: ${progress.streak} jours
 🎯 Points: ${progress.totalPoints}
 ✅ Tâches aujourd'hui: ${progress.tasksCompleted}
 
-🕌 Rejoignez Oumoul pour votre progression spirituelle !
+🕌 Rejoignez Sirat An-Nour pour votre progression spirituelle !
 🕌 https://oumoul.app/download`,
   };
 
@@ -178,8 +178,8 @@ export async function shareProgress(progress: {
 
 export async function inviteFriend(): Promise<void> {
   const content: ShareableContent = {
-    title: "Invitation - Oumoul",
-    message: `🕌 Rejoins-moi sur Oumoul !
+    title: "Invitation - Sirat An-Nour",
+    message: `🕌 Rejoins-moi sur Sirat An-Nour !
 
 Découvrez une application musulmane complète :
 📖 Coran avec traduction
@@ -191,7 +191,7 @@ Découvrez une application musulmane complète :
 Téléchargez gratuitement :
 🕌 https://oumoul.app/download
 
-Code d'invitation: OUMOUL2025`,
+Code d'invitation: SIRAT2025`,
   };
 
   try {
