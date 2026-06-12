@@ -174,7 +174,7 @@ export function AboutScreen({ onBack }: { onBack: () => void }) {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: p.text }]}>Nissa Imane Tracker</Text>
+          <Text style={[styles.footerText, { color: p.text }]}>Sirat An-Nour</Text>
           <Text style={[styles.footerSubtext, { color: p.textSoft }]}>Version 2.0.0</Text>
           <Text style={[styles.footerSubtext, { color: p.textSoft }]}>Développé par KABRAK ENG</Text>
           <Text style={[styles.footerSubtext, { color: p.textSoft }]}>2025</Text>

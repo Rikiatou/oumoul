@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Nissa Imane Tracker",
+    "name": "Sirat An-Nour",
     "slug": "mobile",
     "owner": "kabrak",
     "version": "2.1.0",
@@ -20,8 +20,8 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Oumoul utilise ta position pour calculer les horaires de prière, la direction de la Qibla et le calendrier Hijri.",
-          "locationWhenInUsePermission": "Oumoul utilise ta position pour calculer les horaires de prière, la direction de la Qibla et le calendrier Hijri."
+          "locationAlwaysAndWhenInUsePermission": "Sirat An-Nour utilise ta position pour calculer les horaires de prière, la direction de la Qibla et le calendrier Hijri.",
+          "locationWhenInUsePermission": "Sirat An-Nour utilise ta position pour calculer les horaires de prière, la direction de la Qibla et le calendrier Hijri."
         }
       ]
     ],

@@ -74,7 +74,7 @@ export function ShareSystemScreen({ onBack }: { onBack: () => void }) {
     try {
       const shareOptions = {
         message: template.content,
-        title: "Nissa Imane Tracker",
+        title: "Sirat An-Nour",
         url: "https://oumoul.app", // App store link
       };
 
@@ -132,7 +132,7 @@ export function ShareSystemScreen({ onBack }: { onBack: () => void }) {
     {
       id: "hadith-daily",
       title: "Hadith du Jour",
-      content: "📖 Hadith du jour:\n\n« Le Prophète Muhammad ﷺ a dit: 'Les actions ne sont jugées que selon les intentions.' »\n\n🕌 via Nissa Imane Tracker",
+      content: "📖 Hadith du jour:\n\n« Le Prophète Muhammad ﷺ a dit: 'Les actions ne sont jugées que selon les intentions.' »\n\n🕌 via Sirat An-Nour",
       category: "hadith" as const,
       icon: "book",
       uses: 0,
@@ -140,7 +140,7 @@ export function ShareSystemScreen({ onBack }: { onBack: () => void }) {
     {
       id: "quran-verse",
       title: "Verset du Coran",
-      content: "📖 Verset du Coran:\n\n« Et Nous avons certes rendu le Coran facile à rappeler. Y a-t-il quelqu'un pour réfléchir? » (Sourate Al-Qamar: 17)\n\n🕌 via Nissa Imane Tracker",
+      content: "📖 Verset du Coran:\n\n« Et Nous avons certes rendu le Coran facile à rappeler. Y a-t-il quelqu'un pour réfléchir? » (Sourate Al-Qamar: 17)\n\n🕌 via Sirat An-Nour",
       category: "quran" as const,
       icon: "library",
       uses: 0,
@@ -148,7 +148,7 @@ export function ShareSystemScreen({ onBack }: { onBack: () => void }) {
     {
       id: "dhikr-morning",
       title: "Dhikr du Matin",
-      content: "🤲 Dhikr du Matin:\n\nSubhanAllah (33x)\nAlhamdulillah (33x)\nAllahu Akbar (33x)\n\n🕌 via Nissa Imane Tracker",
+      content: "🤲 Dhikr du Matin:\n\nSubhanAllah (33x)\nAlhamdulillah (33x)\nAllahu Akbar (33x)\n\n🕌 via Sirat An-Nour",
       category: "dhikr" as const,
       icon: "radio",
       uses: 0,
@@ -156,7 +156,7 @@ export function ShareSystemScreen({ onBack }: { onBack: () => void }) {
     {
       id: "progress-prayer",
       title: "Progression Prières",
-      content: "🕌 Progression Spirituelle:\n\n✅ Prières complètes aujourd'hui: 5/5\n🔥 Streak: 7 jours\n📊 Niveau: 3\n\n🕌 via Nissa Imane Tracker",
+      content: "🕌 Progression Spirituelle:\n\n✅ Prières complètes aujourd'hui: 5/5\n🔥 Streak: 7 jours\n📊 Niveau: 3\n\n🕌 via Sirat An-Nour",
       category: "progress" as const,
       icon: "trending-up",
       uses: 0,
@@ -164,7 +164,7 @@ export function ShareSystemScreen({ onBack }: { onBack: () => void }) {
     {
       id: "achievement-unlocked",
       title: "Achievement Débloqué",
-      content: "🏆 Achievement Débloqué!\n\n📖 Lecteur du Coran\n✅ 10 versets lus\n🎯 25 points gagnés\n\n🕌 via Nissa Imane Tracker",
+      content: "🏆 Achievement Débloqué!\n\n📖 Lecteur du Coran\n✅ 10 versets lus\n🎯 25 points gagnés\n\n🕌 via Sirat An-Nour",
       category: "achievement" as const,
       icon: "trophy",
       uses: 0,

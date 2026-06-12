@@ -840,9 +840,12 @@ function HomeScreen({ navigation, user }: { navigation: any; user: AuthUser }) {
 }
 
 function AuthFlow() {
-  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "forgot-otp" | "forgot-new" | "reset">("login");
+  const [resetEmail, setResetEmail] = useState("");
 
-  if (mode === "forgot") return <ForgotPasswordScreen onSwitch={setMode} />;
+  if (mode === "forgot") return <ForgotPasswordScreen onSwitch={setMode} onEmailSent={setResetEmail} />;
+  if (mode === "forgot-otp") return <ForgotPasswordOtpScreen onSwitch={setMode} email={resetEmail} />;
+  if (mode === "forgot-new") return <ForgotPasswordNewScreen onSwitch={setMode} email={resetEmail} />;
   if (mode === "reset") return <ResetPasswordScreen onSwitch={setMode} />;
   return mode === "login" ? <LoginScreen onSwitch={setMode} /> : <RegisterScreen onSwitch={setMode} />;
 }
@@ -1025,7 +1028,7 @@ function RegisterScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | 
   );
 }
 
-function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "forgot" | "reset") => void }) {
+function ForgotPasswordScreen({ onSwitch, onEmailSent }: { onSwitch: (next: "login" | "register" | "forgot" | "forgot-otp" | "forgot-new" | "reset") => void; onEmailSent: (email: string) => void }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1037,23 +1040,32 @@ function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "regist
     try {
       await authApi.forgotPassword({ email: email.trim() });
       setDone(true);
+      onEmailSent(email.trim());
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(translateError(msg) || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
-  }, [email]);
+  }, [email, onEmailSent]);
 
   return (
-    <AuthLayout title="Mot de passe oublié" subtitle="Entre ton email pour recevoir un lien" mode="login" onSwitch={onSwitch}>
-      {error ? <Text style={auth.error}>{error}</Text> : null}
+    <AuthLayout title="Mot de passe oublié" subtitle="Entre ton email pour recevoir un code" mode="login" onSwitch={onSwitch}>
+      {error ? (
+        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
+          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
+          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        </View>
+      ) : null}
       <AuthInput placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
       {done ? (
-        <View style={{ marginTop: 16, gap: 12 }}>
-          <Text style={{ color: C.text, lineHeight: 22 }}>Si un compte existe, un lien a été généré.</Text>
-          <TouchableOpacity onPress={() => onSwitch("reset")}>
-            <Text style={auth.link}>J'ai un token / lien</Text>
+        <View style={{ marginTop: 16, gap: 12, alignItems: "center" }}>
+          <View style={[{ backgroundColor: '#dcfce7', borderLeftColor: '#22c55e', padding: 12, borderRadius: 8, width: '100%' }]}>
+            <Text style={{ color: '#166534', fontWeight: '600', textAlign: 'center' }}>Code envoyé !</Text>
+            <Text style={{ color: '#166534', marginTop: 4, textAlign: 'center', fontSize: 13 }}>Vérifie tes emails pour le code à 6 chiffres.</Text>
+          </View>
+          <TouchableOpacity style={[auth.btn, { marginTop: 8 }]} onPress={() => onSwitch("forgot-otp")}>
+            <Text style={auth.btnText}>Entrer le code</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => onSwitch("login")}>
             <Text style={auth.link}>Retour à la connexion</Text>
@@ -1062,7 +1074,7 @@ function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "regist
       ) : (
         <View style={{ marginTop: 16, gap: 12 }}>
           <TouchableOpacity style={[auth.btn, loading && { opacity: 0.6 }]} disabled={loading} onPress={() => void handleSubmit()}>
-            <Text style={auth.btnText}>{loading ? "Envoi..." : "Envoyer"}</Text>
+            <Text style={auth.btnText}>{loading ? "Envoi..." : "Envoyer le code"}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={{ alignSelf: "center" }} onPress={() => onSwitch("login")}>
             <Text style={auth.link}>Retour</Text>
@@ -1073,8 +1085,153 @@ function ForgotPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "regist
   );
 }
 
-function ResetPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "forgot" | "reset") => void }) {
-  const [token, setToken] = useState("");
+function ForgotPasswordOtpScreen({ onSwitch, email }: { onSwitch: (next: "login" | "register" | "forgot" | "forgot-otp" | "forgot-new" | "reset") => void; email: string }) {
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
+
+  const handleSubmit = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await authApi.forgotPassword({ email });
+      setResent(true);
+      setTimeout(() => setResent(false), 3000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(translateError(msg) || "Une erreur est survenue");
+    } finally {
+      setLoading(false);
+    }
+  }, [email]);
+
+  const handleContinue = useCallback(() => {
+    if (code.trim().length !== 6) return;
+    onSwitch("forgot-new");
+  }, [code, onSwitch]);
+
+  return (
+    <AuthLayout title="Vérification" subtitle={`Entre le code à 6 chiffres envoyé à ${email}`} mode="login" onSwitch={onSwitch}>
+      {error ? (
+        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
+          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
+          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        </View>
+      ) : null}
+      <AuthInput
+        placeholder="Code à 6 chiffres"
+        value={code}
+        onChangeText={setCode}
+        keyboardType="number-pad"
+        maxLength={6}
+        autoFocus
+      />
+      <View style={{ marginTop: 16, gap: 12 }}>
+        <TouchableOpacity
+          style={[auth.btn, (code.trim().length !== 6) && { opacity: 0.6 }]}
+          disabled={code.trim().length !== 6}
+          onPress={() => void handleContinue()}
+        >
+          <Text style={auth.btnText}>Continuer</Text>
+        </TouchableOpacity>
+        {resent ? (
+          <Text style={{ color: C.primaryDark, fontWeight: "600", fontSize: 14, textAlign: "center" }}>Code renvoyé !</Text>
+        ) : (
+          <TouchableOpacity onPress={() => void handleSubmit()} disabled={loading}>
+            <Text style={[auth.link, loading && { opacity: 0.6 }]}>{loading ? "Envoi..." : "Renvoyer le code"}</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={{ alignSelf: "center" }} onPress={() => onSwitch("login")}>
+          <Text style={auth.link}>Retour à la connexion</Text>
+        </TouchableOpacity>
+      </View>
+    </AuthLayout>
+  );
+}
+
+function ForgotPasswordNewScreen({ onSwitch, email }: { onSwitch: (next: "login" | "register" | "forgot" | "forgot-otp" | "forgot-new" | "reset") => void; email: string }) {
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = useCallback(async () => {
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Le mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      await authApi.resetPassword({ email, code, password });
+      setDone(true);
+      setTimeout(() => onSwitch("login"), 1500);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(translateError(msg) || "Une erreur est survenue");
+    } finally {
+      setLoading(false);
+    }
+  }, [email, code, password, confirmPassword, onSwitch]);
+
+  return (
+    <AuthLayout title="Nouveau mot de passe" subtitle="Choisis un nouveau mot de passe sécurisé" mode="login" onSwitch={onSwitch}>
+      {error ? (
+        <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
+          <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
+          <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
+        </View>
+      ) : null}
+      <AuthInput
+        placeholder="Code à 6 chiffres"
+        value={code}
+        onChangeText={setCode}
+        keyboardType="number-pad"
+        maxLength={6}
+        autoFocus
+      />
+      <PasswordInput placeholder="Nouveau mot de passe" value={password} onChangeText={setPassword} />
+      <PasswordInput placeholder="Confirmer le mot de passe" value={confirmPassword} onChangeText={setConfirmPassword} />
+      <View style={{ backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, marginTop: 8 }}>
+        <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 4, fontWeight: '600' }}>Le mot de passe doit contenir :</Text>
+        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 8 caractères</Text>
+        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 lettre majuscule (A-Z)</Text>
+        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 lettre minuscule (a-z)</Text>
+        <Text style={{ fontSize: 11, color: '#94a3b8' }}>• Au moins 1 chiffre (0-9)</Text>
+      </View>
+      {done ? (
+        <View style={[{ backgroundColor: '#dcfce7', borderLeftColor: '#22c55e', padding: 12, borderRadius: 8, marginTop: 16 }]}>
+          <Ionicons name="checkmark-circle" size={16} color="#22c55e" style={{ marginRight: 8 }} />
+          <Text style={{ color: '#166534', fontWeight: '600' }}>Mot de passe mis à jour avec succès !</Text>
+        </View>
+      ) : (
+        <View style={{ marginTop: 16, gap: 12 }}>
+          <TouchableOpacity
+            style={[auth.btn, (loading || !code.trim() || password.length < 8 || !confirmPassword) && { opacity: 0.6 }]}
+            disabled={loading || !code.trim() || password.length < 8 || !confirmPassword}
+            onPress={() => void handleSubmit()}
+          >
+            <Text style={auth.btnText}>{loading ? "Validation..." : "Mettre à jour"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ alignSelf: "center" }} onPress={() => onSwitch("login")}>
+            <Text style={auth.link}>Retour</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </AuthLayout>
+  );
+}
+
+function ResetPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "register" | "forgot" | "forgot-otp" | "forgot-new" | "reset") => void }) {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1084,26 +1241,27 @@ function ResetPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "registe
     setError(null);
     setLoading(true);
     try {
-      await authApi.resetPassword({ token: token.trim(), password });
+      await authApi.resetPassword({ email: email.trim(), code: code.trim(), password });
       setDone(true);
-      setTimeout(() => onSwitch("login"), 800);
+      setTimeout(() => onSwitch("login"), 1500);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(translateError(msg) || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
-  }, [onSwitch, password, token]);
+  }, [onSwitch, email, code, password]);
 
   return (
-    <AuthLayout title="Nouveau mot de passe" subtitle="Colle le token et choisis un nouveau mot de passe" mode="login" onSwitch={onSwitch}>
+    <AuthLayout title="Nouveau mot de passe" subtitle="Entre ton email, le code et ton nouveau mot de passe" mode="login" onSwitch={onSwitch}>
       {error ? (
         <View style={[auth.errorBox, { backgroundColor: '#fee2e2', borderLeftColor: '#ef4444' }]}>
           <Ionicons name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
           <Text style={[auth.error, { color: '#991b1b', flex: 1 }]}>{error}</Text>
         </View>
       ) : null}
-      <AuthInput placeholder="Token" value={token} onChangeText={setToken} autoCapitalize="none" />
+      <AuthInput placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <AuthInput placeholder="Code à 6 chiffres" value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} />
       <PasswordInput placeholder="Nouveau mot de passe" value={password} onChangeText={setPassword} />
       {done ? (
         <View style={[{ backgroundColor: '#dcfce7', borderLeftColor: '#22c55e', padding: 12, borderRadius: 8, marginTop: 16 }]}>
@@ -1113,8 +1271,8 @@ function ResetPasswordScreen({ onSwitch }: { onSwitch: (next: "login" | "registe
       ) : (
         <View style={{ marginTop: 16, gap: 12 }}>
           <TouchableOpacity
-            style={[auth.btn, (loading || !token.trim() || password.length < 8) && { opacity: 0.6 }]}
-            disabled={loading || !token.trim() || password.length < 8}
+            style={[auth.btn, (loading || !email.trim() || !code.trim() || password.length < 8) && { opacity: 0.6 }]}
+            disabled={loading || !email.trim() || !code.trim() || password.length < 8}
             onPress={() => void handleSubmit()}
           >
             <Text style={auth.btnText}>{loading ? "Validation..." : "Mettre à jour"}</Text>

@@ -181,8 +181,11 @@ export class AuthService {
       return { success: true };
     }
 
-    const token = randomBytes(48).toString('hex');
-    const tokenHash = this.hashToken(token);
+    // Delete any existing tokens for this user
+    await this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+
+    const code = String(randomInt(100000, 999999));
+    const tokenHash = this.hashToken(code);
     const ttlMinutes = Number(this.configService.get('PASSWORD_RESET_TOKEN_TTL_MINUTES') ?? 30);
     const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
@@ -194,24 +197,31 @@ export class AuthService {
       },
     });
 
-    const appBaseUrl = this.configService.getOrThrow<string>('WEB_APP_BASE_URL');
-    const resetUrl = `${appBaseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
-
-    await this.emailService.sendPasswordResetEmail(user.email, user.firstName, resetUrl);
+    await this.emailService.sendPasswordResetOtp(user.email, user.firstName, code);
 
     return { success: true };
   }
 
   async resetPassword(payload: ResetPasswordDto) {
-    const tokenHash = this.hashToken(payload.token);
+    const normalizedEmail = payload.email.toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired code');
+    }
+
+    const tokenHash = this.hashToken(payload.code);
 
     const record = await this.prisma.passwordResetToken.findUnique({
       where: { tokenHash },
       include: { user: true },
     });
 
-    if (!record || record.usedAt || record.expiresAt.getTime() <= Date.now()) {
-      throw new UnauthorizedException('Invalid or expired reset token');
+    if (!record || record.usedAt || record.expiresAt.getTime() <= Date.now() || record.userId !== user.id) {
+      throw new UnauthorizedException('Invalid or expired code');
     }
 
     const passwordHash = await this.hashPassword(payload.password);
