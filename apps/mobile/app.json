@@ -12,9 +12,7 @@
       [
         "expo-notifications",
         {
-          "sounds": [
-            "./assets/adhan.wav"
-          ]
+          "sounds": ["./assets/adhan.wav"]
         }
       ],
       [
@@ -34,11 +32,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.kabrak.oumoulsapp",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "audio",
-          "location",
-          "fetch"
-        ],
+        "UIBackgroundModes": ["audio", "location", "fetch"],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
