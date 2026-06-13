@@ -331,9 +331,94 @@ const PROPHET_QUIZ = [
   { question: 'Qui parlait aux animaux ?', options: ['Moussa', 'Issa', 'Sulayman', 'Yunus'], correct: 2 },
 ];
 
-type Tab = 'alphabet' | 'prophets' | 'lessons' | 'duas' | 'stories' | 'animals' | 'games';
+type Tab = 'alphabet' | 'prophets' | 'lessons' | 'duas' | 'coran' | 'stories' | 'animals' | 'games';
 type Prophet = typeof PROPHETS[0];
 type Lesson = typeof KIDS_LESSONS[0];
+
+type QuranVerseKid = {
+  arabic: string;
+  transliteration: string;
+  french: string;
+};
+type KidsSurah = {
+  id: number;
+  name: string;
+  arabicName: string;
+  emoji: string;
+  color: string;
+  verses: QuranVerseKid[];
+};
+
+const KIDS_SURAHS: KidsSurah[] = [
+  {
+    id: 1, name: 'Al-Fatiha', arabicName: 'الفاتحة', emoji: '🌟', color: '#1A7F64',
+    verses: [
+      { arabic: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', transliteration: 'Bismi-llāhi r-raḥmāni r-raḥīm', french: 'Au nom d\'Allah, le Tout Miséricordieux, le Très Miséricordieux' },
+      { arabic: 'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ', transliteration: 'Al-ḥamdu lillāhi rabbi l-ʿālamīn', french: 'Louange à Allah, Seigneur de l\'univers' },
+      { arabic: 'الرَّحْمَٰنِ الرَّحِيمِ', transliteration: 'Ar-raḥmāni r-raḥīm', french: 'Le Tout Miséricordieux, le Très Miséricordieux' },
+      { arabic: 'مَالِكِ يَوْمِ الدِّينِ', transliteration: 'Māliki yawmi d-dīn', french: 'Maître du Jour de la Rétribution' },
+      { arabic: 'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ', transliteration: 'Iyyāka naʿbudu wa iyyāka nastaʿīn', french: 'C\'est Toi que nous adorons, et c\'est Toi dont nous implorons le secours' },
+      { arabic: 'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ', transliteration: 'Ihdinā ṣ-ṣirāṭa l-mustaqīm', french: 'Guide-nous dans le droit chemin' },
+      { arabic: 'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ', transliteration: 'Ṣirāṭa l-ladhīna anʿamta ʿalayhim ghayri l-maghḍūbi ʿalayhim wa laḍ-ḍāllīn', french: 'Le chemin de ceux que Tu as comblés de faveurs, non pas le chemin de ceux qui encourent Ta colère, ni celui des égarés' },
+    ],
+  },
+  {
+    id: 112, name: 'Al-Ikhlas', arabicName: 'الإخلاص', emoji: '☝️', color: '#2563EB',
+    verses: [
+      { arabic: 'قُلْ هُوَ اللَّهُ أَحَدٌ', transliteration: 'Qul huwa-llāhu aḥad', french: 'Dis : Lui, Allah est Un' },
+      { arabic: 'اللَّهُ الصَّمَدُ', transliteration: 'Allāhu ṣ-ṣamad', french: 'Allah, l\'Absolu par excellence' },
+      { arabic: 'لَمْ يَلِدْ وَلَمْ يُولَدْ', transliteration: 'Lam yalid wa lam yūlad', french: 'Il n\'a pas engendré, Il n\'a pas été engendré' },
+      { arabic: 'وَلَمْ يَكُنْ لَهُ كُفُوًا أَحَدٌ', transliteration: 'Wa lam yakun lahu kufuwan aḥad', french: 'Et nul n\'est égal à Lui' },
+    ],
+  },
+  {
+    id: 113, name: 'Al-Falaq', arabicName: 'الفلق', emoji: '🌅', color: '#D97706',
+    verses: [
+      { arabic: 'قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ', transliteration: 'Qul aʿūdhu bi rabbi l-falaq', french: 'Dis : Je cherche protection auprès du Seigneur de l\'aube' },
+      { arabic: 'مِنْ شَرِّ مَا خَلَقَ', transliteration: 'Min sharri mā khalaq', french: 'Contre le mal de ce qu\'Il a créé' },
+      { arabic: 'وَمِنْ شَرِّ غَاسِقٍ إِذَا وَقَبَ', transliteration: 'Wa min sharri ghāsiqin idhā waqab', french: 'Et contre le mal de la nuit quand elle s\'approfondit' },
+      { arabic: 'وَمِنْ شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ', transliteration: 'Wa min sharri n-naffāthāti fi l-ʿuqad', french: 'Et contre le mal de celles qui soufflent sur les nœuds' },
+      { arabic: 'وَمِنْ شَرِّ حَاسِدٍ إِذَا حَسَدَ', transliteration: 'Wa min sharri ḥāsidin idhā ḥasad', french: 'Et contre le mal de l\'envieux quand il envie' },
+    ],
+  },
+  {
+    id: 114, name: 'An-Nas', arabicName: 'الناس', emoji: '👶', color: '#EC4899',
+    verses: [
+      { arabic: 'قُلْ أَعُوذُ بِرَبِّ النَّاسِ', transliteration: 'Qul aʿūdhu bi rabbi n-nās', french: 'Dis : Je cherche protection auprès du Seigneur des hommes' },
+      { arabic: 'مَلِكِ النَّاسِ', transliteration: 'Māliki n-nās', french: 'Roi des hommes' },
+      { arabic: 'إِلَٰهِ النَّاسِ', transliteration: 'Ilāhi n-nās', french: 'Dieu des hommes' },
+      { arabic: 'مِنْ شَرِّ الْوَسْوَاسِ الْخَنَّاسِ', transliteration: 'Min sharri l-waswāsi l-khannās', french: 'Contre le mal du mauvais insinuateur qui se retire' },
+      { arabic: 'الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ', transliteration: 'Alladhī yuwaswisu fī ṣudūri n-nās', french: 'Celui qui souffle le mal dans les poitrines des hommes' },
+      { arabic: 'مِنَ الْجِنَّةِ وَالنَّاسِ', transliteration: 'Mina l-jinnati wa n-nās', french: 'Parmi les djinns et les hommes' },
+    ],
+  },
+  {
+    id: 103, name: 'Al-Asr', arabicName: 'العصر', emoji: '⏳', color: '#7C3AED',
+    verses: [
+      { arabic: 'وَالْعَصْرِ', transliteration: 'Wal-ʿaṣr', french: 'Par le temps !' },
+      { arabic: 'إِنَّ الْإِنْسَانَ لَفِي خُسْرٍ', transliteration: 'Inna l-insāna lafī khusr', french: 'Que l\'homme est certes en perdition' },
+      { arabic: 'إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ', transliteration: 'Illā l-ladhīna āmanū wa ʿamilū ṣ-ṣāliḥāti wa tawāṣaw bi l-ḥaqqi wa tawāṣaw bi ṣ-ṣabr', french: 'Sauf ceux qui croient, accomplissent les bonnes œuvres, s\'engagent mutuellement dans la vérité et dans la patience' },
+    ],
+  },
+  {
+    id: 108, name: 'Al-Kawthar', arabicName: 'الكوثر', emoji: '🌊', color: '#0891B2',
+    verses: [
+      { arabic: 'إِنَّا أَعْطَيْنَاكَ الْكَوْثَرَ', transliteration: 'Innā aʿṭaynāka l-kawthar', french: 'Nous t\'avons certes accordé l\'Abondance' },
+      { arabic: 'فَصَلِّ لِرَبِّكَ وَانْحَرْ', transliteration: 'Fa ṣalli li rabbika wa nḥar', french: 'Accomplis la prière pour ton Seigneur et sacrifie' },
+      { arabic: 'إِنَّ شَانِئَكَ هُوَ الْأَبْتَرُ', transliteration: 'Inna shāni\'aka huwa l-abtar', french: 'Celui qui te hait, c\'est lui le privé de descendance' },
+    ],
+  },
+  {
+    id: 105, name: 'Al-Fil', arabicName: 'الفيل', emoji: '🐘', color: '#DC2626',
+    verses: [
+      { arabic: 'أَلَمْ تَرَ كَيْفَ فَعَلَ رَبُّكَ بِأَصْحَابِ الْفِيلِ', transliteration: 'Alam tara kayfa faʿala rabbuka bi aṣḥābi l-fīl', french: 'N\'as-tu pas vu ce qu\'a fait ton Seigneur aux gens de l\'Éléphant ?' },
+      { arabic: 'أَلَمْ يَجْعَلْ كَيْدَهُمْ فِي تَضْلِيلٍ', transliteration: 'Alam yajʿal kaydahum fī taḍlīl', french: 'N\'a-t-Il pas rendu leur stratagime vain ?' },
+      { arabic: 'وَأَرْسَلَ عَلَيْهِمْ طَيْرًا أَبَابِيلَ', transliteration: 'Wa arsala ʿalayhim ṭayran abābīl', french: 'Et envoyé contre eux des oiseaux par volées' },
+      { arabic: 'تَرْمِيهِمْ بِحِجَارَةٍ مِنْ سِجِّيلٍ', transliteration: 'Tarmīhim bi ḥijāratin min sijjīl', french: 'Qui leur lançaient des pierres d\'argile' },
+      { arabic: 'فَجَعَلَهُمْ كَعَصْفٍ مَأْكُولٍ', transliteration: 'Fa jaʿalahum ka ʿaṣfin ma\'kūl', french: 'Et les a rendus semblables à des épis dévorés' },
+    ],
+  },
+];
 
 export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
@@ -350,6 +435,7 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [selectedStory, setSelectedStory] = useState<typeof STORIES[0] | null>(null);
   const [selectedAnimal, setSelectedAnimal] = useState<typeof QURAN_ANIMALS[0] | null>(null);
+  const [selectedSurah, setSelectedSurah] = useState<KidsSurah | null>(null);
   const [prophetQuizIdx, setProphetQuizIdx] = useState(0);
   const [prophetQuizScore, setProphetQuizScore] = useState(0);
   const [prophetQuizAnswered, setProphetQuizAnswered] = useState(false);
@@ -421,7 +507,8 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
     { key: 'prophets', label: 'Prophètes', emoji: '🌟' },
     { key: 'lessons', label: 'Islam', emoji: '📚' },
     { key: 'duas', label: 'Du\'as', emoji: '🤲' },
-    { key: 'stories', label: 'Histoires', emoji: '📖' },
+    { key: 'coran', label: 'Coran', emoji: '📖' },
+    { key: 'stories', label: 'Histoires', emoji: '�' },
     { key: 'animals', label: 'Animaux', emoji: '🦁' },
     { key: 'games', label: 'Jeux', emoji: '🎮' },
   ];
@@ -484,6 +571,7 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
               setSelectedLesson(null);
               setSelectedStory(null);
               setSelectedAnimal(null);
+              setSelectedSurah(null);
               setQuizMode(false);
               setProphetQuizIdx(0);
               setProphetQuizScore(0);
@@ -744,6 +832,73 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
               <Text style={[k.duaArabic, { color: p.primaryDark }]}>{dua.arabic}</Text>
               <Text style={[k.duaTranslit, { color: p.textSoft }]}>{dua.transliteration}</Text>
               <Text style={[k.duaFrench, { color: p.text }]}>{dua.french}</Text>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* ── CORAN TAB ── */}
+      {activeTab === 'coran' && !selectedSurah && (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          <Text style={[k.sectionTitle, { color: p.text, marginBottom: 12 }]}>📖 Mon Coran</Text>
+          <Text style={[k.prophetDesc, { color: p.textSoft, marginBottom: 16 }]}>Sourates courtes à apprendre</Text>
+          {KIDS_SURAHS.map((surah) => (
+            <TouchableOpacity
+              key={surah.id}
+              style={[k.prophetCard, { backgroundColor: p.card, borderColor: p.border }]}
+              onPress={() => setSelectedSurah(surah)}
+              activeOpacity={0.75}
+            >
+              <View style={[k.prophetIcon, { backgroundColor: surah.color + '22' }]}>
+                <Text style={k.prophetEmoji}>{surah.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[k.prophetName, { color: p.text }]}>{surah.name}</Text>
+                <Text style={[k.prophetDesc, { color: p.textSoft }]}>{surah.verses.length} versets · {surah.arabicName}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={p.muted ?? p.textSoft} />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+      {activeTab === 'coran' && selectedSurah && (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => setSelectedSurah(null)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 6 }}>
+            <Ionicons name="chevron-back" size={18} color={p.primaryDark} />
+            <Text style={[k.backLink, { color: p.primaryDark }]}>Toutes les sourates</Text>
+          </TouchableOpacity>
+          <View style={[k.detailHeader, { backgroundColor: selectedSurah.color + '18', borderColor: selectedSurah.color + '44' }]}>
+            <Text style={{ fontSize: 48 }}>{selectedSurah.emoji}</Text>
+            <Text style={[k.detailName, { color: selectedSurah.color, marginTop: 8 }]}>{selectedSurah.arabicName}</Text>
+            <Text style={[k.detailShort, { color: p.textSoft }]}>{selectedSurah.name} · {selectedSurah.verses.length} versets</Text>
+          </View>
+
+          {selectedSurah.id !== 9 && (
+            <View style={{ alignItems: 'center', marginVertical: 12 }}>
+              <Text style={{ fontSize: 20, fontFamily: 'Amiri-Regular', color: p.primaryDark }}>بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</Text>
+            </View>
+          )}
+
+          {selectedSurah.verses.map((verse, i) => (
+            <View key={i} style={[k.duaCard, { backgroundColor: p.card, borderColor: p.border }]}>
+              <View style={k.duaHeader}>
+                <View style={[k.verseBadge, { backgroundColor: selectedSurah.color + '22' }]}>
+                  <Text style={[k.verseBadgeText, { color: selectedSurah.color }]}>{i + 1}</Text>
+                </View>
+                <TouchableOpacity
+                  style={[k.duaPlayBtn, { backgroundColor: playingId === `surah-${selectedSurah.id}-${i}` ? '#D1FAE5' : p.primaryDark + '15' }]}
+                  onPress={() => playWithFeedback(`surah-${selectedSurah.id}-${i}`, verse.arabic)}
+                >
+                  <Ionicons
+                    name={playingId === `surah-${selectedSurah.id}-${i}` ? 'volume-high' : 'play'}
+                    size={16}
+                    color={p.primaryDark}
+                  />
+                </TouchableOpacity>
+              </View>
+              <Text style={[k.surahArabic, { color: p.primaryDark }]}>{verse.arabic}</Text>
+              <Text style={[k.duaTranslit, { color: p.textSoft }]}>{verse.transliteration}</Text>
+              <Text style={[k.duaFrench, { color: p.text }]}>{verse.french}</Text>
             </View>
           ))}
         </ScrollView>
@@ -1042,6 +1197,11 @@ const k = StyleSheet.create({
   duaTranslit: { fontSize: 13, fontStyle: 'italic', marginBottom: 4 },
   duaFrench: { fontSize: 13 },
   duaPlayBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+
+  // Quran
+  verseBadge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  verseBadgeText: { fontSize: 13, fontWeight: '700' },
+  surahArabic: { fontSize: 20, fontFamily: 'Amiri-Regular', textAlign: 'right', marginBottom: 6 },
 
   // Games
   statsCard: { margin: 0, borderRadius: 16, padding: 20, borderWidth: 1 },
