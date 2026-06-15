@@ -371,7 +371,10 @@ function MainApp({ user }: { user: AuthUser }) {
           listeners={({ navigation }) => ({
             tabPress: (e) => {
               e.preventDefault();
-              navigation.navigate('Coran', { screen: 'ImaneQuran' });
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'ImaneQuran' }],
+              });
             },
           })}
         >
