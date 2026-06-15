@@ -206,6 +206,11 @@ export function ImaneQuranScreen({
   const [showSurahList, setShowSurahList] = useState(true);
   const [showBookmarksPanel, setShowBookmarksPanel] = useState(false);
 
+  // Force show surah list on mount to ensure correct initial state
+  useEffect(() => {
+    setShowSurahList(true);
+  }, []);
+
   const lastReadKey = useRef(`oumoul.quran.lastRead.${user.email}`).current;
   const bookmarksKey = useRef(`oumoul.quran.bookmarks.${user.email}`).current;
   const fontSizeKey = useRef(`oumoul.quran.fontSize.${user.email}`).current;
