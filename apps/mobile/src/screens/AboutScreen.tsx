@@ -12,23 +12,7 @@ export function AboutScreen({ onBack }: { onBack: () => void }) {
   const { width } = Dimensions.get("window");
 
   const handleEmail = () => {
-    Linking.openURL("mailto:contact@nissa-imane.com");
-  };
-
-  const handleWebsite = () => {
-    Linking.openURL("https://nissa-imane.com");
-  };
-
-  const handleInstagram = () => {
-    Linking.openURL("https://instagram.com/nissaimane");
-  };
-
-  const handlePrivacy = () => {
-    Linking.openURL("https://kabrak-eng.com/privacy");
-  };
-
-  const handleTerms = () => {
-    Linking.openURL("https://kabrak-eng.com/terms");
+    Linking.openURL("mailto:contact@kabrakeng.com");
   };
 
   return (
@@ -38,7 +22,7 @@ export function AboutScreen({ onBack }: { onBack: () => void }) {
         <BackButton onPress={onBack} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.headerTitle, { color: p.text }]}>À Propos</Text>
-          <Text style={[styles.headerSub, { color: p.textSoft }]}>🌸 Nissa Imane</Text>
+          <Text style={[styles.headerSub, { color: p.textSoft }]}>� Sirat An-Nour</Text>
         </View>
         <View style={styles.headerIcon}>
           <Ionicons name="heart" size={24} color="#EC4899" />
@@ -54,7 +38,7 @@ export function AboutScreen({ onBack }: { onBack: () => void }) {
               <Text style={styles.heroLogoText}>🌸</Text>
             </View>
             <View style={styles.heroInfo}>
-              <Text style={[styles.heroName, { color: p.text }]}>Nissa Imane</Text>
+              <Text style={[styles.heroName, { color: p.text }]}>Sirat An-Nour</Text>
               <Text style={[styles.heroTagline, { color: p.textSoft }]}>Ton compagnon spirituel quotidien</Text>
               <View style={styles.versionBadge}>
                 <Text style={styles.versionText}>Version 2.0.0</Text>
@@ -63,7 +47,7 @@ export function AboutScreen({ onBack }: { onBack: () => void }) {
           </View>
           
           <Text style={[styles.heroDescription, { color: p.text }]}>
-            🌟 Bienvenue dans ton oasis spirituelle ! Nissa Imane est plus qu'une app, c'est ta compagne de route 
+            🌟 Bienvenue dans ton oasis spirituelle ! Sirat An-Nour est plus qu'une app, c'est ta compagne de route 
             vers une connexion plus profonde avec ta foi. Nous avons créé chaque fonctionnalité avec amour et 
             intention pour t'accompagner dans chaque moment de ta journée spirituelle.
           </Text>
@@ -126,47 +110,16 @@ export function AboutScreen({ onBack }: { onBack: () => void }) {
 
         {/* Contact */}
         <View style={[styles.section, { backgroundColor: p.card }]}>
-          <Text style={[styles.sectionTitle, { color: p.text }]}>📬 Restons en contact !</Text>
+          <Text style={[styles.sectionTitle, { color: p.text }]}>📬 Nous contacter</Text>
           <View style={styles.contactGrid}>
             <TouchableOpacity style={[styles.contactCard, { backgroundColor: p.bgAlt }]} onPress={handleEmail}>
               <View style={[styles.contactIcon, { backgroundColor: '#10B981' }]}>
                 <Ionicons name="mail" size={20} color="#fff" />
               </View>
-              <Text style={[styles.contactTitle, { color: p.text }]}>Email</Text>
-              <Text style={[styles.contactSubtext, { color: p.textSoft }]}>contact@nissa-imane.com</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={[styles.contactCard, { backgroundColor: p.bgAlt }]} onPress={handleWebsite}>
-              <View style={[styles.contactIcon, { backgroundColor: '#3B82F6' }]}>
-                <Ionicons name="globe" size={20} color="#fff" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.contactTitle, { color: p.text }]}>Email</Text>
+                <Text style={[styles.contactSubtext, { color: p.textSoft }]}>contact@kabrakeng.com</Text>
               </View>
-              <Text style={[styles.contactTitle, { color: p.text }]}>Site Web</Text>
-              <Text style={[styles.contactSubtext, { color: p.textSoft }]}>nissa-imane.com</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={[styles.contactCard, { backgroundColor: p.bgAlt }]} onPress={handleInstagram}>
-              <View style={[styles.contactIcon, { backgroundColor: '#EC4899' }]}>
-                <Ionicons name="logo-instagram" size={20} color="#fff" />
-              </View>
-              <Text style={[styles.contactTitle, { color: p.text }]}>Instagram</Text>
-              <Text style={[styles.contactSubtext, { color: p.textSoft }]}>@nissaimane</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Legal Links */}
-        <View style={[styles.section, { backgroundColor: p.card }]}>
-          <Text style={[styles.sectionTitle, { color: p.text }]}>⚖️ Informations Légales</Text>
-          <View style={styles.legalList}>
-            <TouchableOpacity style={[styles.legalItem, { backgroundColor: p.bgAlt }]} onPress={handlePrivacy}>
-              <Ionicons name="lock-closed" size={20} color={p.primary} />
-              <Text style={[styles.legalText, { color: p.text }]}>Politique de Confidentialité</Text>
-              <Ionicons name="chevron-forward" size={16} color={p.textSoft} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={[styles.legalItem, { backgroundColor: p.bgAlt }]} onPress={handleTerms}>
-              <Ionicons name="document-text" size={20} color={p.primary} />
-              <Text style={[styles.legalText, { color: p.text }]}>Conditions d'Utilisation</Text>
               <Ionicons name="chevron-forward" size={16} color={p.textSoft} />
             </TouchableOpacity>
           </View>
@@ -174,10 +127,11 @@ export function AboutScreen({ onBack }: { onBack: () => void }) {
 
         {/* Footer */}
         <View style={styles.footer}>
+          <Text style={{ fontSize: 28, marginBottom: 4 }}>�</Text>
           <Text style={[styles.footerText, { color: p.text }]}>Sirat An-Nour</Text>
           <Text style={[styles.footerSubtext, { color: p.textSoft }]}>Version 2.0.0</Text>
-          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>Développé par KABRAK ENG</Text>
-          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>2025</Text>
+          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</Text>
+          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>© 2026 — Tous droits réservés</Text>
         </View>
       </ScrollView>
     </View>

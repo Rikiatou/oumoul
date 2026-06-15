@@ -11,7 +11,7 @@ export function TermsScreen({ onBack }: { onBack: () => void }) {
   const { palette: p } = useTheme();
 
   const handleContact = () => {
-    Linking.openURL("mailto:kabrakeng@gmail.com");
+    Linking.openURL("mailto:contact@kabrakeng.com");
   };
 
   return (
@@ -32,7 +32,7 @@ export function TermsScreen({ onBack }: { onBack: () => void }) {
         <View style={[styles.card, { backgroundColor: p.card }]}>
           <Text style={[styles.cardTitle, { color: p.text }]}>📋 Conditions Générales</Text>
           <Text style={[styles.cardDesc, { color: p.text }]}>
-            En utilisant Nissa Imane Tracker, vous acceptez ces conditions d'utilisation. 
+            En utilisant Sirat An-Nour, vous acceptez ces conditions d'utilisation. 
             Veuillez les lire attentivement avant d'utiliser notre application.
           </Text>
         </View>
@@ -41,7 +41,7 @@ export function TermsScreen({ onBack }: { onBack: () => void }) {
         <View style={[styles.section, { backgroundColor: p.card }]}>
           <Text style={[styles.sectionTitle, { color: p.text }]}>✅ Acceptation des Conditions</Text>
           <Text style={[styles.sectionText, { color: p.text }]}>
-            En installant et utilisant Nissa Imane Tracker, vous acceptez sans réserve les présentes 
+            En installant et utilisant Sirat An-Nour, vous acceptez sans réserve les présentes 
             conditions. Si vous n'acceptez pas ces conditions, n'utilisez pas l'application.
           </Text>
         </View>
@@ -50,7 +50,7 @@ export function TermsScreen({ onBack }: { onBack: () => void }) {
         <View style={[styles.section, { backgroundColor: p.card }]}>
           <Text style={[styles.sectionTitle, { color: p.text }]}>📱 Description du Service</Text>
           <Text style={[styles.sectionText, { color: p.text }]}>
-            Nissa Imane Tracker est une application mobile conçue pour aider les musulmans dans leur 
+            Sirat An-Nour est une application mobile conçue pour aider les musulmans dans leur 
             pratique spirituelle quotidienne à travers :
           </Text>
           <View style={styles.featuresList}>
@@ -110,16 +110,16 @@ export function TermsScreen({ onBack }: { onBack: () => void }) {
           </Text>
           <TouchableOpacity style={[styles.contactBtn, { backgroundColor: p.primary }]} onPress={handleContact}>
             <Ionicons name="mail" size={20} color="#fff" />
-            <Text style={styles.contactBtnText}>kabrakeng@gmail.com</Text>
+            <Text style={styles.contactBtnText}>contact@kabrakeng.com</Text>
           </TouchableOpacity>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: p.text }]}>Conditions applicables à Nissa Imane Tracker</Text>
-          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>Version 2.0.0 - 19 février 2025</Text>
-          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>Développé par KABRAK ENG</Text>
-          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>© 2025</Text>
+          <Text style={[styles.footerText, { color: p.text }]}>Conditions applicables à Sirat An-Nour</Text>
+          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>Version 2.1.0 — 2026</Text>
+          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>KABRAK ENG</Text>
+          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>© 2026</Text>
         </View>
       </ScrollView>
     </View>

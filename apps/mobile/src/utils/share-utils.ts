@@ -266,7 +266,7 @@ function formatContentForSharing(content: ShareableContent): string {
     content.text || content.message,
     '',
     '═══════════════════════════════════════',
-    '        🌸 Nissa Imane Tracker 🌸',
+    '        � Sirat An-Nour �',
     '     Ton compagnon spirituel quotidien',
     '═══════════════════════════════════════',
   ];

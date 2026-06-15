@@ -24,8 +24,8 @@ function HeaderBase({ user, todayLabel, hijriLabel, locationLabel, isLocationLoa
       <View style={styles.topRow}>
         <View style={{ flex: 1 }}>
           <View style={styles.greetingBadge}>
-            <Text style={[styles.greetingArabic, { color: palette.primaryDark }]}>السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ</Text>
-            <Text style={[styles.greeting, { color: palette.primaryDark }]}>Assalamou Alaikoum Wa Rahmatoullahi Wa Barakatuh</Text>
+            <Text style={[styles.greetingArabic, { color: palette.primaryDark }]}>اَلسَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ</Text>
+            <Text style={[styles.greeting, { color: palette.primaryDark }]}>As-salāmu ʿalaykum wa-raḥmatullāhi wa-barakātuh</Text>
           </View>
           <Text style={[styles.title, { color: palette.text }]}>
             {user.firstName} 🤲

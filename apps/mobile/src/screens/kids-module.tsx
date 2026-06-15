@@ -745,11 +745,28 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
             <Text style={[k.detailName, { color: selectedProphet.color, marginTop: 8 }]}>{selectedProphet.name}</Text>
             <Text style={[k.detailShort, { color: p.textSoft }]}>{selectedProphet.short}</Text>
           </View>
+          <TouchableOpacity
+            style={[k.storyReadBtn, { backgroundColor: selectedProphet.color, alignSelf: 'center', marginBottom: 16 }]}
+            onPress={() => playWithFeedback(`prophet-${selectedProphet.name}`, selectedProphet.story.join('. '), 'fr-FR')}
+          >
+            <Ionicons name={playingId === `prophet-${selectedProphet.name}` ? 'volume-high' : 'play'} size={16} color="#fff" />
+            <Text style={k.storyReadBtnText}>Lire l'histoire 🔊</Text>
+          </TouchableOpacity>
           <Text style={[k.storyTitle, { color: p.text }]}>Son histoire</Text>
           {selectedProphet.story.map((line, i) => (
-            <View key={i} style={[k.storyItem, { backgroundColor: p.card, borderColor: p.border }]}>
-              <Text style={[k.storyText, { color: p.text }]}>{line}</Text>
-            </View>
+            <TouchableOpacity
+              key={i}
+              style={[k.storyItem, { backgroundColor: p.card, borderColor: p.border }]}
+              onPress={() => playWithFeedback(`prophet-line-${i}`, line, 'fr-FR')}
+              activeOpacity={0.7}
+            >
+              <Text style={[k.storyText, { color: p.text, flex: 1 }]}>{line}</Text>
+              <Ionicons
+                name={playingId === `prophet-line-${i}` ? 'volume-high' : 'volume-medium-outline'}
+                size={14}
+                color={playingId === `prophet-line-${i}` ? selectedProphet.color : p.muted ?? p.textSoft}
+              />
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
@@ -936,11 +953,31 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
           <View style={[k.detailHeader, { backgroundColor: selectedStory.color + '18', borderColor: selectedStory.color + '44' }]}>
             <Text style={{ fontSize: 56 }}>{selectedStory.emoji}</Text>
             <Text style={[k.detailName, { color: selectedStory.color, marginTop: 8 }]}>{selectedStory.title}</Text>
+            <TouchableOpacity
+              style={[k.storyReadBtn, { backgroundColor: selectedStory.color }]}
+              onPress={() => {
+                const full = selectedStory.lines.join('. ');
+                speak(full, 'fr-FR');
+              }}
+            >
+              <Ionicons name={playingId === `story-${selectedStory.title}` ? 'volume-high' : 'play'} size={16} color="#fff" />
+              <Text style={k.storyReadBtnText}>Lire toute l'histoire 🔊</Text>
+            </TouchableOpacity>
           </View>
           {selectedStory.lines.map((line, i) => (
-            <View key={i} style={[k.storyItem, { backgroundColor: p.card, borderColor: p.border }]}>
-              <Text style={[k.storyText, { color: p.text }]}>{line}</Text>
-            </View>
+            <TouchableOpacity
+              key={i}
+              style={[k.storyItem, { backgroundColor: p.card, borderColor: p.border }]}
+              onPress={() => playWithFeedback(`story-line-${i}`, line, 'fr-FR')}
+              activeOpacity={0.7}
+            >
+              <Text style={[k.storyText, { color: p.text, flex: 1 }]}>{line}</Text>
+              <Ionicons
+                name={playingId === `story-line-${i}` ? 'volume-high' : 'volume-medium-outline'}
+                size={16}
+                color={playingId === `story-line-${i}` ? selectedStory.color : p.muted ?? p.textSoft}
+              />
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
@@ -973,7 +1010,14 @@ export function KidsModuleScreen({ onBack }: { onBack: () => void }) {
           <View style={[k.letterDetail, { backgroundColor: p.card }]}>
             <Text style={k.detailEmoji}>{selectedAnimal.emoji}</Text>
             <Text style={[k.detailLetter, { color: p.primaryDark }]}>{selectedAnimal.arabic}</Text>
-            <Text style={[k.detailName, { color: p.text }]}>{selectedAnimal.name}</Text>
+            <TouchableOpacity
+              style={[k.storyReadBtn, { backgroundColor: p.primaryDark, marginTop: 8 }]}
+              onPress={() => playWithFeedback(`animal-${selectedAnimal.name}`, selectedAnimal.arabic, 'ar-SA')}
+            >
+              <Ionicons name={playingId === `animal-${selectedAnimal.name}` ? 'volume-high' : 'volume-medium'} size={16} color="#fff" />
+              <Text style={k.storyReadBtnText}>Écouter en arabe 🔊</Text>
+            </TouchableOpacity>
+            <Text style={[k.detailName, { color: p.text, marginTop: 12 }]}>{selectedAnimal.name}</Text>
             <Text style={[k.detailTranslit, { color: p.textSoft }]}>{selectedAnimal.mention}</Text>
             <View style={[k.exampleBox, { backgroundColor: p.bgAlt ?? p.bg, borderColor: p.border }]}>
               <Text style={[k.exampleArabic, { color: p.text }]}>{selectedAnimal.fact}</Text>
@@ -1170,7 +1214,7 @@ const k = StyleSheet.create({
   detailHeader: { alignItems: 'center', padding: 24, borderRadius: 20, borderWidth: 1, marginBottom: 20 },
   detailShort: { fontSize: 13, marginTop: 6, textAlign: 'center' },
   storyTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10 },
-  storyItem: { flexDirection: 'row', padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
+  storyItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
   storyText: { fontSize: 14, lineHeight: 22, flex: 1 },
 
   // Lesson content
@@ -1216,4 +1260,6 @@ const k = StyleSheet.create({
   audioBtnText: { fontSize: 14, fontWeight: '600' },
   hintText: { fontSize: 12, textAlign: 'center', marginTop: 12, marginBottom: 4, fontStyle: 'italic' },
   starReward: { fontSize: 28, position: 'absolute', top: '30%' },
+  storyReadBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginTop: 12 },
+  storyReadBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });

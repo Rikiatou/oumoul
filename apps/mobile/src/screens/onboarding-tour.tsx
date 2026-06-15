@@ -90,7 +90,7 @@ const STEPS: OnboardingStep[] = [
     iconColor: '#1A7F64',
     iconBg: 'rgba(26,127,100,0.12)',
     title: 'Tu es prête !',
-    description: 'Bismillah ! Ton parcours spirituel commence maintenant. Qu\'Allah accepte tes adorations et te guide sur le droit chemin.',
+    description: 'Qu\'Allah accepte tes adorations et te guide sur le droit chemin. Âmîn.',
   },
 ];
 
@@ -212,8 +212,11 @@ export function OnboardingTourScreen({ onFinish }: { onFinish: () => void }) {
 
         <View style={{ flex: 1 }} />
 
+        <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          <Text style={st.basmalaSetup}>بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</Text>
+        </View>
         <TouchableOpacity style={st.nextBtn} onPress={onFinish} activeOpacity={0.8}>
-          <Text style={st.nextBtnText}>Commencer — Bismillah</Text>
+          <Text style={st.nextBtnText}>Commencer</Text>
           <Ionicons name="checkmark" size={18} color="#fff" />
         </TouchableOpacity>
 
@@ -252,6 +255,9 @@ export function OnboardingTourScreen({ onFinish }: { onFinish: () => void }) {
         viewabilityConfig={viewabilityConfig}
         renderItem={({ item }) => (
           <View style={[st.slide, { width: SCREEN_WIDTH }]}>
+            {item.id === 'ready' && (
+              <Text style={st.basmala}>بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</Text>
+            )}
             <View style={[st.iconCircle, { backgroundColor: item.iconBg }]}>
               <Ionicons name={item.icon} size={48} color={item.iconColor} />
             </View>
@@ -301,4 +307,19 @@ const st = StyleSheet.create({
   permSub: { fontSize: 12, marginTop: 3 },
   permBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
   permBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  basmala: {
+    fontFamily: 'Amiri-Regular',
+    fontSize: 22,
+    color: palette.primaryDark,
+    textAlign: 'center',
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  basmalaSetup: {
+    fontFamily: 'Amiri-Regular',
+    fontSize: 20,
+    color: palette.primaryDark,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
 });

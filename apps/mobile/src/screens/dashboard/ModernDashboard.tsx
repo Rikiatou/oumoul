@@ -544,9 +544,6 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
     navigation.navigate('ImaneCycle');
   };
 
-  const handleNavigateToQuranAudio = () => {
-    navigation.navigate('Coran', { screen: 'QuranAudio' });
-  };
 
   const handleNavigateToMosque = () => {
     navigation.navigate('Prière', { screen: 'MosqueFinder' });
@@ -566,6 +563,14 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
 
   const handleNavigateToTasbih = () => {
     navigation.navigate('Apprendre', { screen: 'Tasbih' });
+  };
+
+  const handleNavigateToGoals = () => {
+    navigation.navigate('Apprendre', { screen: 'PersonalGoals' });
+  };
+
+  const handleNavigateToAI = () => {
+    navigation.navigate('Plus', { screen: 'AISystem' });
   };
 
   const locationLabel = detectedLoc.city && detectedLoc.country
@@ -665,7 +670,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
             <Ionicons name="moon" size={22} color="#fff" />
             <View style={{ flex: 1 }}>
               <Text style={s.countdownTitle}>🌙 Ramadan {new Date().getFullYear()}</Text>
-              <Text style={s.countdownSub}>Jour {ramadanInfo.dayNumber}/{ramadanInfo.totalDays} · Qu'Allah accepte ton jeûne</Text>
+              <Text style={s.countdownSub}>Jour {ramadanInfo.dayNumber}/{ramadanInfo.totalDays} · Qu'Allāh accepte ton jeûne et tes prières</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
@@ -684,8 +689,8 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
         <View style={[s.countdownBanner, { backgroundColor: '#E65100' }]}>
           <Ionicons name="gift" size={22} color="#fff" />
           <View style={{ flex: 1 }}>
-            <Text style={s.countdownTitle}>{eidInfo === 0 ? 'Aïd Moubarak ! 🎉' : `Aïd al-Fitr dans ${eidInfo} jour${eidInfo > 1 ? 's' : ''}`}</Text>
-            <Text style={s.countdownSub}>Qu'Allah accepte notre jeûne et nos bonnes actions</Text>
+            <Text style={s.countdownTitle}>{eidInfo === 0 ? 'Aïd Moubarek ! 🎉' : `Aïd al-Fitr dans ${eidInfo} jour${eidInfo > 1 ? 's' : ''}`}</Text>
+            <Text style={s.countdownSub}>Taqabbal Allāhu minnā wa minkum — Qu'Allāh accepte nos bonnes actions</Text>
           </View>
         </View>
       ) : null}
@@ -711,27 +716,27 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
 
       {/* ═══ BLOC 5 : MÉMORISATION & APPRENTISSAGE ═══ */}
       <View style={s.section}>
-        <Text style={[s.sectionTitle, { color: palette.text }]}>📖 Mémorisation & Apprentissage</Text>
+        <Text style={[s.sectionTitle, { color: palette.text }]}>📖 Coran & Apprentissage</Text>
         <View style={s.memGrid}>
           <TouchableOpacity style={[s.memCard, { backgroundColor: palette.primary }]} onPress={handleNavigateToQuran} activeOpacity={0.85}>
             <Ionicons name="book" size={24} color="#fff" />
-            <Text style={s.memCardTitle}>Lire le Coran</Text>
-            <Text style={s.memCardSub}>{quranLastSurah ? `Reprendre ${quranLastSurah}` : 'Commencer maintenant'}</Text>
+            <Text style={s.memCardTitle}>Lire le Saint Coran</Text>
+            <Text style={s.memCardSub}>{quranLastSurah ? `Reprendre ${quranLastSurah}` : 'Commencer la lecture'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.memCard, { backgroundColor: palette.accent }]} onPress={() => navigation.navigate('Coran', { screen: 'QuranWords' })} activeOpacity={0.85}>
             <Ionicons name="language" size={24} color="#fff" />
             <Text style={s.memCardTitle}>Vocabulaire</Text>
             <Text style={s.memCardSub}>Apprendre les mots du Coran</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.memCard, { backgroundColor: palette.secondary }]} onPress={handleNavigateToQuranAudio} activeOpacity={0.85}>
+          <TouchableOpacity style={[s.memCard, { backgroundColor: palette.secondary }]} onPress={handleNavigateToQuran} activeOpacity={0.85}>
             <Ionicons name="musical-note" size={24} color="#fff" />
             <Text style={s.memCardTitle}>Écouter</Text>
-            <Text style={s.memCardSub}>Coran audio par récitateur</Text>
+            <Text style={s.memCardSub}>Audio intégré dans la lecture</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.memCard, { backgroundColor: '#7B1FA2' }]} onPress={() => navigation.navigate('Apprendre', { screen: 'AllahNames' })} activeOpacity={0.85}>
             <Ionicons name="heart" size={24} color="#fff" />
-            <Text style={s.memCardTitle}>99 Noms</Text>
-            <Text style={s.memCardSub}>Mémoriser les noms d'Allah</Text>
+            <Text style={s.memCardTitle}>99 Noms d'Allāh</Text>
+            <Text style={s.memCardSub}>Al-Asmā' al-Ḥusnā</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -741,6 +746,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
         <Text style={[s.sectionTitle, { color: palette.text }]}>⚡ Accès rapide</Text>
         <View style={s.quickRow}>
           {[
+            { label: 'Objectifs', icon: 'flag'       as const, onPress: handleNavigateToGoals,    color: '#E67E22' },
             { label: 'Dhikr',     icon: 'radio'      as const, onPress: handleNavigateToDhikr,    color: palette.primary },
             { label: 'Tasbih',    icon: 'radio-button-on' as const, onPress: handleNavigateToTasbih, color: palette.accent },
             { label: 'Mosquées',  icon: 'business'   as const, onPress: handleNavigateToMosque,   color: palette.secondary },
@@ -748,6 +754,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
             { label: 'Zakat',     icon: 'calculator' as const, onPress: handleNavigateToZakat,    color: '#388E3C' },
             { label: 'Calendrier',icon: 'calendar'   as const, onPress: handleNavigateToCalendar, color: '#7B1FA2' },
             { label: 'Cycle',     icon: 'heart'      as const, onPress: handleNavigateToCycle,    color: '#C62828' },
+            { label: 'IA',        icon: 'sparkles'   as const, onPress: handleNavigateToAI,       color: '#6366F1' },
           ].map(item => (
             <TouchableOpacity key={item.label} style={s.quickItem} onPress={item.onPress} activeOpacity={0.8}>
               <View style={[s.quickIcon, { backgroundColor: item.color + '18' }]}>

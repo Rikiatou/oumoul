@@ -43,7 +43,7 @@ export function WelcomeLandingScreen({ onGetStarted }: WelcomeLandingProps) {
         </View>
 
         {/* App name */}
-        <Text style={s.appName}>Nissa Imane{"\n"}Tracker</Text>
+        <Text style={s.appName}>Sirat An-Nour</Text>
         <View style={s.divider} />
         <Text style={s.tagline}>
           Ton compagnon spirituel{"\n"}au quotidien

@@ -37,13 +37,13 @@ import { ImaneCycleScreen } from "./src/screens/imane-cycle";
 import { ImaneRamadanScreen } from "./src/screens/imane-ramadan";
 import { RamadanCatchupScreen } from "./src/screens/ramadan-catchup";
 import { DhikrScreen } from "./src/screens/DhikrMain";
+import { PersonalGoalsScreen } from "./src/screens/personal-goals";
 import { QiblaScreen } from "./src/screens/qibla";
 import { HijriCalendarScreen } from "./src/screens/hijri-calendar";
 import { PrayerSettingsScreen } from "./src/screens/prayer-settings";
 import { WelcomeScreen } from "./src/screens/welcome";
 import { WelcomeLandingScreen } from "./src/screens/welcome-landing";
 import { PrayerTrackingScreen } from "./src/screens/prayer-tracking";
-import { QuranAudioScreen } from "./src/screens/quran-audio";
 import { AllahNamesScreen } from "./src/screens/allah-names";
 import { TasbihScreen } from "./src/screens/tasbih";
 import { MosqueFinderScreen } from "./src/screens/mosque-finder";
@@ -461,6 +461,9 @@ function LearnStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="DhikrMain" options={{ animation: "slide_from_right" }}>
         {(props) => <DhikrScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
+      <Stack.Screen name="PersonalGoals" options={{ animation: "slide_from_right" }}>
+        {(props) => <PersonalGoalsScreen user={user} onBack={() => props.navigation.goBack()} />}
+      </Stack.Screen>
       <Stack.Screen name="Dua" options={{ animation: "slide_from_right" }}>
         {(props) => <DuaScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
@@ -569,9 +572,6 @@ function SettingsStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="RecitationChecker" options={{ animation: "slide_from_right" }}>
         {(props) => <RecitationCheckerScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
-      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
-      </Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -585,7 +585,6 @@ function QuranStack({ user }: { user: AuthUser }) {
             user={user}
             onBack={() => props.navigation.goBack()}
             onOpenTafsir={(surahId, ayah, locale) => props.navigation.navigate('Tafsir' as never, ({ surahId, ayah, locale, autoLoad: true } as never))}
-            onOpenAudio={() => props.navigation.navigate('QuranAudio' as never)}
             onOpenWords={() => props.navigation.navigate('QuranWords' as never)}
             onOpenRecitation={() => props.navigation.navigate('RecitationChecker' as never)}
           />
@@ -599,9 +598,6 @@ function QuranStack({ user }: { user: AuthUser }) {
             initialSelection={(props.route.params as any) ?? null}
           />
         )}
-      </Stack.Screen>
-      <Stack.Screen name="QuranAudio" options={{ animation: "slide_from_right" }}>
-        {(props) => <QuranAudioScreen user={user} onBack={() => props.navigation.goBack()} />}
       </Stack.Screen>
       <Stack.Screen name="QuranWords" options={{ animation: "slide_from_right" }}>
         {(props) => <QuranWordsScreen user={user} onBack={() => props.navigation.goBack()} initialWordId={(props.route.params as any)?.initialWordId} />}
@@ -671,6 +667,7 @@ function LearnHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
     {
       title: "📿 Spiritualité quotidienne",
       items: [
+        { key: "goals", label: "Mes Objectifs", sub: "Objectifs islamiques + rappels personnalisés", icon: "flag", screen: "PersonalGoals", color: "#E67E22" },
         { key: "dhikr", label: "Dhikr & Tasbih", sub: "Invocations et compteur", icon: "radio", screen: "DhikrMain", color: "#1A7F64" },
         { key: "dua", label: "Du'as & Invocations", sub: "Par situation et contexte", icon: "hand-left", screen: "Dua", color: "#7C3AED" },
         { key: "tasbih", label: "Tasbih numérique", sub: "Compteur de dhikr", icon: "repeat", screen: "Tasbih", color: "#0891B2" },

@@ -11,7 +11,7 @@ export function PrivacyScreen({ onBack }: { onBack: () => void }) {
   const { palette: p } = useTheme();
 
   const handleContact = () => {
-    Linking.openURL("mailto:kabrakeng@gmail.com");
+    Linking.openURL("mailto:contact@kabrakeng.com");
   };
 
   return (
@@ -211,9 +211,9 @@ export function PrivacyScreen({ onBack }: { onBack: () => void }) {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: p.text }]}>Cette politique s'applique à Nissa Imane Tracker</Text>
+          <Text style={[styles.footerText, { color: p.text }]}>Cette politique s'applique à Sirat An-Nour</Text>
           <Text style={[styles.footerSubtext, { color: p.textSoft }]}>Développé par KABRAK ENG</Text>
-          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>© 2025</Text>
+          <Text style={[styles.footerSubtext, { color: p.textSoft }]}>© 2026</Text>
         </View>
       </ScrollView>
     </View>

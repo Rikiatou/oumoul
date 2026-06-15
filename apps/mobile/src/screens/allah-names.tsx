@@ -1,4 +1,5 @@
 import { useCallback, useEffect, memo, useMemo, useRef, useState } from 'react';
+import * as Speech from 'expo-speech';
 import {
   FlatList,
   StyleSheet,
@@ -17,6 +18,11 @@ import { BackButton } from '../components/BackButton';
 import { ALLAH_NAMES, AllahNameLocal } from '../data/allah-names';
 
 const NAMES_PROGRESS_KEY = 'oumoul_allah_names_progress';
+
+function speakName(arabic: string, transliteration: string) {
+  Speech.stop();
+  Speech.speak(arabic, { language: 'ar-SA', rate: 0.7, pitch: 1.0 });
+}
 
 type ViewMode = 'grid' | 'list' | 'quiz';
 
@@ -251,6 +257,13 @@ export const AllahNamesScreen = memo(function AllahNamesScreen({ user, onBack, i
                     <Text style={[st.gridArabic, isMemo && { color: '#fff' }]}>{item.name}</Text>
                     <Text style={[st.gridTranslit, isMemo && { color: 'rgba(255,255,255,0.85)' }]}>{item.transliteration}</Text>
                     <Text style={[st.gridMeaning, isMemo && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={2}>{item.meaning}</Text>
+                    <TouchableOpacity
+                      style={st.speakBtn}
+                      onPress={(e) => { e.stopPropagation(); speakName(item.name, item.transliteration); }}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Ionicons name="volume-medium" size={12} color={isMemo ? 'rgba(255,255,255,0.7)' : palette.primaryDark} />
+                    </TouchableOpacity>
                     {isMemo && <Ionicons name="checkmark-circle" size={14} color="#fff" style={{ position: 'absolute', top: 6, right: 6 }} />}
                   </TouchableOpacity>
                 );
@@ -289,6 +302,13 @@ export const AllahNamesScreen = memo(function AllahNamesScreen({ user, onBack, i
                         <Text style={st.listArabic}>{item.name}</Text>
                         <Text style={st.listTranslit}>{item.transliteration} — {item.meaning}</Text>
                       </View>
+                      <TouchableOpacity
+                        style={st.listSpeakBtn}
+                        onPress={(e) => { e.stopPropagation(); speakName(item.name, item.transliteration); }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="volume-medium" size={18} color={palette.primaryDark} />
+                      </TouchableOpacity>
                       <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={palette.textSoft} />
                     </View>
                     {isExpanded && (
@@ -363,4 +383,6 @@ const st = StyleSheet.create({
   quizOptionText: { fontSize: 14, fontWeight: '600', color: palette.text, flex: 1 },
   quizExit: { marginTop: 24, alignItems: 'center' },
   quizExitText: { fontSize: 14, color: palette.textSoft, fontWeight: '600' },
+  speakBtn: { marginTop: 6, padding: 4 },
+  listSpeakBtn: { padding: 6, marginRight: 4 },
 });

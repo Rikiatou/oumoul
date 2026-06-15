@@ -5,6 +5,22 @@ import { authApi, tokenStore } from '../api';
 import { syncPushTokenWithBackend } from '../push-notifications';
 
 const CACHED_USER_KEY = 'oumoul_cached_user';
+const CACHED_CREDS_KEY = 'oumoul_cached_creds';
+
+async function saveCredsCache(email: string, password: string) {
+  try { await SecureStore.setItemAsync(CACHED_CREDS_KEY, JSON.stringify({ email, password })); } catch {}
+}
+
+async function loadCredsCache(): Promise<{ email: string; password: string } | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(CACHED_CREDS_KEY);
+    return raw ? (JSON.parse(raw) as { email: string; password: string }) : null;
+  } catch { return null; }
+}
+
+async function clearCredsCache() {
+  try { await SecureStore.deleteItemAsync(CACHED_CREDS_KEY); } catch {}
+}
 
 async function saveUserCache(user: AuthUser) {
   try { await SecureStore.setItemAsync(CACHED_USER_KEY, JSON.stringify(user)); } catch {}
@@ -70,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, loading: true }));
     try {
       const response = await authApi.login({ email, password });
+      await saveCredsCache(email, password);
       await applyAuthResponse(response, '✅ Connexion réussie');
     } catch (error) {
       const status = (error as any)?.status;
@@ -105,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Auto-login immediately after registration — no email verification wall
         try {
           const response = await authApi.login({ email: payload.email, password: payload.password });
+          await saveCredsCache(payload.email, payload.password);
           await applyAuthResponse(response, '✅ Bienvenue ! Compte créé avec succès.');
         } catch {
           // Login failed after register (e.g. server requires verification) — still let user in
@@ -152,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     await tokenStore.clearTokens();
     await clearUserCache();
+    await clearCredsCache();
     setState({ user: null, tokens: null, loading: false, pendingVerificationEmail: null, authToast: null });
   }, []);
 
@@ -192,9 +211,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (refreshError) {
           if (!mounted) return;
           const status = (refreshError as any)?.status;
-          // Only logout if token is explicitly invalid (401), not on network errors
           if (status === 401 || status === 403) {
-            await logout();
+            // Token expired — try silent re-login with saved credentials
+            const creds = await loadCredsCache();
+            if (creds) {
+              try {
+                const response = await authApi.login({ email: creds.email, password: creds.password });
+                if (!mounted) return;
+                await applyAuthResponse(response);
+                return;
+              } catch {
+                // Silent re-login failed — restore cached user rather than forcing logout
+              }
+            }
+            // No saved credentials or re-login failed — restore cached user anyway
+            const cachedUser = await loadUserCache();
+            if (!mounted) return;
+            if (cachedUser) {
+              setState({ user: cachedUser, tokens: stored, loading: false, pendingVerificationEmail: null, authToast: null });
+            } else {
+              await logout();
+            }
           } else {
             // Network error — restore cached user so returning user skips auth
             const cachedUser = await loadUserCache();
