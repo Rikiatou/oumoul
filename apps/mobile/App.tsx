@@ -540,7 +540,7 @@ function SettingsStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="GlobalSearch" options={{ animation: "slide_from_right" }}>
         {(props) => <GlobalSearchScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
           const parentNav = props.navigation.getParent();
-          if (screen === '__CORAN_TAB__') parentNav?.navigate('Coran');
+          if (screen === '__CORAN_TAB__') parentNav?.navigate('Coran', { screen: 'ImaneQuran' });
           else if (screen === 'ImaneRamadan') parentNav?.navigate('Apprendre', { screen: 'ImaneRamadan' });
           else if (screen === 'ImaneCycle') parentNav?.navigate('Accueil', { screen: 'ImaneCycle' });
           else if (screen === 'AISystem') parentNav?.navigate('Apprendre', { screen: 'AISystem' });
@@ -550,7 +550,7 @@ function SettingsStack({ user }: { user: AuthUser }) {
       <Stack.Screen name="AppGuide" options={{ animation: "slide_from_right" }}>
         {(props) => <AppGuideScreen user={user} onBack={() => props.navigation.goBack()} onNavigate={(screen: string) => {
           const parentNav = props.navigation.getParent();
-          if (screen === '__CORAN_TAB__') parentNav?.navigate('Coran');
+          if (screen === '__CORAN_TAB__') parentNav?.navigate('Coran', { screen: 'ImaneQuran' });
           else if (screen === 'ImaneRamadan') parentNav?.navigate('Apprendre', { screen: 'ImaneRamadan' });
           else if (screen === 'Gamification') parentNav?.navigate('Apprendre', { screen: 'Gamification' });
           else if (screen === 'AISystem') parentNav?.navigate('Apprendre', { screen: 'AISystem' });
@@ -740,7 +740,7 @@ function LearnHubScreen({ navigation }: { navigation: any; user: AuthUser }) {
                 onPress={() => {
                   if (item.screen === '__CORAN_TAB__') {
                     const parentNav = navigation.getParent();
-                    parentNav?.navigate('Coran');
+                    parentNav?.navigate('Coran', { screen: 'ImaneQuran' });
                     return;
                   }
                   navigation.navigate(item.screen);

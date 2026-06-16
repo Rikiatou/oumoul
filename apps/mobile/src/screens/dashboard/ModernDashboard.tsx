@@ -537,7 +537,7 @@ export function ModernDashboard({ user, locale, onSearch, onRefresh, refreshing 
   };
 
   const handleNavigateToQuran = () => {
-    navigation.navigate('Coran');
+    navigation.navigate('Coran', { screen: 'ImaneQuran' });
   };
 
   const handleNavigateToCycle = () => {
