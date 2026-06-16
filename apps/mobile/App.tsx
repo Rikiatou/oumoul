@@ -369,12 +369,6 @@ function MainApp({ user }: { user: AuthUser }) {
         <Tab.Screen
           name="Coran"
           initialParams={{ screen: 'ImaneQuran' }}
-          listeners={({ navigation }) => ({
-            tabPress: (e) => {
-              e.preventDefault();
-              navigation.jumpTo('Coran', { screen: 'ImaneQuran' });
-            },
-          })}
         >
           {() => <QuranStack user={user} />}
         </Tab.Screen>
