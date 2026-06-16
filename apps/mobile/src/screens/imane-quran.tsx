@@ -62,13 +62,22 @@ function useQuranSurahs(language: 'fr' | 'en') {
     setError(null);
     try {
       const cacheKey = `${CACHE_KEYS.QURAN_SURAHS}_${language}`;
-      const response = await offlineCache.getWithFallback(
+      let response = await offlineCache.getWithFallback(
         cacheKey,
         () => quranApi.listSurahs(language),
         CACHE_TTL.WEEK,
       );
-      setSurahs(response.surahs);
-      if (response.surahs.length > 0) {
+      // Defensive fallback: if API returns empty list, retry with French
+      if (!response?.surahs?.length && language !== 'fr') {
+        const frCacheKey = `${CACHE_KEYS.QURAN_SURAHS}_fr`;
+        response = await offlineCache.getWithFallback(
+          frCacheKey,
+          () => quranApi.listSurahs('fr'),
+          CACHE_TTL.WEEK,
+        );
+      }
+      setSurahs(response.surahs ?? []);
+      if (response.surahs?.length > 0) {
         setSelectedSurahId((prev) => prev ?? response.surahs[0].id);
       }
     } catch (err) {
@@ -76,6 +85,11 @@ function useQuranSurahs(language: 'fr' | 'en') {
       setError(message);
       setSurahs([]);
       setSelectedSurahId(null);
+      // Clear stale cache to force fresh fetch on next attempt
+      await offlineCache.remove(`${CACHE_KEYS.QURAN_SURAHS}_${language}`);
+      if (language !== 'fr') {
+        await offlineCache.remove(`${CACHE_KEYS.QURAN_SURAHS}_fr`);
+      }
     } finally {
       setLoading(false);
     }

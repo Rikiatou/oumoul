@@ -368,7 +368,6 @@ function MainApp({ user }: { user: AuthUser }) {
         </Tab.Screen>
         <Tab.Screen
           name="Coran"
-          initialParams={{ screen: 'ImaneQuran' }}
         >
           {() => <QuranStack user={user} />}
         </Tab.Screen>
@@ -573,7 +572,7 @@ function SettingsStack({ user }: { user: AuthUser }) {
 
 function QuranStack({ user }: { user: AuthUser }) {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="ImaneQuran">
       <Stack.Screen name="ImaneQuran">
         {(props) => (
           <ImaneQuranScreen

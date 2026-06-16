@@ -82,8 +82,8 @@ export const offlineCache = {
       return cached.data; // fresh
     }
 
-    // Check network with a lightweight HEAD request
-    const isOnline = await fetch('https://dns.google/resolve?name=google.com', { method: 'HEAD', signal: AbortSignal.timeout(3000) })
+    // Check network with a lightweight HEAD request to the backend API
+    const isOnline = await fetch('https://backend-production-bdc1.up.railway.app/api/health', { method: 'HEAD', signal: AbortSignal.timeout(5000) })
       .then(() => true).catch(() => false);
 
     if (!isOnline) {
