@@ -69,7 +69,7 @@ export const offlineCache = {
    * 1. If fresh cache → return immediately
    * 2. If stale cache → return stale, then refresh in background
    * 3. If no cache → fetch and store
-   * 4. If offline + no cache → throw; if offline + stale → return stale
+   * 4. If fetch fails → serve stale if available, else throw
    */
   async getWithFallback<T>(
     key: string,
@@ -82,15 +82,6 @@ export const offlineCache = {
       return cached.data; // fresh
     }
 
-    // Check network with a lightweight HEAD request to the backend API
-    const isOnline = await fetch('https://backend-production-bdc1.up.railway.app/api/health', { method: 'HEAD', signal: AbortSignal.timeout(5000) })
-      .then(() => true).catch(() => false);
-
-    if (!isOnline) {
-      if (cached) return cached.data; // serve stale offline
-      throw new Error('Pas de connexion et aucun cache disponible.');
-    }
-
     if (cached?.stale) {
       // Serve stale immediately, revalidate in background
       fetcher().then((fresh) => void offlineCache.set(key, fresh, ttlMs)).catch(() => {});
@@ -98,9 +89,13 @@ export const offlineCache = {
     }
 
     // No cache at all — fetch and store
-    const data = await fetcher();
-    await offlineCache.set(key, data, ttlMs);
-    return data;
+    try {
+      const data = await fetcher();
+      await offlineCache.set(key, data, ttlMs);
+      return data;
+    } catch {
+      throw new Error('Pas de connexion et aucun cache disponible.');
+    }
   },
 
   /** Purge all expired entries (call on app foreground) */
