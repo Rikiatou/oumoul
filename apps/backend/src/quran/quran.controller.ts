@@ -1,11 +1,8 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { ApiOkResponse, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { QuranService, QuranSurah, QuranVerse } from './quran.service';
 
 @ApiTags('quran')
-@ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
 @Controller('quran')
 export class QuranController {
   constructor(private readonly quranService: QuranService) {}
