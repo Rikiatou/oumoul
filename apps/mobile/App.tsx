@@ -373,7 +373,7 @@ function MainApp({ user }: { user: AuthUser }) {
               e.preventDefault();
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'ImaneQuran' }],
+                routes: [{ name: 'Coran', params: { screen: 'ImaneQuran' } }],
               });
             },
           })}
