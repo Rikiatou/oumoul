@@ -1,11 +1,8 @@
-import { BadRequestException, Controller, Get, Query, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiQuery, ApiTags } from "@nestjs/swagger";
-import { AuthGuard } from "@nestjs/passport";
+import { BadRequestException, Controller, Get, Query } from "@nestjs/common";
+import { ApiOkResponse, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { TafsirService } from "./tafsir.service";
 
 @ApiTags("tafsir")
-@ApiBearerAuth()
-@UseGuards(AuthGuard("jwt"))
 @Controller("tafsir")
 export class TafsirController {
   constructor(private readonly tafsirService: TafsirService) {}
