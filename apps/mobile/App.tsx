@@ -368,6 +368,7 @@ function MainApp({ user }: { user: AuthUser }) {
         </Tab.Screen>
         <Tab.Screen
           name="Coran"
+          initialParams={{ screen: 'ImaneQuran' }}
           listeners={({ navigation }) => ({
             tabPress: (e) => {
               e.preventDefault();
