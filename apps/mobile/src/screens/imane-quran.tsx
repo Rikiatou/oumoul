@@ -198,11 +198,11 @@ function useQuranVerses({
 }
 
 const FONT_SIZES = [
-  { arabic: 18, trans: 12, label: "Petit" },
-  { arabic: 22, trans: 13, label: "Normal" },
-  { arabic: 26, trans: 14, label: "Grand" },
-  { arabic: 32, trans: 16, label: "Très grand" },
-  { arabic: 40, trans: 18, label: "Maximum" },
+  { arabic: 22, trans: 12, label: "Petit" },
+  { arabic: 28, trans: 13, label: "Normal" },
+  { arabic: 34, trans: 14, label: "Grand" },
+  { arabic: 40, trans: 16, label: "Très grand" },
+  { arabic: 48, trans: 18, label: "Maximum" },
 ];
 
 function formatAudioTime(ms: number) {
@@ -1458,15 +1458,6 @@ export function ImaneQuranScreen({
         </Text>
       )}
 
-      {/* Bismillah header */}
-      {selectedSurahId !== null && selectedSurahId !== 9 && (
-        <View style={q.bismillah}>
-          <Text style={q.bismillahText}>
-            بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
-          </Text>
-        </View>
-      )}
-
       {/* Verses */}
       {loadingVerses ? (
         <View
@@ -1480,6 +1471,14 @@ export function ImaneQuranScreen({
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Bismillah header — inside ScrollView so it scrolls with verses */}
+          {selectedSurahId !== null && selectedSurahId !== 9 && (
+            <View style={q.bismillah}>
+              <Text style={q.bismillahText}>
+                بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
+              </Text>
+            </View>
+          )}
           {verseQuery.trim() && filteredVerses.length === 0 && (
             <Text
               style={{
@@ -1602,7 +1601,7 @@ export function ImaneQuranScreen({
                     q.arabicText,
                     {
                       fontSize: currentFont.arabic,
-                      lineHeight: currentFont.arabic * 1.8,
+                      lineHeight: currentFont.arabic * 2.2,
                     },
                   ]}
                 >
@@ -2045,7 +2044,12 @@ const q = StyleSheet.create({
   surahName: { fontSize: 15, fontWeight: "600", color: q_c.text },
   surahNameTranslated: { fontSize: 12, color: q_c.accent, fontStyle: "italic" },
   surahMeta: { fontSize: 12, color: q_c.muted },
-  surahArabic: { fontSize: 20, color: q_c.text, fontFamily: "Amiri-Regular" },
+  surahArabic: {
+    fontSize: 20,
+    color: q_c.text,
+    fontFamily: "AmiriQuran-Regular",
+    writingDirection: "rtl",
+  },
 
   // Surah navigation bar (prev/next)
   surahNavBar: {
@@ -2140,7 +2144,13 @@ const q = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
   },
-  bismillahText: { fontSize: 28, color: q_c.accent, fontFamily: "Amiri-Bold" },
+  bismillahText: {
+    fontSize: 30,
+    color: q_c.accent,
+    fontFamily: "AmiriQuran-Regular",
+    writingDirection: "rtl",
+    textAlign: "center",
+  },
 
   // Verse card
   verseCard: {
@@ -2179,8 +2189,8 @@ const q = StyleSheet.create({
   arabicText: {
     color: "#1B3A2D",
     textAlign: "right",
-    fontFamily: "Amiri-Bold",
-    letterSpacing: 0.5,
+    writingDirection: "rtl",
+    fontFamily: "AmiriQuran-Regular",
   },
   quickTool: {
     flexDirection: "row",
