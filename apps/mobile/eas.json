@@ -32,6 +32,12 @@
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json",
         "track": "internal"
+      },
+      "ios": {
+        "ascAppId": "6769941043",
+        "ascApiKeyId": "VYS4PZPMMQ",
+        "ascApiKeyIssuerId": "4a830002-a655-4b8c-9451-5f8d56a4f2a3",
+        "ascApiKeyPath": "/home/ubuntu/.apple-keys/AuthKey_VYS4PZPMMQ.p8"
       }
     }
   }
